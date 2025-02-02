@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Kris CMS</title>
+    <style>
+        :root {
+            --primary-color: #42c983;
+            --secondary-color: #35495e;
+            --accent-color: #547c9c;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .logo {
+            width: 150px;
+            margin-bottom: 2rem;
+        }
+
+        .welcome-message {
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            color: var(--secondary-color);
+            font-size: 2.5em;
+            margin-bottom: 0.5rem;
+        }
+
+        h2 {
+            color: var(--accent-color);
+            font-weight: 300;
+            margin-top: 0;
+        }
+
+        .links {
+            margin-bottom: 3rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn:hover {
+            background-color: #2a3b4d;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 800px;
+            padding: 2rem;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .feature-card h3 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        footer {
+            margin-top: 3rem;
+            color: var(--accent-color);
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <img editable-img="true" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBkPSJNNTAgMTVMMjUgMzBsMjUgNDVMNzUgMzB6IiBmaWxsPSIjNDJjOTgzIi8+PHBhdGggZD0iTTUwIDg1TDI1IDYwbDI1LTQ1IDI1IDQ1eiIgZmlsbD0iIzM1NDk1ZSIvPjwvc3ZnPg==" 
+         alt="Kris CMS Logo" 
+         class="logo">
+
+    <div class="welcome-message">
+        <h1><editable k-id="title">Welcome to Kris CMS</editable></h1>
+        <h2><editable k-id="subtitle">The Modern Content Management Framework</editable></h2>
+    </div>
+
+    <div class="links">
+        <a href="https://github.com/fellarrusto/kris-cms" class="btn"><editable k-id="button-git">GitHub Repository</editable></a>
+    </div>
+
+    <div class="features">
+        <div class="feature-card">
+            <h3><editable k-id="feature-1-title">Feature 1 Title</editable></h3>
+            <p><editable k-id="feature-1-desc">Feature 1 Description</editable></p>
+        </div>
+        <div class="feature-card">
+            <h3><editable k-id="feature-2-title">Modular 🧩</editable></h3>
+            <p><editable k-id="feature-2-desc">Composable architecture with plugin system</editable></p>
+        </div>
+        <div class="feature-card">
+            <h3><editable k-id="feature-3-title">Secure 🔒</editable></h3>
+            <p><editable k-id="feature-3-desc">Built-in security best practices and validation</editable></p>
+        </div>
+    </div>
+
+    <footer>
+        <p><editable k-id="footer-start">Start by creating your first content model</editable></p>
+        <p><editable k-id="footer-version">Kris CMS v1.0.0 · MIT Licensed</editable></p>
+    </footer>
+</body>
+</html>

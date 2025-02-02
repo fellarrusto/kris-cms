@@ -1,0 +1,46 @@
+{
+    "title": {
+        "en": "Welcome to Kris CMS",
+        "it": "Benvenuti su Kris CMS"
+    },
+    "subtitle": {
+        "en": "The Modern Content Management Framework",
+        "it": "Il Gestore Di Contenuti Moderno"
+    },
+    "button-git": {
+        "en": "GitHub Repository",
+        "it": "Repository GitHub"
+    },
+    "feature-1-title": {
+        "en": "Fast ⚡",
+        "it": "Veloce ⚡"
+    },
+    "feature-1-desc": {
+        "en": "Optimized performance",
+        "it": "Performance ottimizzate"
+    },
+    "feature-2-title": {
+        "en": "Modular 🧩",
+        "it": "Modulare 🧩"
+    },
+    "feature-2-desc": {
+        "en": "Composable architecture with plugin system",
+        "it": "Architettura componibile con sistema di plugin"
+    },
+    "feature-3-title": {
+        "en": "Secure 🔒",
+        "it": "Sicuro 🔒"
+    },
+    "feature-3-desc": {
+        "en": "Built-in security best practices and validation",
+        "it": "Migliori pratiche di sicurezza e validazione integrate"
+    },
+    "footer-start": {
+        "en": "Start by creating your first content model",
+        "it": "Inizia creando il tuo primo modello di contenuto"
+    },
+    "footer-version": {
+        "en": "Kris CMS v1.0.0 · MIT Licensed",
+        "it": "Kris CMS v1.0.0 · Licenza MIT"
+    }
+}

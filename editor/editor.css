@@ -1,0 +1,100 @@
+editable {
+    cursor: pointer !important;
+    pointer-events: all;
+    display: inline-block;
+    outline: 1px dashed #00ff00;
+}
+
+editable:hover {
+    background-color: #c4ffc4;
+}
+
+#editorOverlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 15vw;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+    display: none;
+    border-radius: 12px 12px 0 0;
+    padding: 20px;
+    overflow-y: auto;
+    z-index: 1000;
+}
+
+.editor-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-bottom: 15px;
+}
+
+.language-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+.text-group {
+    width: 100%;
+}
+
+.text-group label {
+    display: block;
+    margin-bottom: 10px;
+    color: #2d3748;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.9em;
+}
+
+.editor-textarea {
+    min-height: 100pt;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    resize: none;
+    font-family: inherit;
+    font-size: 12pt;
+    overflow: hidden;
+}
+
+.close-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 1.4em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+    background: #dc2626;
+    transform: rotate(90deg);
+}
+
+.save-btn {
+    background: #3b82f6;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    float: right;
+    margin-top: 15px;
+}
+
