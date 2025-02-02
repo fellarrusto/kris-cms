@@ -3,6 +3,12 @@
 
 <?php
 
+session_start();
+if (!isset($_SESSION['logged']) || $_SESSION['logged'] !== true) {
+    header("Location: signin.php");
+    exit();
+}
+
 $ln = $_GET['ln'] ?? "it";
 $data = json_decode(file_get_contents('../k_data.json'), true);
 

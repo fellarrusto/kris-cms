@@ -1,6 +1,10 @@
 <?php
 $ln = $_GET['ln'] ?? "it";
-$html = file_get_contents('templates/template.html');
+
+$template = $_GET['page'] ?? "template";
+$templatePath = "templates/" . $template . ".html";
+
+$html = file_get_contents($templatePath);
 $data = json_decode(file_get_contents('k_data.json'), true);
 libxml_use_internal_errors(true);
 $dom = new DOMDocument();
