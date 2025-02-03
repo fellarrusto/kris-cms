@@ -64,7 +64,28 @@ function closeEditor() {
     currentElement = null;
 }
 
+function changeLanguage(language){
+    data = window.kData;
+    Object.keys(data).forEach(key => {
+        document.querySelector(`[k-id="${key}"]`).innerHTML = data[key][language];
+        console.log(key, data[key][language]);
+    });
+}
+
 // Chiudi overlay premendo ESC
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeEditor();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const languageSwitcher = document.querySelector('.language-switcher');
+    const radioButtons = languageSwitcher.querySelectorAll('input[type="radio"]');
+
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function (event) {
+            const selectedLanguage = event.target.value;
+            console.log(`Selected language: ${selectedLanguage}`);
+            changeLanguage(selectedLanguage)
+        });
+    });
 });

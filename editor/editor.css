@@ -98,3 +98,31 @@ editable:hover {
     margin-top: 15px;
 }
 
+.language-switcher {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.language-switcher label {
+    font-size: 0.8em;
+    color: var(--secondary-color);
+    cursor: pointer;
+}
+
+.language-switcher input[type="radio"] {
+    margin: 0 5px;
+    cursor: pointer;
+}

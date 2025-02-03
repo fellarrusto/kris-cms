@@ -70,8 +70,7 @@ $dom->formatOutput = true; // Abilita formattazione output
 $fragment = $dom->createDocumentFragment();
 
 // Aggiungi wrapper per validità XML
-$wrapperTemplate = '<div>' . $overlayTemplate . '</div>';
-if (!$fragment->appendXML($wrapperTemplate)) {
+if (!$fragment->appendXML($overlayTemplate)) {
     die("Errore nel parsing dell'overlay. Controlla la sintassi HTML.");
 }
 
