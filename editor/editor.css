@@ -1,11 +1,10 @@
-editable {
+.editable {
     cursor: pointer !important;
     pointer-events: all;
-    display: inline-block;
     outline: 1px dashed #00ff00;
 }
 
-editable:hover {
+.editable:hover {
     background-color: #c4ffc4;
 }
 

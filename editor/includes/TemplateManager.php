@@ -34,9 +34,12 @@ class TemplateManager {
     }
 
     public function processEditableContent() {
-        foreach ($this->dom->getElementsByTagName('editable') as $el) {
-            $this->updateEditableElement($el);
-            $el->setAttribute('onclick', 'edit(event, this)');
+        foreach ($this->dom->getElementsByTagName('*') as $el) {
+            if ($el->hasAttribute('k-edit')) {
+                $this->updateEditableElement($el);
+                $el->setAttribute('onclick', 'edit(event, this)');
+                $el->setAttribute('class', 'editable');
+            }
         }
     }
 
