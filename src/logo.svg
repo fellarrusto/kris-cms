@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="100mm"
+   height="100mm"
+   viewBox="0 0 100 100"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   sodipodi:docname="logo.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="0.37371282"
+     inkscape:cx="115.06161"
+     inkscape:cy="276.95063"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     inkscape:window-x="1912"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Livello 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       id="g8"
+       transform="matrix(10.00009,0,0,10.00009,-1410.242,-190.50171)">
+      <path
+         id="path6-2-6"
+         style="fill:#42c983;fill-opacity:1;stroke-width:1.32292;stroke-linecap:round;stroke-linejoin:round;paint-order:markers stroke fill"
+         d="m 141.60738,19.634461 c -0.36144,0.361448 -0.58446,0.861556 -0.58446,1.415417 v 3.500045 2.500106 1.999877 h 9.99991 z" />
+      <path
+         id="path6-9-9-6"
+         style="fill:#35495e;fill-opacity:1;stroke-width:1.32292;stroke-linecap:round;stroke-linejoin:round;paint-order:markers stroke fill"
+         d="m 143.02332,19.05 c -1.108,0 -2.0004,0.89188 -2.0004,1.999878 v 3.500045 2.500106 1.999877 L 151.02283,19.05 Z" />
+    </g>
+  </g>
+</svg>

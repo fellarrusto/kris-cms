@@ -7,16 +7,18 @@ $templatePath = "templates/" . $template . ".html";
 function setElementData($dom, $el, $data, $ln) {
     $id = $el->getAttribute('k-id');
 
-    if (!isset($data[$id][$ln])) {
-        return;
-    }
-
     switch ($el->tagName) {
         case 'img':
+            if (!isset($data[$id]["src"])) {
+                return;
+            }
             $el->setAttribute('src', $data[$id]["src"]); // Update image source
             break;
 
         default:
+            if (!isset($data[$id][$ln])) {
+                return;
+            }
             while ($el->firstChild) {
                 $el->removeChild($el->firstChild);
             }

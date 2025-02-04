@@ -35,13 +35,25 @@ class TemplateManager {
 
     public function processEditableContent() {
         foreach ($this->dom->getElementsByTagName('*') as $el) {
-            if ($el->hasAttribute('k-edit')) {
-                $this->updateEditableElement($el);
-                $el->setAttribute('onclick', 'edit(event, this)');
-                $el->setAttribute('class', 'editable');
+            if (!$el->hasAttribute('k-edit')) {
+                continue;
+            }
+    
+            switch ($el->tagName) {
+                case 'img':
+                    $el->setAttribute('onclick', 'editImage(event, this)');
+                    $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
+                    break;
+    
+                default:
+                    $this->updateEditableElement($el);
+                    $el->setAttribute('onclick', 'edit(event, this)');
+                    $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
+                    break;
             }
         }
     }
+    
 
     private function updateEditableElement($element) {
         $id = $element->getAttribute('k-id');

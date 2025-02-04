@@ -1,6 +1,6 @@
 .editable {
     cursor: pointer !important;
-    pointer-events: all;
+    pointer-events: all !important;
     outline: 1px dashed #00ff00;
 }
 

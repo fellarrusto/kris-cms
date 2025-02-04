@@ -42,5 +42,8 @@
     "footer-version": {
         "en": "Kris CMS v1.0.0 · MIT Licensed",
         "it": "Kris CMS v1.0.0 · Licenza MIT"
+    },
+    "logo": {
+        "src": "src/logo.svg"
     }
 }
