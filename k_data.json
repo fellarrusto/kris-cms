@@ -4,36 +4,36 @@
         "it": "Benvenuti su Kris CMS"
     },
     "subtitle": {
-        "en": "The Modern Content Management Framework",
-        "it": "Il Gestore Di Contenuti Moderno"
+        "en": "Edit in place your content.",
+        "it": "Modifica diretta dei contenuti."
     },
     "button-git": {
         "en": "GitHub Repository",
         "it": "Repository GitHub"
     },
     "feature-1-title": {
-        "en": "Fast ⚡",
-        "it": "Veloce ⚡"
+        "en": "Lightweight ⚡",
+        "it": "Leggero ⚡"
     },
     "feature-1-desc": {
-        "en": "Optimized performance",
-        "it": "Performance ottimizzate"
+        "en": "Few files great power.",
+        "it": "Pochi files grande potenza."
     },
     "feature-2-title": {
-        "en": "Modular 🧩",
-        "it": "Modulare 🧩"
+        "en": "Simple 🧩",
+        "it": "Semplice 🧩"
     },
     "feature-2-desc": {
-        "en": "Composable architecture with plugin system",
-        "it": "Architettura componibile con sistema di plugin"
+        "en": "No database or complex configurations.",
+        "it": "Nessun database o configurazioni complesse."
     },
     "feature-3-title": {
-        "en": "Secure 🔒",
-        "it": "Sicuro 🔒"
+        "en": "Direct 🚀",
+        "it": "Immediato 🚀"
     },
     "feature-3-desc": {
-        "en": "Built-in security best practices and validation",
-        "it": "Migliori pratiche di sicurezza e validazione integrate"
+        "en": "Just edit the content you see.",
+        "it": "Modifica direttamente ciò che vedi."
     },
     "footer-start": {
         "en": "Start by creating your first content model",
