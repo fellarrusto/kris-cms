@@ -4,6 +4,7 @@ function editText(e, el) {
     currentElement = el;
     document.getElementById("editorOverlay").style.display = "block";
     document.getElementById("editor-text").style.display = "block";
+    document.getElementById("editor-image").style.display = "none";
 
     const editorIt = document.getElementById("editor-it");
     const editorEn = document.getElementById("editor-en");
@@ -19,6 +20,7 @@ function editText(e, el) {
 function editImage(e, el){
     currentElement = el;
     document.getElementById("editorOverlay").style.display = "block";
+    document.getElementById("editor-text").style.display = "none";
     document.getElementById("editor-image").style.display = "block";
 
 }
