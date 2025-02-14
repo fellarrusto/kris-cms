@@ -41,13 +41,14 @@ class TemplateManager {
     
             switch ($el->tagName) {
                 case 'img':
+                    $this->updateImageEditableElement($el);
                     $el->setAttribute('onclick', 'editImage(event, this)');
                     $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
                     break;
     
                 default:
-                    $this->updateEditableElement($el);
-                    $el->setAttribute('onclick', 'edit(event, this)');
+                    $this->updateTextEditableElement($el);
+                    $el->setAttribute('onclick', 'editText(event, this)');
                     $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
                     break;
             }
@@ -55,7 +56,7 @@ class TemplateManager {
     }
     
 
-    private function updateEditableElement($element) {
+    private function updateTextEditableElement($element) {
         $id = $element->getAttribute('k-id');
         if (isset($this->data[$id][$this->lang])) {
             while ($element->firstChild) {
@@ -64,6 +65,14 @@ class TemplateManager {
             $element->appendChild($this->dom->createTextNode($this->data[$id][$this->lang]));
         }
     }
+
+    private function updateImageEditableElement($element) {
+        $id = $element->getAttribute('k-id');
+        if (isset($this->data[$id]['src'])) {
+            $element->setAttribute('src', $this->data[$id]['src']);
+        }
+    }
+
 
     public function injectOverlay($overlayPath) {
         $overlayContent = file_get_contents($overlayPath);

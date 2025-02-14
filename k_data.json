@@ -44,6 +44,6 @@
         "it": "Kris CMS v1.0.0 · Licenza MIT"
     },
     "logo": {
-        "src": "src/logo.svg"
+        "src": "/src/logo.svg"
     }
 }

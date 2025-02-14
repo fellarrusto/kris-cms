@@ -1,9 +1,9 @@
 let currentElement = null;
 
-function edit(e, el) {
+function editText(e, el) {
     currentElement = el;
-    const overlay = document.getElementById("editorOverlay");
-    overlay.style.display = "block";
+    document.getElementById("editorOverlay").style.display = "block";
+    document.getElementById("editor-text").style.display = "block";
 
     const editorIt = document.getElementById("editor-it");
     const editorEn = document.getElementById("editor-en");
@@ -14,6 +14,13 @@ function edit(e, el) {
 
     editorIt.value = textIt;
     editorEn.value = textEn;
+}
+
+function editImage(e, el){
+    currentElement = el;
+    document.getElementById("editorOverlay").style.display = "block";
+    document.getElementById("editor-image").style.display = "block";
+
 }
 
 function saveContent() {
@@ -39,6 +46,46 @@ function saveContent() {
 
 }
 
+function saveImage() { 
+    const fileUpload = document.getElementById("image-upload").files[0];
+    if (!fileUpload) {
+        alert("Seleziona un file prima di salvare.");
+        return;
+    }
+
+    const filename = Date.now() + "_" + fileUpload.name; // Nome unico per evitare sovrascritture
+    const filepath = "/src/" + filename;
+    console.log(filepath)
+    const kId = currentElement.getAttribute("k-id");
+    window.kData[kId].src = filepath;
+
+    uploadImageToServer(fileUpload, filename, () => {
+        currentElement.src = filepath;
+        saveDataToServer();
+    });
+}
+
+
+function uploadImageToServer(file, filename, callback) {
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("filename", filename);
+
+    fetch("upload_image.php", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            callback();
+        } else {
+            alert("Errore nel caricamento dell'immagine.");
+        }
+    })
+    .catch(error => console.error("Errore:", error));
+}
+
 function saveDataToServer() {
     fetch("save_data.php", {
         method: "POST",
@@ -61,6 +108,8 @@ function saveDataToServer() {
 
 function closeEditor() {
     document.getElementById("editorOverlay").style.display = "none";
+    document.getElementById("editor-text").style.display = "none";
+    document.getElementById("editor-image").style.display = "none";
     currentElement = null;
 }
 

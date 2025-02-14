@@ -1,5 +1,5 @@
 <div id="editorOverlay">
-    <div class="editor-container">
+    <div id="editor-text" class="editor-container">
         <div class="editor-header">
             <h3>Modifica testo selezionato</h3>
             <button class="close-btn" onclick="closeEditor()">×</button>
@@ -14,6 +14,19 @@
         </div>
         
         <button class="save-btn" onclick="saveContent()">Salva</button>
+    </div>
+    <div id="editor-image" class="editor-container">
+        <div class="editor-header">
+            <h3>Modifica immagine selezionata</h3>
+            <button class="close-btn" onclick="closeEditor()">×</button>
+        </div>
+        
+        <div class="text-group">
+            <label for="image-upload">Carica immagine</label>
+            <input type="file" id="image-upload" accept="image/*"></input>
+        </div>
+    
+        <button class="save-btn" onclick="saveImage()">Salva</button>
     </div>
 </div>
 <div class="language-switcher">

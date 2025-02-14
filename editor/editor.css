@@ -23,6 +23,14 @@
     z-index: 1000;
 }
 
+#editor-text{
+    display: none;
+}
+
+#editor-image{
+    display: none;
+}
+
 .editor-container {
     max-width: 1200px;
     margin: 0 auto;
