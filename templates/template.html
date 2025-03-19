@@ -1,126 +1,262 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Kris CMS</title>
-    <style>
-        :root {
-            --primary-color: #42c983;
-            --secondary-color: #35495e;
-            --accent-color: #547c9c;
-        }
+<html lang="it">
+    <head>
+        <!-- Meta tag -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        <!-- Favicon & Title -->
+        <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon.png" />
+        <title>Soul & Fish</title>
 
-        body {
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-            background-color: #f8f9fa;
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100..700;1,100..700&family=Kalnia:wght@100..700&display=swap" rel="stylesheet">
+        <!-- End Fonts -->
 
-        .logo {
-            width: 80px;
-            margin-bottom: 1rem;
-        }
+        <!-- CSS only -->
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" />
+        <link rel="stylesheet" type="text/css" href="/css/slick.css" />
+        <link rel="stylesheet" type="text/css" href="/css/bootstrap.min.css" />
+        <link rel="stylesheet" type="text/css" href="/css/style.css" />
+        <link rel="stylesheet" type="text/css" href="/css/responsive.css" />
+    </head>
+    <body>
+        <div class="main-wrpper">
+            
+            <!-- Header -->
+            <header>
+                <div class="container-fluid">
+                    <nav class="navbar navbar-expand-md navbar-light">
+                        <a class="navbar-brand" href="index.html"><img src="/images/logo@2x.png" alt="Logo" /></a>
 
-        .welcome-message {
-            margin-bottom: 2rem;
-        }
+                        <ul class="language-rw mobile-lang">
+                            <li class="active"><a href="#">it </a></li>
+                            <li><a href="#">en</a></li>
+                        </ul>
+                        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#NavbarToggle" aria-controls="NavbarToggle" aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="collapse navbar-collapse" id="NavbarToggle">
+                            <div class="nav-row">
+                                <ul class="navbar-nav">
+                                    <li><a class="nav-link" href="#" data-scroll-nav="0" k-edit k-id="nav-menu">MENU</a></li>
+                                    <li><a class="nav-link" href="#" data-scroll-nav="1" k-edit k-id="nav-us">CHI SIAMO</a></li>
+                                    <li><a class="nav-link" href="#" data-scroll-nav="2" k-edit k-id="nav-story">STORIA</a></li>
+                                </ul>
 
-        h1 {
-            color: var(--secondary-color);
-            font-size: 2.5em;
-            margin-bottom: 0.5rem;
-        }
+                                <div class="enter-nav">
+                                    <ul class="language-rw">
+                                        <li class="active"><a href="#">it </a></li>
+                                        <li><a href="#">en</a></li>
+                                    </ul>
 
-        h2 {
-            color: var(--accent-color);
-            font-weight: 300;
-            margin-top: 0;
-        }
+                                    <ul class="header-right">
+                                        <li><a href="#" target="_blank"><i class="fab fa-instagram fa-fw"></i></a></li>
+                                        <li><a href="#" target="_blank"><i class="fab fa-facebook-f fa-fw"></i></a></li>
+                                        <li><a href="#" class="book-btn" k-edit k-id="btn-book-1">PRENOTA</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+            </header>
+            <!-- End Header -->
 
-        .links {
-            margin-bottom: 3rem;
-        }
+            <!-- Hero Banner -->
+            <section class="hero-banner">
+                <div class="hero-banner-img">
+                    <figure>
+                        <img src="/images/hero-banner-img.jpg" alt="Banner" class="desktop-img">
+                    </figure>
 
-        .btn {
-            padding: 12px 24px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 500;
-            background-color: var(--secondary-color);
-            color: white;
-        }
+                    <figure>
+                        <img src="/images/hero-banner-img-mobile.jpg" alt="Banner" class="mobile-img">
+                    </figure>
+                </div>
 
-        .btn:hover {
-            background-color: #2a3b4d;
-        }
+                <div class="banner-center">
+                    <div class="container">
+                        <figure>
+                            <img src="/images/logo2@2x.png" alt="Logo">
+                        </figure>
 
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            max-width: 800px;
-            padding: 2rem;
-        }
+                        <a href="#" class="btn-main" k-edit k-id="btn-book-2">PRENOTA</a>
+                    </div>
+                </div>
 
-        .feature-card {
-            background: white;
-            padding: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
+                <div class="mobile-button">                    
+                    <a href="#" class="btn-main" k-edit k-id="btn-book-3">PRENOTA</a>
+                </div>
 
-        .feature-card h3 {
-            color: var(--primary-color);
-            margin-top: 0;
-        }
+                <a href="javascript:void(0);" class="scroll-btn"><i class="fal fa-chevron-down fa-fw"></i></a>
+            </section>
+            <!-- End Hero Banner -->
 
-        footer {
-            margin-top: 3rem;
-            color: var(--accent-color);
-            font-size: 0.9em;
-        }
-    </style>
-</head>
-<body>
-    <img k-edit k-id="logo" editable-img="true" src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgoKPHN2ZwogICB3aWR0aD0iMTAwbW0iCiAgIGhlaWdodD0iMTAwbW0iCiAgIHZpZXdCb3g9IjAgMCAxMDAgMTAwIgogICB2ZXJzaW9uPSIxLjEiCiAgIGlkPSJzdmcxIgogICBpbmtzY2FwZTp2ZXJzaW9uPSIxLjMuMiAoMDkxZTIwZSwgMjAyMy0xMS0yNSwgY3VzdG9tKSIKICAgc29kaXBvZGk6ZG9jbmFtZT0ibG9nby5zdmciCiAgIHhtbG5zOmlua3NjYXBlPSJodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy9uYW1lc3BhY2VzL2lua3NjYXBlIgogICB4bWxuczpzb2RpcG9kaT0iaHR0cDovL3NvZGlwb2RpLnNvdXJjZWZvcmdlLm5ldC9EVEQvc29kaXBvZGktMC5kdGQiCiAgIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIKICAgeG1sbnM6c3ZnPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHNvZGlwb2RpOm5hbWVkdmlldwogICAgIGlkPSJuYW1lZHZpZXcxIgogICAgIHBhZ2Vjb2xvcj0iI2ZmZmZmZiIKICAgICBib3JkZXJjb2xvcj0iIzAwMDAwMCIKICAgICBib3JkZXJvcGFjaXR5PSIwLjI1IgogICAgIGlua3NjYXBlOnNob3dwYWdlc2hhZG93PSIyIgogICAgIGlua3NjYXBlOnBhZ2VvcGFjaXR5PSIwLjAiCiAgICAgaW5rc2NhcGU6cGFnZWNoZWNrZXJib2FyZD0iMCIKICAgICBpbmtzY2FwZTpkZXNrY29sb3I9IiNkMWQxZDEiCiAgICAgaW5rc2NhcGU6ZG9jdW1lbnQtdW5pdHM9Im1tIgogICAgIGlua3NjYXBlOnpvb209IjAuMzczNzEyODIiCiAgICAgaW5rc2NhcGU6Y3g9IjExNS4wNjE2MSIKICAgICBpbmtzY2FwZTpjeT0iMjc2Ljk1MDYzIgogICAgIGlua3NjYXBlOndpbmRvdy13aWR0aD0iMTkyMCIKICAgICBpbmtzY2FwZTp3aW5kb3ctaGVpZ2h0PSIxMDE3IgogICAgIGlua3NjYXBlOndpbmRvdy14PSIxOTEyIgogICAgIGlua3NjYXBlOndpbmRvdy15PSItOCIKICAgICBpbmtzY2FwZTp3aW5kb3ctbWF4aW1pemVkPSIxIgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIgLz4KICA8ZGVmcwogICAgIGlkPSJkZWZzMSIgLz4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMaXZlbGxvIDEiCiAgICAgaW5rc2NhcGU6Z3JvdXBtb2RlPSJsYXllciIKICAgICBpZD0ibGF5ZXIxIj4KICAgIDxnCiAgICAgICBpZD0iZzgiCiAgICAgICB0cmFuc2Zvcm09Im1hdHJpeCgxMC4wMDAwOSwwLDAsMTAuMDAwMDksLTE0MTAuMjQyLC0xOTAuNTAxNzEpIj4KICAgICAgPHBhdGgKICAgICAgICAgaWQ9InBhdGg2LTItNiIKICAgICAgICAgc3R5bGU9ImZpbGw6IzQyYzk4MztmaWxsLW9wYWNpdHk6MTtzdHJva2Utd2lkdGg6MS4zMjI5MjtzdHJva2UtbGluZWNhcDpyb3VuZDtzdHJva2UtbGluZWpvaW46cm91bmQ7cGFpbnQtb3JkZXI6bWFya2VycyBzdHJva2UgZmlsbCIKICAgICAgICAgZD0ibSAxNDEuNjA3MzgsMTkuNjM0NDYxIGMgLTAuMzYxNDQsMC4zNjE0NDggLTAuNTg0NDYsMC44NjE1NTYgLTAuNTg0NDYsMS40MTU0MTcgdiAzLjUwMDA0NSAyLjUwMDEwNiAxLjk5OTg3NyBoIDkuOTk5OTEgeiIgLz4KICAgICAgPHBhdGgKICAgICAgICAgaWQ9InBhdGg2LTktOS02IgogICAgICAgICBzdHlsZT0iZmlsbDojMzU0OTVlO2ZpbGwtb3BhY2l0eToxO3N0cm9rZS13aWR0aDoxLjMyMjkyO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDtwYWludC1vcmRlcjptYXJrZXJzIHN0cm9rZSBmaWxsIgogICAgICAgICBkPSJtIDE0My4wMjMzMiwxOS4wNSBjIC0xLjEwOCwwIC0yLjAwMDQsMC44OTE4OCAtMi4wMDA0LDEuOTk5ODc4IHYgMy41MDAwNDUgMi41MDAxMDYgMS45OTk4NzcgTCAxNTEuMDIyODMsMTkuMDUgWiIgLz4KICAgIDwvZz4KICA8L2c+Cjwvc3ZnPgo=" 
-         alt="Kris CMS Logo" 
-         class="logo">
+            <!-- About -->
+            <div class="about-wrp">
 
-    <div class="welcome-message">
-        <h1 k-edit k-id="title">Welcome to Kris CMS</h1>
-        <h2 k-edit k-id="subtitle">The Modern Content Management Framework</h2>
-    </div>
+                <section class="restro-wrp">
+                    <div class="container">
+                        <div class="restro-row" data-scroll-index="0">
+                            <div class="row">
+                                <div class="col-md-8 col-sm-12">
+                                    <div class="restro-data">
+                                        <h1 k-edit k-id="text-1">IL RISTORANTE</h1>
 
-    <div class="links">
-        <a href="https://github.com/fellarrusto/kris-cms" class="btn" k-edit k-id="button-git">GitHub Repository</a>
-    </div>
+                                        <p k-edit k-id="text-2">Soul&Fish, anima e pesce. Nessuna differenza, l’uomo è ciò che mangia. Perciò mettetevi  comodi, respirate la brezza del mare, ripulite i polmoni dallo stress,  al resto ci pensiamo noi.</p>
 
-    <div class="features">
-        <div class="feature-card">
-            <h3 k-edit k-id="feature-1-title">Feature 1 Title</h3>
-            <p k-edit k-id="feature-1-desc">Feature 1 Description</p>
+                                        <p class="mb-0"><strong k-edit k-id="text-3">Ma noi chi?</strong></p>
+                                        <p k-edit k-id="text-4">Nessun plurare maestatis, siamo sei teste calde ed un solo cuore che batte. Nasciamo nel 2014,  riuniti dalle stesse passioni, giovani legati alla tradizione ma  proiettati al futuro. Siamo la terza generazione, uniti da un legame  familiare, che è la nostra forza. Abbiamo fatto del rispetto per la  tradizione, unita all’innovazione, una costante. Adesso che sapete chi  siamo, fidatevi dell’istinto che vi ha portati fin qui e lasciate che i  vostri sensi si divertano insieme a noi.</p>
+
+                                        <a href="#" class="btn-secondary" k-edit k-id="btn-menu-1">MENU</a>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-sm-12">
+                                    <div class="restro-img">
+                                        <figure>
+                                            <img  k-edit k-id="img-restaurant" src="/images/restro-img@2x.png" alt="restro-img">
+                                        </figure>
+                                    </div>
+                                </div>
+                            </div>  
+                        </div>
+
+                        <div class="restro-row who-we-wrp" data-scroll-index="1">
+                            <div class="row">
+                                <div class="col-md-4 col-sm-12">
+                                    <div class="restro-img">
+                                        <figure>
+                                            <img src="/images/who-we@2x.png" alt="restro-img">
+                                        </figure>
+                                    </div>
+                                </div>
+                                <div class="col-md-8 col-sm-12">
+                                    <div class="restro-data">
+                                        <div class="titlebar">
+                                            <h2 k-edit k-id="text-chi-siamo">CHI SIAMO</h2>
+                                        </div>
+
+                                        <p k-edit k-id="text-chi-siamo-p1">Soul&Fish, anima e pesce. Nessuna differenza, l’uomo è ciò che mangia. Perciò mettetevi  comodi, respirate la brezza del mare, ripulite i polmoni dallo stress,  al resto ci pensiamo noi.</p>
+
+                                        <p><strong k-edit k-id="text-chi-siamo-strong">Ma noi chi?</strong></p>
+                                        <p k-edit k-id="text-chi-siamo-p2">Nessun plurare maestatis, siamo sei teste calde ed un solo cuore che batte. Nasciamo nel 2014,  riuniti dalle stesse passioni, giovani legati alla tradizione ma  proiettati al futuro. Siamo la terza generazione, uniti da un legame  familiare, che è la nostra forza. Abbiamo fatto del rispetto per la  tradizione, unita all’innovazione, una costante. Adesso che sapete chi  siamo, fidatevi dell’istinto che vi ha portati fin qui e lasciate che i  vostri sensi si divertano insieme a noi.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>  
+                    </div>
+                </section>
+
+                <section class="restro-family-wrp">
+                    <figure>
+                        <img k-edit k-id="image-wide-1" src="/images/restorant-img.jpg" alt="restro family">
+                    </figure>
+                </section>
+
+                <section class="the-dishes-wrp">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-md-6 col-sm-12">
+                                <div class="dishes-data">
+                                    <div class="titlebar">
+                                        <h2 k-edit k-id="text-piatti">I PIATTI</h2>
+                                    </div>
+
+                                    <p k-edit k-id="text-piatti-p1">"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do  eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad  minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip  ex ea commodo consequat. Duis aute irure dolor in reprehenderit in  voluptate velit esse cillum dolore eu fugiat nulla </p>
+
+                                    <a k-edit k-id="text-piatti-button" href="#" class="btn-secondary">MENù</a>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+                                <div class="dishes-slider">
+                                    <div class="dishes-img">
+                                        <figure>
+                                            <img k-edit k-id="slideshow-img-1" src="/images/dish-img.png" alt="Dishes">
+                                        </figure>
+                                    </div>
+                                    <div class="dishes-img">
+                                        <figure>
+                                            <img k-edit k-id="slideshow-img-2" src="/images/dish-img2.png" alt="Dishes">
+                                        </figure>
+                                    </div>
+                                    <div class="dishes-img">
+                                        <figure>
+                                            <img k-edit k-id="slideshow-img-3" src="/images/dish-img.png" alt="Dishes">
+                                        </figure>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- End About -->
+
+            <!-- Our History -->
+            <section class="our-history-wrp" data-scroll-index="2">
+                <div class="container">
+                    <div class="history-data">
+                        <div class="titlebar">
+                            <h2 k-edit k-id="text-storia">LA NOSTRA STORIA</h2>
+                            <p k-edit k-id="text-storia-p1">Era il 1965, il sole cocente scaldava e imbruniva la pelle di Antonino, che di salsedine e sole ne aveva vista, con un occhio guardava la gatta e Anna, l’amore della sua vita, friggeva il pesce. Soul & Fish sta per Anna e Antonino. Una storia di ombrelloni giallo rossi, di fish & chips e di nipoti che si sbucciavano le ginocchia.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="history-img">
+                    <figure>
+                        <img src="/images/history-img.png" alt="History Image">
+                    </figure>
+                </div>
+            </section>
+            <!-- End Our History -->
+
+            <!-- Contact -->
+            <section class="contact-wrp">
+                <div class="container">
+                    <div class="titlebar">
+                        <h2 k-edit k-id="text-contatti">CONTATTI</h2>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-5 col-sm-12">
+                            <div class="contact-data">
+                                <figure>
+                                    <a href="index.html"><img src="/images/logo2@2x.png" alt="Logo"></a>
+                                </figure>
+
+                                <div class="contact-list">
+                                    <p k-edit k-id="text-contatti-address">Soul & Fish Via Marina Grande 80067 Sorrento ITALY </p>
+                                    <p>Ph. <a href="tel:390818782170" k-edit k-id="text-contatti-phone">+39 0818782170</a></p>
+                                    <p>E-mail: <a href="mailto:info@soulandfish.it" k-edit k-id="text-contatti-email">info@soulandfish.it</a></p>
+                                </div>
+
+                                <div class="social-bx">
+                                    <a href="#" target="_blank"><i class="fab fa-instagram fa-fw"></i></a>
+                                    <a href="#" target="_blank"><i class="fab fa-facebook-f fa-fw"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-7 col-sm-12">
+                            <div class="map-box">
+                                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3591.920755577477!2d14.361893876410253!3d40.627772442767004!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x133b9ea501351d5b%3A0xf44e7fbd3bd40950!2sSoul%20%26%20Fish!5e1!3m2!1sen!2sin!4v1738567582475!5m2!1sen!2sin" width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <!-- End Contact -->
         </div>
-        <div class="feature-card">
-            <h3 k-edit k-id="feature-2-title">Modular 🧩</h3>
-            <p k-edit k-id="feature-2-desc">Composable architecture with plugin system</p>
-        </div>
-        <div class="feature-card">
-            <h3 k-edit k-id="feature-3-title">Secure 🔒</h3>
-            <p k-edit k-id="feature-3-desc">Built-in security best practices and validation</p>
-        </div>
-    </div>
 
-    <footer>
-        <p k-edit k-id="footer-start">Start by creating your first content model</p>
-        <p k-edit k-id="footer-version">Kris CMS v1.0.0 · MIT Licensed</p>
-    </footer>
-</body>
+        <!-- script -->
+        <script src="/js/jquery.js"></script>
+        <script src="/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/slick.min.js"></script>
+        <script src="/js/scrollIt.min.js"></script>
+        <script src="/js/custom.js"></script>
+        <!-- End script -->
+    </body>
 </html>

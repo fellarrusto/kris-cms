@@ -15,12 +15,6 @@ if (json_last_error() !== JSON_ERROR_NONE) {
     exit;
 }
 
-if (!isset($data['title']['en']) || !isset($data['title']['it'])) {
-    http_response_code(400);
-    echo json_encode(['status' => 'error', 'message' => 'Struttura dati mancante']);
-    exit;
-}
-
 // Percorso file dati
 $dataFile = __DIR__ . '/../k_data.json';
 

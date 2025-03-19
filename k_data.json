@@ -1,49 +1,113 @@
 {
-    "title": {
-        "en": "Welcome to Kris CMS",
-        "it": "Benvenuti su Kris CMS"
+    "nav-menu": {
+        "en": "MENU",
+        "it": "MENU"
     },
-    "subtitle": {
-        "en": "Edit in place your content.",
-        "it": "Modifica diretta dei contenuti."
+    "nav-us": {
+        "en": "ABOUT US",
+        "it": "CHI SIAMO"
     },
-    "button-git": {
-        "en": "GitHub Repository",
-        "it": "Repository GitHub"
+    "nav-story": {
+        "en": "STORY",
+        "it": "STORIA"
     },
-    "feature-1-title": {
-        "en": "Lightweight ⚡",
-        "it": "Leggero ⚡"
+    "btn-book-1": {
+        "en": "BOOK",
+        "it": "PRENOTA"
     },
-    "feature-1-desc": {
-        "en": "Few files great power.",
-        "it": "Pochi files grande potenza."
+    "btn-book-2": {
+        "en": "BOOK",
+        "it": "PRENOTA"
     },
-    "feature-2-title": {
-        "en": "Simple 🧩",
-        "it": "Semplice 🧩"
+    "btn-book-3": {
+        "en": "BOOK",
+        "it": "PRENOTA"
     },
-    "feature-2-desc": {
-        "en": "No database or complex configurations.",
-        "it": "Nessun database o configurazioni complesse."
+    "text-1": {
+        "en": "THE RESTAURANT",
+        "it": "IL RISTORANTE"
     },
-    "feature-3-title": {
-        "en": "Direct 🚀",
-        "it": "Immediato 🚀"
+    "text-2": {
+        "en": "Soul&Fish, soul and fish. No difference, man is what he eats. So sit back, breathe the sea breeze, clear your lungs from stress, we'll take care of the rest.",
+        "it": "Soul&Fish, anima e pesce. Nessuna differenza, l’uomo è ciò che mangia. Perciò mettetevi comodi, respirate la brezza del mare, ripulite i polmoni dallo stress, al resto ci pensiamo noi."
     },
-    "feature-3-desc": {
-        "en": "Just edit the content you see.",
-        "it": "Modifica direttamente ciò che vedi."
+    "text-3": {
+        "en": "But who are we?",
+        "it": "Ma noi chi?"
     },
-    "footer-start": {
-        "en": "Start by creating your first content model",
-        "it": "Inizia creando il tuo primo modello di contenuto"
+    "text-4": {
+        "en": "No royal we, we are six hot heads and one beating heart. Born in 2014, united by the same passions, young people tied to tradition but projected into the future.",
+        "it": "Nessun plurare maestatis, siamo sei teste calde ed un solo cuore che batte. Nasciamo nel 2014, riuniti dalle stesse passioni, giovani legati alla tradizione ma proiettati al futuro."
     },
-    "footer-version": {
-        "en": "Kris CMS v1.0.0 · MIT Licensed",
-        "it": "Kris CMS v1.0.0 · Licenza MIT"
+    "btn-menu-1": {
+        "en": "MENU",
+        "it": "MENU"
     },
-    "logo": {
-        "src": "src/logo.svg"
+    "img-restaurant": {
+        "src": "/images/restro-img@2x.png"
+    },
+    "text-chi-siamo": {
+        "en": "ABOUT US",
+        "it": "CHI SIAMO"
+    },
+    "text-chi-siamo-p1": {
+        "en": "Soul&Fish, soul and fish. No difference, man is what he eats. So sit back, breathe the sea breeze, clear your lungs from stress, we'll take care of the rest.",
+        "it": "Soul&Fish, anima e pesce. Nessuna differenza, l’uomo è ciò che mangia. Perciò mettetevi comodi, respirate la brezza del mare, ripulite i polmoni dallo stress, al resto ci pensiamo noi."
+    },
+    "text-chi-siamo-strong": {
+        "en": "But who are we?",
+        "it": "Ma noi chi?"
+    },
+    "text-chi-siamo-p2": {
+        "en": "No royal we, we are six hot heads and one beating heart. Born in 2014, united by the same passions, young people tied to tradition but projected into the future.",
+        "it": "Nessun plurare maestatis, siamo sei teste calde ed un solo cuore che batte. Nasciamo nel 2014, riuniti dalle stesse passioni, giovani legati alla tradizione ma proiettati al futuro."
+    },
+    "image-wide-1": {
+        "src": "/images/restorant-img.jpg"
+    },
+    "text-piatti": {
+        "en": "THE DISHES",
+        "it": "I PIATTI"
+    },
+    "text-piatti-p1": {
+        "en": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+        "it": "\"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+    },
+    "text-piatti-button": {
+        "en": "MENU",
+        "it": "MENÙ"
+    },
+    "slideshow-img-1": {
+        "src": "/images/dish-img.png"
+    },
+    "slideshow-img-2": {
+        "src": "/images/dish-img2.png"
+    },
+    "slideshow-img-3": {
+        "src": "/images/dish-img.png"
+    },
+    "text-storia": {
+        "en": "OUR HISTORY",
+        "it": "LA NOSTRA STORIA"
+    },
+    "text-storia-p1": {
+        "en": "It was 1965, the scorching sun warmed and tanned Antonino's skin, who had seen a lot of salt and sun. With one eye, he watched the cat, while Anna, the love of his life, fried the fish.",
+        "it": "Era il 1965, il sole cocente scaldava e imbruniva la pelle di Antonino, che di salsedine e sole ne aveva vista. Con un occhio guardava la gatta e Anna, l’amore della sua vita, friggeva il pesce."
+    },
+    "text-contatti": {
+        "en": "CONTACTS",
+        "it": "CONTATTI"
+    },
+    "text-contatti-address": {
+        "en": "Soul & Fish Via Marina Grande 80067 Sorrento ITALY",
+        "it": "Soul & Fish Via Marina Grande 80067 Sorrento ITALIA"
+    },
+    "text-contatti-phone": {
+        "en": "+39 0818782170",
+        "it": "+39 0818782170"
+    },
+    "text-contatti-email": {
+        "en": "info@soulandfish.it",
+        "it": "info@soulandfish.it"
     }
 }
