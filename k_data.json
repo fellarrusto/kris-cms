@@ -28,71 +28,71 @@
         "it": "IL RISTORANTE"
     },
     "text-2": {
-        "en": "Soul&Fish, soul and fish. No difference, man is what he eats. So sit back, breathe the sea breeze, clear your lungs from stress, we'll take care of the rest.",
-        "it": "Soul&Fish, anima e pesce. Nessuna differenza, l’uomo è ciò che mangia. Perciò mettetevi comodi, respirate la brezza del mare, ripulite i polmoni dallo stress, al resto ci pensiamo noi."
+        "en": "We are bold and forward-thinking.\n\nTraveling has opened our eyes—we’ve looked around, gathered inspiration, and brought it home. You’ll find it on our plates.\n\nOur vision? A new generation obsessed with quality. A touch of fine dining luxury, never taken for granted, because it lives in a setting of sand, earth, and sea. We never forget where we come from—it’s our compass, guiding us toward both near and distant goals.\n\nWe were born from a love story, and like all great love stories, it’s an endless return.\n\nFresh catch, seasonal ingredients, carefully selected produce, and a whole lot of passion—this is what defines our cuisine. Why us?",
+        "it": "Siamo intrepidi e lungimiranti, viaggiando ci siamo guardati intorno, riportando a casa spunti di riflessione. Li troverete nei nostri piatti.\nLa nostra visione è quella di una gioventù ossessionata dalla qualità, dove non manca mai il tocco di lusso del fine dining, per nulla scontato, perchè inserito in una cornice sabbia, terra e mare. Ricordiamo sempre da dove siamo venuti, ci indica la strada per gli obiettivi vicini e lontani. Nasciamo da una storia d’amore e come tale è un eterno ritorno.\nPescato fresco, stagionalità dei prodotti, scelta accurata della materia prima e tantissima passione, contraddistinguono la nostra offerta culinaria. Perchè proprio noi?"
     },
     "text-3": {
-        "en": "But who are we?",
-        "it": "Ma noi chi?"
+        "en": "",
+        "it": ""
     },
     "text-4": {
-        "en": "No royal we, we are six hot heads and one beating heart. Born in 2014, united by the same passions, young people tied to tradition but projected into the future.",
-        "it": "Nessun plurare maestatis, siamo sei teste calde ed un solo cuore che batte. Nasciamo nel 2014, riuniti dalle stesse passioni, giovani legati alla tradizione ma proiettati al futuro."
+        "en": "",
+        "it": ""
     },
     "btn-menu-1": {
         "en": "MENU",
         "it": "MENU"
     },
     "img-restaurant": {
-        "src": "/images/restro-img@2x.png"
+        "src": "\/images\/restro-img@2x.png"
     },
     "text-chi-siamo": {
         "en": "ABOUT US",
         "it": "CHI SIAMO"
     },
     "text-chi-siamo-p1": {
-        "en": "Soul&Fish, soul and fish. No difference, man is what he eats. So sit back, breathe the sea breeze, clear your lungs from stress, we'll take care of the rest.",
-        "it": "Soul&Fish, anima e pesce. Nessuna differenza, l’uomo è ciò che mangia. Perciò mettetevi comodi, respirate la brezza del mare, ripulite i polmoni dallo stress, al resto ci pensiamo noi."
+        "en": "Soul and Fish. Anima e pesce. No difference. We are what we eat.\n\nSo, sit back, breathe in the salty breeze, and let go of the stress. We’ll take care of the rest.",
+        "it": "Soul and Fish, anima e pesce. Nessuna differenza, l’uomo è ciò che mangia. Perciò mettetevi comodi, respirate la brezza del mare, ripulite i polmoni dallo stress, al resto ci pensiamo noi.\n"
     },
     "text-chi-siamo-strong": {
         "en": "But who are we?",
         "it": "Ma noi chi?"
     },
     "text-chi-siamo-p2": {
-        "en": "No royal we, we are six hot heads and one beating heart. Born in 2014, united by the same passions, young people tied to tradition but projected into the future.",
-        "it": "Nessun plurare maestatis, siamo sei teste calde ed un solo cuore che batte. Nasciamo nel 2014, riuniti dalle stesse passioni, giovani legati alla tradizione ma proiettati al futuro."
+        "en": "No royal “we” here—just six fiery minds and one beating heart.\n\nWe started in 2014, brought together by the same passions. Young, rooted in tradition, yet always looking ahead. We are the third generation, bound by family ties—our greatest strength.\n\nWe believe in respecting tradition while embracing innovation, always pushing forward without forgetting where we came from.\n\nNow that you know who we are, trust the instinct that led you here and let your senses have some fun with us.",
+        "it": "Nessun plurare maestatis, siamo sei teste calde ed un solo cuore che batte. Nasciamo nel 2014, riuniti dalle stesse passioni, giovani legati alla tradizione ma proiettati al futuro. \n\nSiamo la terza generazione, uniti da un legame familiare, che è la nostra forza. Abbiamo fatto del rispetto per la tradizione, unita all’innovazione, una costante. Adesso che sapete chi siamo, fidatevi dell’istinto che vi ha portati fin qui e lasciate che i vostri sensi si divertano insieme a noi."
     },
     "image-wide-1": {
-        "src": "/images/restorant-img.jpg"
+        "src": "\/images\/restorant-img.jpg"
     },
     "text-piatti": {
         "en": "THE DISHES",
         "it": "I PIATTI"
     },
     "text-piatti-p1": {
-        "en": "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-        "it": "\"Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        "en": "What do we serve? Or maybe, what have we served? One thing’s for sure—there’s always fresh fish and whatever the sea has to offer.\n\nWe reject stagnation—it’s just not who we are. Our dishes are dynamic, fresh, simple yet complex, inviting and accessible to all palates.\n\nFood is life, and we want ours to feel like a gentle touch to the soul.",
+        "it": "Quali sono i nostri piatti? O forse quali sono stati? Sappiamo di sicuro che c’è del pesce fresco e tutto ciò che il mare offre. Combattiamo la staticità che non ci appartiene. Piatti dinamici, freschi, che apprezzano e accolgono la semplicità; ma che sanno parlare con il linguaggio della complessità aperta a tutti i palati. Il cibo è vita e il nostro vuole essere una carezza per l’anima. \n"
     },
     "text-piatti-button": {
         "en": "MENU",
         "it": "MENÙ"
     },
     "slideshow-img-1": {
-        "src": "/images/dish-img.png"
+        "src": "\/images\/dish-img.png"
     },
     "slideshow-img-2": {
-        "src": "/images/dish-img2.png"
+        "src": "\/images\/dish-img2.png"
     },
     "slideshow-img-3": {
-        "src": "/images/dish-img.png"
+        "src": "\/images\/dish-img.png"
     },
     "text-storia": {
         "en": "OUR HISTORY",
         "it": "LA NOSTRA STORIA"
     },
     "text-storia-p1": {
-        "en": "It was 1965, the scorching sun warmed and tanned Antonino's skin, who had seen a lot of salt and sun. With one eye, he watched the cat, while Anna, the love of his life, fried the fish.",
-        "it": "Era il 1965, il sole cocente scaldava e imbruniva la pelle di Antonino, che di salsedine e sole ne aveva vista. Con un occhio guardava la gatta e Anna, l’amore della sua vita, friggeva il pesce."
+        "en": "It was 1965. The scorching sun tanned and bronzed Antonino’s skin—he knew salt and sun well. With one eye on the cat and the other on Anna, the love of his life, he watched her fry fish.\n\nSoul and Fish is Anna and Antonino. A story of striped yellow and red umbrellas, fish & chips, and grandkids with scraped knees.\n\nThe protagonists haven’t changed. Those kids just grew up—strong, united, and full of fire.\n\nWhere they once played and scraped their knees, today, they run fast.",
+        "it": "Era il 1965, il sole cocente scaldava e imbruniva la pelle di Antonino, che di salsedine e sole ne aveva vista, con un occhio guardava la gatta e Anna, l’amore della sua vita, friggeva il pesce. Soul and Fish sta per Anna e Antonino. Una storia di ombrelloni giallo rossi, di fish & chips e di nipoti che si sbucciavano le ginocchia.\nI protagonisti non sono cambiati, quei bambini sono solo cresciuti, uniti e con gli animi vigorosi. Dove giocavano a sbucciarsi le ginocchia, oggi corrono veloci."
     },
     "text-contatti": {
         "en": "CONTACTS",
