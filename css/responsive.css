@@ -98,11 +98,11 @@
 	.banner-center{top: 25%;}
 	.banner-center figure img{height: auto;margin: 0 auto;height: 24px;}
 	.mobile-button{display: block;background: transparent;padding: 0;position: absolute; top: 55%;left: 0;right: 0;transform: translateY(-50%);}
-	.mobile-button .btn-main{margin: 0 auto;color: #084D5D;border-color: #F2EEE4;background: #F2EEE4;font-size: 15px;line-height: 15px;padding: 11px 25px 8px;border-radius: 30px;}
-	.mobile-button .btn-main:hover{background: #591B0A;color: #fff;border-color: #591B0A;}
+	.mobile-button .btn-main{margin: 0 auto;color: #B35942;border-color: #F2EEE4;background: #F2EEE4;font-size: 15px;line-height: 15px;padding: 11px 25px 8px;border-radius: 30px;}
+	.mobile-button .btn-main:hover{background: #B35942;color: #fff;border-color: #B35942;}
 	ul.language-rw li a{font-weight: 700;}
-	.scroll-btn{width: 44px;height: 44px;line-height: 48px;color: #591B0A;font-size: 18px;text-align: center;display: block;position: absolute;bottom: 20px;left: 0;right: 0;margin: 0 auto;border: 1px solid #591B0A;border-radius: 100%;}
-	.scroll-btn:hover{background: #591B0A;color: #fff;}
+	.scroll-btn{width: 44px;height: 44px;line-height: 48px;color: #4F2612;font-size: 18px;text-align: center;display: block;position: absolute;bottom: 20px;left: 0;right: 0;margin: 0 auto;border: 1px solid #4F2612;border-radius: 100%;}
+	.scroll-btn:hover{background: #4F2612;color: #fff;}
 	
 	.restro-wrp{padding: 22px 0;}
 	.restro-row{padding: 22px 0;margin: 0;}

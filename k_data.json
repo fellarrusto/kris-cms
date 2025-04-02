@@ -29,7 +29,7 @@
     },
     "text-2": {
         "en": "We are bold and forward-thinking.\n\nTraveling has opened our eyes—we’ve looked around, gathered inspiration, and brought it home. You’ll find it on our plates.\n\nOur vision? A new generation obsessed with quality. A touch of fine dining luxury, never taken for granted, because it lives in a setting of sand, earth, and sea. We never forget where we come from—it’s our compass, guiding us toward both near and distant goals.\n\nWe were born from a love story, and like all great love stories, it’s an endless return.\n\nFresh catch, seasonal ingredients, carefully selected produce, and a whole lot of passion—this is what defines our cuisine. Why us?",
-        "it": "Siamo intrepidi e lungimiranti, viaggiando ci siamo guardati intorno, riportando a casa spunti di riflessione. Li troverete nei nostri piatti.\nLa nostra visione è quella di una gioventù ossessionata dalla qualità, dove non manca mai il tocco di lusso del fine dining, per nulla scontato, perchè inserito in una cornice sabbia, terra e mare. Ricordiamo sempre da dove siamo venuti, ci indica la strada per gli obiettivi vicini e lontani. Nasciamo da una storia d’amore e come tale è un eterno ritorno.\nPescato fresco, stagionalità dei prodotti, scelta accurata della materia prima e tantissima passione, contraddistinguono la nostra offerta culinaria. Perchè proprio noi?"
+        "it": "Siamo intrepidi e lungimiranti, viaggiando ci siamo guardati intorno, riportando a casa spunti di riflessione. Li troverete nei nostri piatti.\n\n\nLa nostra visione è quella di una gioventù ossessionata dalla qualità, dove non manca mai il tocco di lusso del fine dining, per nulla scontato, perchè inserito in una cornice sabbia, terra e mare. Ricordiamo sempre da dove siamo venuti, ci indica la strada per gli obiettivi vicini e lontani. Nasciamo da una storia d’amore e come tale è un eterno ritorno.\nPescato fresco, stagionalità dei prodotti, scelta accurata della materia prima e tantissima passione, contraddistinguono la nostra offerta culinaria. Perchè proprio noi?"
     },
     "text-3": {
         "en": "",
@@ -85,6 +85,9 @@
     },
     "slideshow-img-3": {
         "src": "\/images\/dish-img.png"
+    },
+    "img-logo": {
+        "src": "\/images\/logo2@2x.png"
     },
     "text-storia": {
         "en": "OUR HISTORY",
