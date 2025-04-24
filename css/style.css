@@ -216,6 +216,21 @@ ul.header-right li a.book-btn:hover{
     background: #B35942;
     color: #fff;
 }
+
+a.privacy-btn {
+    padding: 4px 12px;
+    border: 1px solid #B35942;
+    border-radius: 30px;
+    width: auto;
+    height: 32px;
+    color: #B35942;
+    display: inline-block;
+    font-size: 16px;
+    letter-spacing: 0.15em;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
 /* **** End Header **** */
 
 /* **** toggler **** */

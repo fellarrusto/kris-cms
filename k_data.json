@@ -112,5 +112,9 @@
     "text-contatti-email": {
         "en": "info@soulandfish.com",
         "it": "info@soulandfish.com"
+    },
+    "update-privacy": {
+        "en": "UPDATE PRIVACY",
+        "it": "AGGIORNA PRIVACY"
     }
 }
