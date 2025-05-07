@@ -78,15 +78,36 @@
         "it": "MENÙ"
     },
     "slideshow-img-1": {
-        "src": "\/images\/dish-img.png"
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 1.jpg"
     },
     "slideshow-img-2": {
-        "src": "\/images\/dish-img2.png"
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 2.jpg"
     },
     "slideshow-img-3": {
-        "src": "\/images\/dish-img.png"
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 3.jpg"
     },
-    "img-logo": {
+    "slideshow-img-4": {
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 4.jpg"
+    },
+    "slideshow-img-5": {
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 5.jpg"
+    },
+    "slideshow-img-6": {
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 6.jpg"
+    },
+    "slideshow-img-7": {
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 7.jpg"
+    },
+    "slideshow-img-8": {
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 8.jpg"
+    },
+    "slideshow-img-9": {
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 9.jpg"
+    },
+    "slideshow-img-10": {
+        "src": "\/images\/Soul & Fish Restaurant Sorrento 10.jpg"
+    },
+      "img-logo": {
         "src": "\/images\/logo2@2x.png"
     },
     "text-storia": {
