@@ -72,19 +72,6 @@
                 "en": "No database or complex configurations.",
                 "it": "Nessun database o configurazioni complesse."
             }
-        },
-        {
-            "image": {
-                "src": "/src/logo.svg"
-            },
-            "title": {
-                "en": "test3",
-                "it": "Immediato 🚀"
-            },
-            "desc": {
-                "en": "Just edit the content you see.",
-                "it": "Modifica direttamente ciò che vedi."
-            }
         }
     ]
 }

@@ -118,21 +118,12 @@
         </div>
     </div>
 
-    <div id="features-repeatable" k-edit k-id="features-repeatable" style="cursor:pointer;"></div>
+    <div class="features-repeatable" id="features-repeatable-1" k-edit k-id="features-repeatable" style="cursor:pointer;"></div>
+    <!-- <div class="features-repeatable" id="features-repeatable-2" k-edit k-id="features-repeatable" style="cursor:pointer;"></div> -->
 
     <footer>
         <p k-edit k-id="footer-start">Start by creating your first content model</p>
         <p k-edit k-id="footer-version">Kris CMS v1.0.0 · MIT Licensed</p>
     </footer>
-    <script>
-      fetch('/templates/components/repeatable-content.html')
-        .then(response => response.text())
-        .then(html => {
-          document.getElementById('features-repeatable').innerHTML = html;
-        })
-        .catch(err => {
-          console.warn('Could not load features-repeatable.html', err);
-        });
-    </script>
 </body>
 </html>
