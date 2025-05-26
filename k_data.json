@@ -53,7 +53,8 @@
             },
             "title": {
                 "en": "test1",
-                "it": "Leggero ⚡"
+                "it": "Leggero ⚡",
+                "action": "https://facebook.com"
             },
             "desc": {
                 "en": "Few files great power.",
@@ -66,7 +67,8 @@
             },
             "title": {
                 "en": "test2",
-                "it": "Semplice 🧩"
+                "it": "Semplice 🧩",
+                "action": "https://instagram.com"
             },
             "desc": {
                 "en": "No database or complex configurations.",

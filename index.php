@@ -56,11 +56,19 @@ function setElementData($dom, $el, $data, $ln)
                 break; // only first img in card
             }
 
-            // Update <h3> text content
-            foreach ($card->getElementsByTagName('h3') as $h3) {
-                $text = $itemData['title'][$ln] ?? $itemData['title']['en'] ?? '';
-                $h3->nodeValue = $text;
-                break; // only first h3
+            // Update <a> content
+            foreach ($card->getElementsByTagName('a') as $a) {
+                if (isset($itemData['title']["action"])) {
+                    $a->setAttribute('href', $itemData['title']["action"]);
+                }
+
+                if (isset($itemData['title'][$ln])) {
+                    while ($a->firstChild) {
+                        $a->removeChild($a->firstChild);
+                    }
+                    $a->appendChild($dom->createTextNode($itemData['title'][$ln]));
+                }
+                break;
             }
 
             // Update <p> text content
