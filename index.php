@@ -4,7 +4,8 @@ $ln = $_GET['ln'] ?? "it";
 $template = $_GET['page'] ?? "template";
 $templatePath = "templates/" . $template . ".html";
 
-function setElementData($dom, $el, $data, $ln) {
+function setElementData($dom, $el, $data, $ln)
+{
     $id = $el->getAttribute('k-id');
 
     switch ($el->tagName) {
@@ -13,6 +14,32 @@ function setElementData($dom, $el, $data, $ln) {
                 return;
             }
             $el->setAttribute('src', $data[$id]["src"]); // Update image source
+            break;
+
+        case 'a':
+            if (isset($data[$id]["action"])) {
+                $el->setAttribute('href', $data[$id]["action"]);
+            }
+
+            if (isset($data[$id][$ln])) {
+                while ($el->firstChild) {
+                    $el->removeChild($el->firstChild);
+                }
+                $el->appendChild($dom->createTextNode($data[$id][$ln]));
+            }
+            break;
+
+        case 'button':
+            if (isset($data[$id]["action"])) {
+                $url = htmlspecialchars($data[$id]["action"], ENT_QUOTES);
+                $el->setAttribute('onclick', "window.location.href='{$url}'");
+            }
+            if (isset($data[$id][$ln])) {
+                while ($el->firstChild) {
+                    $el->removeChild($el->firstChild);
+                }
+                $el->appendChild($dom->createTextNode($data[$id][$ln]));
+            }
             break;
 
         default:
