@@ -4,15 +4,19 @@
             <h3>Modifica testo</h3>
             <button class="close-btn" onclick="closeEditor()">×</button>
         </div>
-        
+
         <div class="text-group">
             <label for="editor-it">it</label>
-            <textarea  id="editor-it"  class="editor-textarea" ></textarea>
+            <textarea id="editor-it" class="editor-textarea"></textarea>
 
             <label for="editor-en">en</label>
-            <textarea  id="editor-en"  class="editor-textarea" ></textarea>
+            <textarea id="editor-en" class="editor-textarea"></textarea>
+            <div>
+                <label for="editor-action">Action</label>
+                <textarea id="editor-action" class="editor-textarea"></textarea>
+            </div>
         </div>
-        
+
         <button class="save-btn" onclick="saveContent()">Salva</button>
     </div>
     <div id="editor-image" class="editor-container">
@@ -20,14 +24,15 @@
             <h3>Modifica immagine</h3>
             <button class="close-btn" onclick="closeEditor()">×</button>
         </div>
-        
+
         <div class="text-group">
             <label for="image-upload">Carica immagine</label>
             <input type="file" id="image-upload" accept="image/*"></input>
         </div>
-    
+
         <button class="save-btn" onclick="saveImage()">Salva</button>
     </div>
+
 </div>
 <div class="language-switcher">
     <label for="radio-it">IT</label>
