@@ -44,35 +44,65 @@
         "it": "Kris CMS v1.0.0 · Licenza MIT"
     },
     "logo": {
-        "src": "/src/logo.svg"
+        "src": "\/src\/logo.svg"
     },
-    "features-repeatable": [
+    "features-repeatable-1": [
         {
             "image": {
-                "src": "/src/logo.svg"
+                "src": "\/src\/1748311623472_wp8358478-software-developer-wallpapers.png"
             },
             "title": {
-                "en": "test1",
-                "it": "Leggero ⚡",
-                "action": "https://facebook.com"
+                "it": "Semplicep",
+                "en": "test2",
+                "action": "https:\/\/instagram.com"
             },
             "desc": {
-                "en": "Few files great power.",
-                "it": "Pochi files grande potenza."
+                "it": "Nessun database o configurazioni complesse.",
+                "en": "No database or complex configurations."
             }
         },
         {
             "image": {
-                "src": "/src/logo.svg"
+                "src": "\/src\/1748311657398_Emma.png"
             },
             "title": {
-                "en": "test2",
-                "it": "Semplice 🧩",
-                "action": "https://instagram.com"
+                "it": "rtyrt",
+                "en": "rtyrty",
+                "action": "rtyrty"
             },
             "desc": {
-                "en": "No database or complex configurations.",
-                "it": "Nessun database o configurazioni complesse."
+                "it": "rtyrty",
+                "en": "rtyrty"
+            }
+        }
+    ],
+    "features-repeatable-2": [
+        {
+            "image": {
+                "src": "\/src\/1748311623472_wp8358478-software-developer-wallpapers.png"
+            },
+            "title": {
+                "it": "Semplicep",
+                "en": "test2",
+                "action": "https:\/\/instagram.com"
+            },
+            "desc": {
+                "it": "Nessun database o configurazioni complesse.",
+                "en": "No database or complex configurations."
+            }
+        },
+        {
+            "image": {
+                "src": "\/src\/1748311657398_Emma.png"
+            },
+            "title": {
+                "it": "rtyrt",
+                "en": "rtyrty",
+                "action": "rtyrty"
+            },
+            "desc": {
+                "it": "rtyrty",
+                "en": "rtyrty"
             }
         }
     ]

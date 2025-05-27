@@ -1,4 +1,6 @@
 <?php
+
+require_once __DIR__ . '/helpers/replace_components.php';
 $ln = $_GET['ln'] ?? "it";
 
 $template = $_GET['page'] ?? "template";
@@ -12,73 +14,8 @@ function setElementData($dom, $el, $data, $ln)
 
         if (!isset($data[$id]) || !is_array($data[$id])) return;
 
-        $featureCards = [];
-        foreach ($el->getElementsByTagName('div') as $childDiv) {
-            if ($childDiv->getAttribute('class') === 'feature-card') {
-                $featureCards[] = $childDiv;
-            }
-        }
-
-        $items = $data[$id];
-        // Adjust number of cards to match items count
-        $cardsCount = count($featureCards);
-        $itemsCount = count($items);
-
-        if ($cardsCount < $itemsCount) {
-            // Clone last card
-            $templateCard = $featureCards[$cardsCount - 1];
-
-            for ($i = $cardsCount; $i < $itemsCount; $i++) {
-                // Clone last existing card deeply
-                $newCard = $templateCard->cloneNode(true);
-                $el->firstElementChild->appendChild($newCard);
-                $featureCards[] = $newCard;
-            }
-        } elseif ($cardsCount > $itemsCount) {
-            // Remove extra cards
-            for ($i = $itemsCount; $i < $cardsCount; $i++) {
-                $el->firstElementChild->removeChild($featureCards[$i]);
-            }
-            // Trim the array so it matches $itemsCount
-            $featureCards = array_slice($featureCards, 0, $itemsCount);
-        }
-
-        foreach ($featureCards as $index => $card) {
-            if (!isset($items[$index])) continue; // no data for this card, skip
-
-            $itemData = $items[$index];
-
-            // Update <img> src attribute
-            foreach ($card->getElementsByTagName('img') as $img) {
-                if (isset($itemData['image']['src'])) {
-                    $img->setAttribute('src', $itemData['image']['src']);
-                }
-                break; // only first img in card
-            }
-
-            // Update <a> content
-            foreach ($card->getElementsByTagName('a') as $a) {
-                if (isset($itemData['title']["action"])) {
-                    $a->setAttribute('href', $itemData['title']["action"]);
-                }
-
-                if (isset($itemData['title'][$ln])) {
-                    while ($a->firstChild) {
-                        $a->removeChild($a->firstChild);
-                    }
-                    $a->appendChild($dom->createTextNode($itemData['title'][$ln]));
-                }
-                break;
-            }
-
-            // Update <p> text content
-            foreach ($card->getElementsByTagName('p') as $p) {
-                $text = $itemData['desc'][$ln] ?? $itemData['desc']['en'] ?? '';
-                $p->nodeValue = $text;
-                break; // only first p
-            }
-        }
-
+        replace_components($el, $data, $dom, $ln);
+        
         return;
     }
 

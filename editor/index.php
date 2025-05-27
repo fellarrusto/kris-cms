@@ -20,6 +20,7 @@ try {
     $templatePath = $paths['templates'] . '/' . $template;
     
     $tm = new TemplateManager($templatePath, $data, $ln);
+    $tm->injectComponents();
     $tm->disableInteractiveElements();
     $tm->processEditableContent();
     $tm->injectOverlay($paths['overlay']);

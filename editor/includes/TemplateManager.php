@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../helpers/replace_components.php';
 class TemplateManager
 {
     private $dom;
@@ -25,6 +26,34 @@ class TemplateManager
         }
     }
 
+    public function injectComponents(): void
+    {
+        $componentPath = '../templates/components/repeatable-content.html';
+
+        if (!file_exists($componentPath)) {
+            return;
+        }
+
+        $componentHtml = file_get_contents($componentPath);
+
+        $html = $this->dom->saveHTML();
+
+        $html = preg_replace_callback(
+            '#<div([^>]*)class="([^"]*features-repeatable[^"]*)"([^>]*)>\s*</div>#i',
+            function ($matches) use ($componentHtml) {
+                return "<div{$matches[1]}class=\"{$matches[2]}\"{$matches[3]}>"
+                    . $componentHtml
+                    . "</div>";
+            },
+            $html
+        );
+
+        libxml_use_internal_errors(true);
+        $newDom = new \DOMDocument();
+        $newDom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $this->dom = $newDom;
+    }
+
     public function disableInteractiveElements()
     {
         foreach ($this->dom->getElementsByTagName('button') as $btn) {
@@ -41,6 +70,15 @@ class TemplateManager
     {
         foreach ($this->dom->getElementsByTagName('*') as $el) {
             if (!$el->hasAttribute('k-edit')) {
+                continue;
+            }
+
+            if ($el->hasAttribute('class') && str_contains($el->getAttribute('class'), 'features-repeatable')) {
+
+                replace_components($el, $this->data, $this->dom, $this->lang);
+                
+                $el->setAttribute('onclick', 'editRepeatable(event, this)');
+                $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
                 continue;
             }
 
@@ -62,7 +100,7 @@ class TemplateManager
                     break;
             }
 
-             $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
+            $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
         }
     }
 
