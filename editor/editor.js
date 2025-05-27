@@ -6,42 +6,7 @@ function createRepeatableItemElement(index, item, kId) {
     div.className = "repeatable-item";
     div.dataset.index = index;
 
-    div.innerHTML = `
-    <label for="image-upload-${index}" style="display:block; margin-top: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px;">
-        Upload Image
-    </label>
-    <input type="file" id="image-upload-${index}" class="repeatable-image-upload" accept="image/*" />
-    <input type="hidden" class="repeatable-image-src" value="${item.image?.src || ''}" />
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Title (IT):</label>
-    <input type="text" class="repeatable-title-it" value="${item.title?.it || ''}" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Title (EN):</label>
-    <input type="text" class="repeatable-title-en" value="${item.title?.en || ''}" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Action URL:</label>
-    <input type="text" class="repeatable-title-action" value="${item.title?.action || ''}" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
-    <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
-        Please enter a valid URL starting with http:// or https://
-    </small>
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Description (IT):</label>
-    <textarea class="repeatable-desc-it" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${item.desc?.it || ''}</textarea>
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Description (EN):</label>
-    <textarea class="repeatable-desc-en" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${item.desc?.en || ''}</textarea>
-
-    <button class="delete-repeatable-btn" 
-        style="margin-top: 12px; padding: 8px 16px; background-color: #e74c3c; border: none; color: white; border-radius: 4px; cursor: pointer;">
-        Delete
-    </button>
-    <hr style="margin-top: 20px; border-color: #ddd;"/>
-`;
+    div.innerHTML = getRepeatableItemHTML(index, item);
 
     // Add delete event
     div.querySelector(".delete-repeatable-btn").onclick = () => {
@@ -320,6 +285,45 @@ function changeLanguage(language) {
         document.querySelector(`[k-id="${key}"]`).innerHTML = data[key][language];
         console.log(key, data[key][language]);
     });
+}
+
+function getRepeatableItemHTML(index, item) {
+    return `
+    <label for="image-upload-${index}" style="display:block; margin-top: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px;">
+        Upload Image
+    </label>
+    <input type="file" id="image-upload-${index}" class="repeatable-image-upload" accept="image/*" />
+    <input type="hidden" class="repeatable-image-src" value="${item.image?.src || ''}" />
+
+    <label style="display:block; margin-top: 12px; font-weight: 600;">Title (IT):</label>
+    <input type="text" class="repeatable-title-it" value="${item.title?.it || ''}" 
+        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+
+    <label style="display:block; margin-top: 12px; font-weight: 600;">Title (EN):</label>
+    <input type="text" class="repeatable-title-en" value="${item.title?.en || ''}" 
+        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+
+    <label style="display:block; margin-top: 12px; font-weight: 600;">Action URL:</label>
+    <input type="text" class="repeatable-title-action" value="${item.title?.action || ''}" 
+        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+    <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
+        Please enter a valid URL starting with http:// or https://
+    </small>
+
+    <label style="display:block; margin-top: 12px; font-weight: 600;">Description (IT):</label>
+    <textarea class="repeatable-desc-it" 
+        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${item.desc?.it || ''}</textarea>
+
+    <label style="display:block; margin-top: 12px; font-weight: 600;">Description (EN):</label>
+    <textarea class="repeatable-desc-en" 
+        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${item.desc?.en || ''}</textarea>
+
+    <button class="delete-repeatable-btn" 
+        style="margin-top: 12px; padding: 8px 16px; background-color: #e74c3c; border: none; color: white; border-radius: 4px; cursor: pointer;">
+        Delete
+    </button>
+    <hr style="margin-top: 20px; border-color: #ddd;"/>
+`;
 }
 
 // Chiudi overlay premendo ESC
