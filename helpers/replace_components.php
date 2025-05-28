@@ -1,70 +1,73 @@
 <?php
 
-function replace_components($el, $data, $dom, $lang)
+function replaceComponents($el, $data, $dom, $lang)
 {
     $id = $el->getAttribute('k-id');
     if (!isset($data[$id]) || !is_array($data[$id])) {
         return;  // No data for this repeatable section, skip updating
     }
 
-    $featureCards = [];
+    $card = null;
     foreach ($el->getElementsByTagName('div') as $childDiv) {
-        if ($childDiv->getAttribute('class') === 'feature-card') {
-            $featureCards[] = $childDiv;
-        }
-    }
-
-    $items = $data[$id];
-    $cardsCount = count($featureCards);
-    $itemsCount = count($items);
-
-    // Clone or remove cards to match items count
-    if ($cardsCount < $itemsCount) {
-        $templateCard = $featureCards[$cardsCount - 1];
-        for ($i = $cardsCount; $i < $itemsCount; $i++) {
-            $newCard = $templateCard->cloneNode(true);
-            $el->firstElementChild->appendChild($newCard);
-            $featureCards[] = $newCard;
-        }
-    } elseif ($cardsCount > $itemsCount) {
-        for ($i = $itemsCount; $i < $cardsCount; $i++) {
-            $el->firstElementChild->removeChild($featureCards[$i]);
-        }
-        $featureCards = array_slice($featureCards, 0, $itemsCount);
-    }
-
-    // Update each card content
-    foreach ($featureCards as $index => $card) {
-        if (!isset($items[$index])) continue;
-        $itemData = $items[$index];
-
-        // Update first img src
-        foreach ($card->getElementsByTagName('img') as $img) {
-            if (isset($itemData['image']['src'])) {
-                $img->setAttribute('src', $itemData['image']['src']);
-            }
+        if ($childDiv->hasAttribute('k-card')) {
+            $card = $childDiv;
             break;
         }
+    }
 
-        // Update first anchor href and text
-        foreach ($card->getElementsByTagName('a') as $a) {
-            if (isset($itemData['title']['action'])) {
-                $a->setAttribute('href', $itemData['title']['action']);
-            }
-            if (isset($itemData['title'][$lang])) {
-                while ($a->firstChild) {
-                    $a->removeChild($a->firstChild);
+    if (!$card) {
+        return;
+    }
+
+    $allCardsData = $data[$id];
+
+    foreach ($allCardsData as $cardKey => $cardContent) {
+        $newCard = $card->cloneNode(true);
+        
+        $newCard->setAttribute('k-id', $cardKey);
+
+        foreach ($newCard->getElementsByTagName('*') as $childElement) {
+            if ($childElement->hasAttribute('k-id')) {
+                $childId = $childElement->getAttribute('k-id');
+
+                if (isset($cardContent[$childId])) {
+                    switch ($childElement->tagName) {
+                        case 'img':
+                            if (isset($cardContent[$childId]['src'])) {
+                                $childElement->setAttribute('src', $cardContent[$childId]['src']);
+                            }
+                            break;
+
+                        case 'a':
+                            if (isset($cardContent[$childId]['action'])) {
+                                $childElement->setAttribute('href', $cardContent[$childId]['action']);
+                            }
+                            if (isset($cardContent[$childId][$lang])) {
+                                while ($childElement->firstChild) {
+                                    $childElement->removeChild($childElement->firstChild);
+                                }
+                                $childElement->appendChild($dom->createTextNode($cardContent[$childId][$lang]));
+                            }
+                            break;
+
+                        case 'p':
+                            if (isset($cardContent[$childId][$lang])) {
+                                $childElement->nodeValue = $cardContent[$childId][$lang];
+                            } else {
+                                $childElement->nodeValue = $cardContent[$childId]['en'] ?? '';
+                            }
+                            break;
+
+                        default:
+                            if (isset($cardContent[$childId][$lang])) {
+                                $childElement->nodeValue = $cardContent[$childId][$lang];
+                            }
+                            break;
+                    }
                 }
-                $a->appendChild($dom->createTextNode($itemData['title'][$lang]));
             }
-            break;
         }
-
-        // Update first paragraph text
-        foreach ($card->getElementsByTagName('p') as $p) {
-            $text = $itemData['desc'][$lang] ?? $itemData['desc']['en'] ?? '';
-            $p->nodeValue = $text;
-            break;
-        }
+        $el->firstElementChild->appendChild($newCard);
     }
+    $el->firstElementChild->removeChild($card);
 }

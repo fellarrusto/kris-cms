@@ -1,60 +1,118 @@
 let currentElement = null;
 
-
-function createRepeatableItemElement(index, item, kId) {
+function createRepeatableItemElement(key, item, kId) {
     const div = document.createElement("div");
     div.className = "repeatable-item";
-    div.dataset.index = index;
+    div.dataset.index = key;
 
-    div.innerHTML = getRepeatableItemHTML(index, item);
+    let html = '';
 
-    // Add delete event
+    Object.keys(item).forEach(subKey => {
+        const field = item[subKey];
+        if (field.hasOwnProperty("src")) {
+            // Handle image
+            html += `
+                <label style="display:block; margin-top: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px;">
+                    Upload Image
+                </label>
+                <input type="file" class="image-upload-${subKey}" accept="image/*" />
+                <input type="hidden" class="image-src-${subKey} repeatable-${subKey}-src" value="${field.src}" />
+            `;
+        } else if (field.hasOwnProperty("action")) {
+            // Handle action URL
+            html += `<label style="display:block; margin-top: 12px; font-weight: 600;">Title (IT):</label>
+                <input type="text" class="repeatable-${subKey}-it" value="${field.it || ''}" 
+                    style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+
+                <label style="display:block; margin-top: 12px; font-weight: 600;">Title (EN):</label>
+                <input type="text" class="repeatable-${subKey}-en" value="${field.en || ''}" 
+                    style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+
+                <label style="display:block; margin-top: 12px; font-weight: 600;">Action URL:</label>
+                <input type="text" class="repeatable-${subKey}-action" value="${field.action || ''}" 
+                    style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+                <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
+                    Please enter a valid URL starting with http:// or https://
+                </small>`
+        } else if (field.hasOwnProperty("it") && field.hasOwnProperty("en")) {
+            // Handle text (e.g., title or paragraph in different languages)
+            html += `
+                <label style="display:block; margin-top: 12px; font-weight: 600;">Description (IT):</label>
+                <textarea class="repeatable-${subKey}-it" 
+                    style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${field.it || ''}</textarea>
+
+                <label style="display:block; margin-top: 12px; font-weight: 600;">Description (EN):</label>
+                <textarea class="repeatable-${subKey}-en" 
+                    style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${field.en || ''}</textarea>
+            `;
+        }
+    });
+
+    html += `
+        <button class="delete-repeatable-btn" 
+            style="margin-top: 12px; padding: 8px 16px; background-color: #e74c3c; border: none; color: white; border-radius: 4px; cursor: pointer;">
+            Delete
+        </button>
+        <hr style="margin-top: 20px; border-color: #ddd;"/>
+    `;
+
+    div.innerHTML = html;
+
+    Object.keys(item).forEach(subKey => {
+        const fileInput = div.querySelector('.image-upload-' + subKey);
+        if (fileInput) {
+            const hiddenSrcInput = div.querySelector('.image-src-' + subKey);
+
+            fileInput.addEventListener("change", () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+
+                const filename = Date.now() + "_" + file.name;
+                const filepath = "/src/" + filename;
+
+                uploadImageToServer(file, filename, () => {
+                    hiddenSrcInput.value = filepath;
+                });
+            });
+        }
+    });
+
     div.querySelector(".delete-repeatable-btn").onclick = () => {
         div.remove();
-        updateRepeatableData(kId);
     };
-
-    // Update data on input change
-    div.querySelectorAll("input, textarea").forEach(input => {
-        input.addEventListener("input", updateRepeatableData(kId));
-    });
-
-    const fileInput = div.querySelector(".repeatable-image-upload");
-    const hiddenSrcInput = div.querySelector(".repeatable-image-src");
-
-    fileInput.addEventListener("change", () => {
-        const file = fileInput.files[0];
-        if (!file) return;
-
-        const filename = Date.now() + "_" + file.name;
-        const filepath = "/src/" + filename;
-
-        uploadImageToServer(file, filename, () => {
-            hiddenSrcInput.value = filepath;
-            updateRepeatableData(kId);
-        });
-    });
 
     return div;
 }
 
 function updateRepeatableData(kId) {
     const container = document.getElementById("repeatable-items-container");
-    const items = [];
+    const items = {};
     container.querySelectorAll(".repeatable-item").forEach(div => {
         const idx = div.dataset.index;
-        const imageSrc = div.querySelector(".repeatable-image-src").value.trim();
-        const titleIt = div.querySelector(".repeatable-title-it").value.trim();
-        const titleEn = div.querySelector(".repeatable-title-en").value.trim();
-        const titleAction = div.querySelector(".repeatable-title-action").value.trim();
-        const descIt = div.querySelector(".repeatable-desc-it").value.trim();
-        const descEn = div.querySelector(".repeatable-desc-en").value.trim();
+        const itemData = {};
 
-        items.push({
-            image: { src: imageSrc },
-            title: { it: titleIt, en: titleEn, action: titleAction },
-            desc: { it: descIt, en: descEn }
+        // Dynamically handle each key in the item
+        Object.keys(window.kData[kId][idx]).forEach(key => {
+            const classPrefix = `repeatable-${key}`;
+            const fields = div.querySelectorAll(`[class*='${classPrefix}']`);
+            fields.forEach(field => {
+                const suffixMatch = field.className.match(new RegExp(`repeatable-${key}-(\\S+)`));
+
+                if (suffixMatch) {
+                    const suffix = suffixMatch[1];
+
+                    if (!itemData[key]) {
+                        itemData[key] = {};
+                    }
+
+                    itemData[key][suffix] = field.value.trim();
+                }
+            });
         });
+
+        console.log('Item data for index', idx, ':', itemData);
+
+        items[idx] = itemData;
     });
 
     window.kData[kId] = items;
@@ -63,16 +121,36 @@ function updateRepeatableData(kId) {
 // Call this to add a new empty repeatable item block
 function addRepeatableItem(kId) {
     const container = document.getElementById("repeatable-items-container");
-    const items = window.kData[kId] || [];
-    const newItem = {
-        image: { src: "" },
-        title: { it: "", en: "", action: "" },
-        desc: { it: "", en: "" }
-    };
-    items.push(newItem);
+
+    const items = window.kData[kId] || {};
+
+    let newItemTemplate = null;
+    for (const itemKey in items) {
+        if (items.hasOwnProperty(itemKey)) {
+            newItemTemplate = items[itemKey];
+            break;
+        }
+    }
+
+    const newItem = {};
+    if (newItemTemplate) {
+        Object.keys(newItemTemplate).forEach(subKey => {
+            const field = newItemTemplate[subKey];
+            if (field.hasOwnProperty("src")) {
+                newItem[subKey] = { src: "" };
+            } else if (field.hasOwnProperty("action")) {
+                newItem[subKey] = { it: "", en: "", action: "" };
+            } else if (field.hasOwnProperty("it") && field.hasOwnProperty("en")) {
+                newItem[subKey] = { it: "", en: "" };
+            }
+        });
+    }
+
+    const newItemKey = `new-item-${Date.now()}`;  // Generate a unique key for the new item
+    items[newItemKey] = newItem;
     window.kData[kId] = items;
 
-    const itemDiv = createRepeatableItemElement(items.length - 1, newItem, kId);
+    const itemDiv = createRepeatableItemElement(newItemKey, newItem, kId);
     container.appendChild(itemDiv);
 }
 
@@ -102,8 +180,10 @@ async function editRepeatable(e, el) {
     container.innerHTML = "";
 
     const items = kData[kId];
-    items.forEach((item, index) => {
-        const itemDiv = createRepeatableItemElement(index, item, kId);
+    Object.keys(items).forEach(key => {
+        const item = items[key];
+        console.log('key:', item);
+        const itemDiv = createRepeatableItemElement(key, item, kId, items);
         container.appendChild(itemDiv);
     });
 }
@@ -285,45 +365,6 @@ function changeLanguage(language) {
         document.querySelector(`[k-id="${key}"]`).innerHTML = data[key][language];
         console.log(key, data[key][language]);
     });
-}
-
-function getRepeatableItemHTML(index, item) {
-    return `
-    <label for="image-upload-${index}" style="display:block; margin-top: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px;">
-        Upload Image
-    </label>
-    <input type="file" id="image-upload-${index}" class="repeatable-image-upload" accept="image/*" />
-    <input type="hidden" class="repeatable-image-src" value="${item.image?.src || ''}" />
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Title (IT):</label>
-    <input type="text" class="repeatable-title-it" value="${item.title?.it || ''}" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Title (EN):</label>
-    <input type="text" class="repeatable-title-en" value="${item.title?.en || ''}" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Action URL:</label>
-    <input type="text" class="repeatable-title-action" value="${item.title?.action || ''}" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
-    <small style="color: #666; font-size: 12px; margin-top: 4px; display: block;">
-        Please enter a valid URL starting with http:// or https://
-    </small>
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Description (IT):</label>
-    <textarea class="repeatable-desc-it" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${item.desc?.it || ''}</textarea>
-
-    <label style="display:block; margin-top: 12px; font-weight: 600;">Description (EN):</label>
-    <textarea class="repeatable-desc-en" 
-        style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px; min-height: 60px;">${item.desc?.en || ''}</textarea>
-
-    <button class="delete-repeatable-btn" 
-        style="margin-top: 12px; padding: 8px 16px; background-color: #e74c3c; border: none; color: white; border-radius: 4px; cursor: pointer;">
-        Delete
-    </button>
-    <hr style="margin-top: 20px; border-color: #ddd;"/>
-`;
 }
 
 // Chiudi overlay premendo ESC

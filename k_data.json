@@ -46,50 +46,24 @@
     "logo": {
         "src": "\/src\/logo.svg"
     },
-    "features-repeatable-1": [
-        {
-            "image": {
-                "src": "\/src\/1748311623472_wp8358478-software-developer-wallpapers.png"
+    "features-repeatable-1": [],
+    "features-repeatable-2": {
+        "card-1": {
+            "aa": {
+                "src": "\/src\/1748447723618_Daniel.png"
             },
-            "title": {
-                "it": "Semplicep",
+            "aa1": {
+                "src": "\/src\/1748448618188_Victoria.png"
+            },
+            "bb": {
+                "it": "Semplicepjj",
                 "en": "test2",
-                "action": "https:\/\/instagram.com"
+                "action": "https:\/\/facebook.com"
             },
-            "desc": {
-                "it": "Nessun database o configurazioni complesse.",
+            "cc": {
+                "it": "Nessun database o configurazioni complesse.ll",
                 "en": "No database or complex configurations."
             }
         }
-    ],
-    "features-repeatable-2": [
-        {
-            "image": {
-                "src": "\/src\/1748311623472_wp8358478-software-developer-wallpapers.png"
-            },
-            "title": {
-                "it": "Semplicep",
-                "en": "test2",
-                "action": "https:\/\/instagram.com"
-            },
-            "desc": {
-                "it": "Nessun database o configurazioni complesse.",
-                "en": "No database or complex configurations."
-            }
-        },
-        {
-            "image": {
-                "src": "\/src\/1748311657398_Emma.png"
-            },
-            "title": {
-                "it": "rtyrt",
-                "en": "rtyrty",
-                "action": "rtyrty"
-            },
-            "desc": {
-                "it": "rtyrty",
-                "en": "rtyrty"
-            }
-        }
-    ]
+    }
 }
