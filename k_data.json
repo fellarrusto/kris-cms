@@ -46,23 +46,35 @@
     "logo": {
         "src": "\/src\/logo.svg"
     },
-    "features-repeatable-1": [],
-    "features-repeatable-2": {
+    "block-1": {
         "card-1": {
-            "aa": {
-                "src": "\/src\/1748447723618_Daniel.png"
+            "title": {
+                "en": "Lightweight ⚡",
+                "it": "Leggero ⚡"
             },
-            "aa1": {
-                "src": "\/src\/1748448618188_Victoria.png"
+            "desc": {
+                "en": "Few files great power.",
+                "it": "Pochi files grande potenza."
+            }
+        },
+        "card-2": {
+            "title": {
+                "en": "Simple 🧩",
+                "it": "Semplice 🧩"
             },
-            "bb": {
-                "it": "Semplicepjj",
-                "en": "test2",
-                "action": "https:\/\/facebook.com"
+            "desc": {
+                "en": "No database or complex configurations.",
+                "it": "Nessun database o configurazioni complesse."
+            }
+        },
+        "card-3": {
+            "title": {
+                "en": "Direct 🚀",
+                "it": "Immediato 🚀"
             },
-            "cc": {
-                "it": "Nessun database o configurazioni complesse.ll",
-                "en": "No database or complex configurations."
+            "desc": {
+                "en": "Just edit the content you see.",
+                "it": "Modifica direttamente ciò che vedi."
             }
         }
     }
