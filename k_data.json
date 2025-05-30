@@ -44,6 +44,38 @@
         "it": "Kris CMS v1.0.0 · Licenza MIT"
     },
     "logo": {
-        "src": "/src/logo.svg"
+        "src": "\/src\/logo.svg"
+    },
+    "block-1": {
+        "card-1": {
+            "title": {
+                "en": "Lightweight ⚡",
+                "it": "Leggero ⚡"
+            },
+            "desc": {
+                "en": "Few files great power.",
+                "it": "Pochi files grande potenza."
+            }
+        },
+        "card-2": {
+            "title": {
+                "en": "Simple 🧩",
+                "it": "Semplice 🧩"
+            },
+            "desc": {
+                "en": "No database or complex configurations.",
+                "it": "Nessun database o configurazioni complesse."
+            }
+        },
+        "card-3": {
+            "title": {
+                "en": "Direct 🚀",
+                "it": "Immediato 🚀"
+            },
+            "desc": {
+                "en": "Just edit the content you see.",
+                "it": "Modifica direttamente ciò che vedi."
+            }
+        }
     }
 }

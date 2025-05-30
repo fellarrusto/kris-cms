@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/../../helpers/replace_components.php';
 class TemplateManager
 {
     private $dom;
@@ -25,6 +26,38 @@ class TemplateManager
         }
     }
 
+    public function injectComponents(): void
+    {
+        $html = $this->dom->saveHTML();
+
+        $html = preg_replace_callback(
+            '#<div([^>]*)k-template="([^"]+)"([^>]*)>\s*</div>#i',
+            function ($matches) {
+                $templateName = $matches[2];
+                $componentPath = '../templates/components/' . $templateName . '.html';
+
+                if (!file_exists($componentPath)) {
+                    // Component not found, return the original empty div
+                    return $matches[0];
+                }
+
+                $componentHtml = file_get_contents($componentPath);
+
+                // Rebuild the <div> with the original attributes and injected component HTML
+                return "<div{$matches[1]}k-template=\"{$templateName}\"{$matches[3]}>"
+                    . $componentHtml
+                    . "</div>";
+            },
+            $html
+        );
+
+        // Reload DOM with the updated HTML
+        libxml_use_internal_errors(true);
+        $newDom = new \DOMDocument();
+        $newDom->loadHTML($html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        $this->dom = $newDom;
+    }
+
     public function disableInteractiveElements()
     {
         foreach ($this->dom->getElementsByTagName('button') as $btn) {
@@ -40,7 +73,18 @@ class TemplateManager
     public function processEditableContent()
     {
         foreach ($this->dom->getElementsByTagName('*') as $el) {
-            if (!$el->hasAttribute('k-edit')) {
+            if (! ($el->hasAttribute('k-edit') || $el->hasAttribute('k-component')) ) {
+                continue;
+            }
+
+            if ($el->hasAttribute('k-component')) {
+                $id = $el->getAttribute('k-id');
+                if (isset($this->data[$id])) {
+                   replaceComponents($el, $this->data, $this->dom, $this->lang); 
+                }
+                
+                $el->setAttribute('onclick', 'editRepeatable(event, this)');
+                $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
                 continue;
             }
 
@@ -62,7 +106,7 @@ class TemplateManager
                     break;
             }
 
-             $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
+            $el->setAttribute('class', trim($el->getAttribute('class') . ' editable'));
         }
     }
 
