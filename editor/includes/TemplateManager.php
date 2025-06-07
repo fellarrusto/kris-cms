@@ -7,12 +7,14 @@ class TemplateManager
     private $templatePath;
     private $data;
     private $lang;
+    private $paths;
 
-    public function __construct($templatePath, $data, $lang)
+    public function __construct($templatePath, $data, $lang, $paths)
     {
         $this->templatePath = $templatePath;
         $this->data = $data;
         $this->lang = $lang;
+        $this->paths = $paths;
         $this->initializeDom();
     }
 
@@ -160,12 +162,12 @@ class TemplateManager
         // Aggiungi CSS
         $css = $this->dom->createElement('link');
         $css->setAttribute('rel', 'stylesheet');
-        $css->setAttribute('href', $GLOBALS['paths']['editor_css']);
+        $css->setAttribute('href', $this->paths['editor_css']);
         $head->appendChild($css);
 
         // Aggiungi JS
         $js = $this->dom->createElement('script');
-        $js->setAttribute('src', $GLOBALS['paths']['editor_js']);
+        $js->setAttribute('src', $this->paths['editor_js']);
         $body->appendChild($js);
     }
 
