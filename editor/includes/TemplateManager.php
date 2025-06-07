@@ -70,6 +70,14 @@ class TemplateManager
             $link->removeAttribute('href');
             $link->setAttribute('style', 'pointer-events: none; color: gray;');
         }
+
+        foreach ($this->dom->getElementsByTagName('video') as $video) {
+            if ($video->hasAttribute('controls')) {
+                $video->removeAttribute('controls');
+            }
+            // ensure a preview is loaded but the video does not auto play
+            $video->setAttribute('preload', 'metadata');
+        }
     }
 
     public function processEditableContent()

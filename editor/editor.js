@@ -209,6 +209,7 @@ function editText(e, el) {
     document.getElementById("editorOverlay").style.display = "block";
     document.getElementById("editor-text").style.display = "block";
     document.getElementById("editor-image").style.display = "none";
+    document.getElementById("editor-video").style.display = "none";
     document.getElementById("editor-repeatable").style.display = "none";
 
     const editorIt = document.getElementById("editor-it");
@@ -236,20 +237,21 @@ function editImage(e, el) {
     document.getElementById("editorOverlay").style.display = "block";
     document.getElementById("editor-text").style.display = "none";
     document.getElementById("editor-repeatable").style.display = "none";
+    document.getElementById("editor-video").style.display = "none";
     document.getElementById("editor-image").style.display = "block";
 
 }
 
 function editVideo(e, el) {
+    if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+    }
     currentElement = el;
     document.getElementById("editorOverlay").style.display = "block";
     document.getElementById("editor-text").style.display = "none";
     document.getElementById("editor-image").style.display = "none";
     document.getElementById("editor-repeatable").style.display = "none";
     document.getElementById("editor-video").style.display = "block";
-
-    const kId = el.getAttribute("k-id");
-    document.getElementById("video-src").value = window.kData[kId].src || '';
 }
 
 function isValidURL(url) {
@@ -317,16 +319,21 @@ function saveImage() {
 }
 
 function saveVideo() {
-    const urlInput = document.getElementById("video-src").value.trim();
-    if (urlInput === '') {
-        alert("Inserisci l'URL del video");
+    const fileUpload = document.getElementById("video-upload").files[0];
+    if (!fileUpload) {
+        alert("Seleziona un file prima di salvare.");
         return;
     }
 
+    const filename = Date.now() + "_" + fileUpload.name;
+    const filepath = "/src/" + filename;
     const kId = currentElement.getAttribute("k-id");
-    window.kData[kId].src = urlInput;
-    currentElement.src = urlInput;
-    saveDataToServer();
+    window.kData[kId].src = filepath;
+
+    uploadImageToServer(fileUpload, filename, () => {
+        currentElement.src = filepath;
+        saveDataToServer();
+    });
 }
 
 function editButton(e, el) {
