@@ -9,14 +9,15 @@ function createRepeatableItemElement(key, item, kId) {
 
     Object.keys(item).forEach(subKey => {
         const field = item[subKey];
-        if (field.hasOwnProperty("video") || (subKey === 'video' && field.hasOwnProperty('src'))) {
+        const isVideo = subKey.toLowerCase().includes('video');
+
+        if (isVideo && field.hasOwnProperty("src")) {
             html += `
                 <label style="display:block; margin-top: 12px; font-weight: 600;">Upload Video</label>
                 <input type="file" class="video-upload-${subKey}" accept="video/*" />
                 <input type="hidden" class="repeatable-${subKey}-src" value="${field.src || ''}" />
             `;
         } else if (field.hasOwnProperty("src")) {
-            // Handle image
             html += `
                 <label style="display:block; margin-top: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px;">
                     Upload Image
@@ -25,7 +26,6 @@ function createRepeatableItemElement(key, item, kId) {
                 <input type="hidden" class="image-src-${subKey} repeatable-${subKey}-src" value="${field.src}" />
             `;
         } else if (field.hasOwnProperty("action")) {
-            // Handle action URL
             html += `<label style="display:block; margin-top: 12px; font-weight: 600;">Title (IT):</label>
                 <input type="text" class="repeatable-${subKey}-it" value="${field.it || ''}" 
                     style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
@@ -41,7 +41,6 @@ function createRepeatableItemElement(key, item, kId) {
                     Please enter a valid URL starting with http:// or https://
                 </small>`
         } else if (field.hasOwnProperty("it") && field.hasOwnProperty("en")) {
-            // Handle text (e.g., title or paragraph in different languages)
             html += `
                 <label style="display:block; margin-top: 12px; font-weight: 600;">Description (IT):</label>
                 <textarea class="repeatable-${subKey}-it" 
@@ -65,7 +64,6 @@ function createRepeatableItemElement(key, item, kId) {
     div.innerHTML = html;
 
     Object.keys(item).forEach(subKey => {
-        // Handle image uploads
         const fileInput = div.querySelector('.image-upload-' + subKey);
         if (fileInput) {
             const hiddenSrcInput = div.querySelector('.image-src-' + subKey);
@@ -83,7 +81,6 @@ function createRepeatableItemElement(key, item, kId) {
             });
         }
 
-        // Handle video uploads
         const videoInput = div.querySelector('.video-upload-' + subKey);
         if (videoInput) {
             const hiddenSrcInput = div.querySelector('.repeatable-' + subKey + '-src');
@@ -112,36 +109,37 @@ function createRepeatableItemElement(key, item, kId) {
 function updateRepeatableData(kId) {
     const container = document.getElementById("repeatable-items-container");
     const items = {};
+
     container.querySelectorAll(".repeatable-item").forEach(div => {
         const idx = div.dataset.index;
         const itemData = {};
 
-        // Dynamically handle each key in the item
         Object.keys(window.kData[kId][idx]).forEach(key => {
+            const field = window.kData[kId][idx][key];
             const classPrefix = `repeatable-${key}`;
             const fields = div.querySelectorAll(`[class*='${classPrefix}']`);
-            fields.forEach(field => {
-                const suffixMatch = field.className.match(new RegExp(`repeatable-${key}-(\\S+)`));
 
-                if (suffixMatch) {
-                    const suffix = suffixMatch[1];
-
-                    if (!itemData[key]) {
-                        itemData[key] = {};
+            if (typeof field === "object" && Object.keys(field).length === 1 && field.hasOwnProperty("src")) {
+                const input = div.querySelector(`.repeatable-${key}-src`);
+                itemData[key] = { src: input ? input.value.trim() : "" };
+            } else {
+                itemData[key] = {};
+                fields.forEach(fieldEl => {
+                    const match = fieldEl.className.match(new RegExp(`repeatable-${key}-(\\S+)`));
+                    if (match) {
+                        const suffix = match[1];
+                        itemData[key][suffix] = fieldEl.value.trim();
                     }
-
-                    itemData[key][suffix] = field.value.trim();
-                }
-            });
+                });
+            }
         });
-
-        console.log('Item data for index', idx, ':', itemData);
 
         items[idx] = itemData;
     });
 
     window.kData[kId] = items;
 }
+
 
 // Call this to add a new empty repeatable item block
 function addRepeatableItem(kId) {
