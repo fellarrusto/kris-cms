@@ -18,6 +18,14 @@ function setElementData($dom, $el, $data, $ln)
             $el->setAttribute('src', $data[$id]["src"]); // Update image source
             break;
 
+        case 'video':
+        case 'iframe':
+            if (!isset($data[$id]["src"])) {
+                return;
+            }
+            $el->setAttribute('src', $data[$id]["src"]); // Update video source
+            break;
+
         case 'a':
             if (isset($data[$id]["action"])) {
                 $el->setAttribute('href', $data[$id]["action"]);

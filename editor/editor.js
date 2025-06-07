@@ -9,7 +9,14 @@ function createRepeatableItemElement(key, item, kId) {
 
     Object.keys(item).forEach(subKey => {
         const field = item[subKey];
-        if (field.hasOwnProperty("src")) {
+        if (field.hasOwnProperty("video") || (subKey === 'video' && field.hasOwnProperty('src'))) {
+            // Handle video URL
+            const value = field.video || field.src || '';
+            html += `
+                <label style="display:block; margin-top: 12px; font-weight: 600;">Video URL</label>
+                <input type="text" class="repeatable-${subKey}-video" value="${value}" style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+            `;
+        } else if (field.hasOwnProperty("src")) {
             // Handle image
             html += `
                 <label style="display:block; margin-top: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px;">
@@ -136,7 +143,9 @@ function addRepeatableItem(kId) {
     if (newItemTemplate) {
         Object.keys(newItemTemplate).forEach(subKey => {
             const field = newItemTemplate[subKey];
-            if (field.hasOwnProperty("src")) {
+            if (field.hasOwnProperty("video") || (subKey === 'video' && field.hasOwnProperty('src'))) {
+                newItem[subKey] = { video: "" };
+            } else if (field.hasOwnProperty("src")) {
                 newItem[subKey] = { src: "" };
             } else if (field.hasOwnProperty("action")) {
                 newItem[subKey] = { it: "", en: "", action: "" };
@@ -231,6 +240,18 @@ function editImage(e, el) {
 
 }
 
+function editVideo(e, el) {
+    currentElement = el;
+    document.getElementById("editorOverlay").style.display = "block";
+    document.getElementById("editor-text").style.display = "none";
+    document.getElementById("editor-image").style.display = "none";
+    document.getElementById("editor-repeatable").style.display = "none";
+    document.getElementById("editor-video").style.display = "block";
+
+    const kId = el.getAttribute("k-id");
+    document.getElementById("video-src").value = window.kData[kId].src || '';
+}
+
 function isValidURL(url) {
     try {
         const parsedUrl = new URL(url);
@@ -295,6 +316,19 @@ function saveImage() {
     });
 }
 
+function saveVideo() {
+    const urlInput = document.getElementById("video-src").value.trim();
+    if (urlInput === '') {
+        alert("Inserisci l'URL del video");
+        return;
+    }
+
+    const kId = currentElement.getAttribute("k-id");
+    window.kData[kId].src = urlInput;
+    currentElement.src = urlInput;
+    saveDataToServer();
+}
+
 function editButton(e, el) {
     currentElement = el;
 
@@ -356,6 +390,7 @@ function closeEditor() {
     document.getElementById("editorOverlay").style.display = "none";
     document.getElementById("editor-text").style.display = "none";
     document.getElementById("editor-image").style.display = "none";
+    document.getElementById("editor-video").style.display = "none";
     currentElement = null;
 }
 
