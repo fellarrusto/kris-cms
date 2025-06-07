@@ -10,11 +10,10 @@ function createRepeatableItemElement(key, item, kId) {
     Object.keys(item).forEach(subKey => {
         const field = item[subKey];
         if (field.hasOwnProperty("video") || (subKey === 'video' && field.hasOwnProperty('src'))) {
-            // Handle video URL
-            const value = field.video || field.src || '';
             html += `
-                <label style="display:block; margin-top: 12px; font-weight: 600;">Video URL</label>
-                <input type="text" class="repeatable-${subKey}-video" value="${value}" style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
+                <label style="display:block; margin-top: 12px; font-weight: 600;">Upload Video</label>
+                <input type="file" class="video-upload-${subKey}" accept="video/*" />
+                <input type="hidden" class="repeatable-${subKey}-src" value="${field.src || ''}" />
             `;
         } else if (field.hasOwnProperty("src")) {
             // Handle image
@@ -66,6 +65,7 @@ function createRepeatableItemElement(key, item, kId) {
     div.innerHTML = html;
 
     Object.keys(item).forEach(subKey => {
+        // Handle image uploads
         const fileInput = div.querySelector('.image-upload-' + subKey);
         if (fileInput) {
             const hiddenSrcInput = div.querySelector('.image-src-' + subKey);
@@ -78,6 +78,24 @@ function createRepeatableItemElement(key, item, kId) {
                 const filepath = "/src/" + filename;
 
                 uploadImageToServer(file, filename, () => {
+                    hiddenSrcInput.value = filepath;
+                });
+            });
+        }
+
+        // Handle video uploads
+        const videoInput = div.querySelector('.video-upload-' + subKey);
+        if (videoInput) {
+            const hiddenSrcInput = div.querySelector('.repeatable-' + subKey + '-src');
+
+            videoInput.addEventListener("change", () => {
+                const file = videoInput.files[0];
+                if (!file) return;
+
+                const filename = Date.now() + "_" + file.name;
+                const filepath = "/src/" + filename;
+
+                uploadVideoToServer(file, filename, () => {
                     hiddenSrcInput.value = filepath;
                 });
             });
@@ -330,7 +348,7 @@ function saveVideo() {
     const kId = currentElement.getAttribute("k-id");
     window.kData[kId].src = filepath;
 
-    uploadImageToServer(fileUpload, filename, () => {
+    uploadVideoToServer(fileUpload, filename, () => {
         currentElement.src = filepath;
         saveDataToServer();
     });
@@ -371,6 +389,27 @@ function uploadImageToServer(file, filename, callback) {
         })
         .catch(error => console.error("Errore:", error));
 }
+
+function uploadVideoToServer(file, filename, callback) {
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("filename", filename);
+
+    fetch("upload_video.php", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            callback();
+        } else {
+            alert("Errore nel caricamento del video.");
+        }
+    })
+    .catch(error => console.error("Errore:", error));
+}
+
 
 function saveDataToServer() {
     fetch("save_data.php", {
