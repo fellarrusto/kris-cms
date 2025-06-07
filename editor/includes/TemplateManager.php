@@ -91,9 +91,14 @@ class TemplateManager
             }
 
             switch ($el->tagName) {
-                case 'img':
-                    $this->updateImageEditableElement($el);
-                    $el->setAttribute('onclick', 'editImage(event, this)');
+               case 'img':
+                   $this->updateImageEditableElement($el);
+                   $el->setAttribute('onclick', 'editImage(event, this)');
+                   break;
+
+                case 'video':
+                    $this->updateVideoEditableElement($el);
+                    $el->setAttribute('onclick', 'editVideo(event, this)');
                     break;
 
                 case 'a':
@@ -124,6 +129,14 @@ class TemplateManager
     }
 
     private function updateImageEditableElement($element)
+    {
+        $id = $element->getAttribute('k-id');
+        if (isset($this->data[$id]['src'])) {
+            $element->setAttribute('src', $this->data[$id]['src']);
+        }
+    }
+
+    private function updateVideoEditableElement($element)
     {
         $id = $element->getAttribute('k-id');
         if (isset($this->data[$id]['src'])) {

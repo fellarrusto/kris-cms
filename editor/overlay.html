@@ -32,6 +32,19 @@
 
         <button class="save-btn" onclick="saveImage()">Salva</button>
     </div>
+    <div id="editor-video" class="editor-container" style="display: none;">
+        <div class="editor-header">
+            <h3>Modifica video</h3>
+            <button class="close-btn" onclick="closeEditor()">×</button>
+        </div>
+
+        <div class="text-group">
+            <label for="video-src">Video URL</label>
+            <input type="text" id="video-src" />
+        </div>
+
+        <button class="save-btn" onclick="saveVideo()">Salva</button>
+    </div>
     <div id="editor-repeatable" class="editor-container" style="display: none;">
         <div class="editor-header">
             <h3>Modifica contenuti ripetibili</h3>
