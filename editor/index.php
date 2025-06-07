@@ -19,7 +19,7 @@ try {
     $template = $_GET['template'] ?? 'template.html';
     $templatePath = $paths['templates'] . '/' . $template;
     
-    $tm = new TemplateManager($templatePath, $data, $ln);
+    $tm = new TemplateManager($templatePath, $data, $ln, $paths);
     $tm->injectComponents();
     $tm->disableInteractiveElements();
     $tm->processEditableContent();
