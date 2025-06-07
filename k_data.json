@@ -46,6 +46,9 @@
     "logo": {
         "src": "\/src\/logo.svg"
     },
+    "intro-video": {
+        "src": "https://www.w3schools.com/html/mov_bbb.mp4"
+    },
     "block-1": {
         "card-1": {
             "title": {
