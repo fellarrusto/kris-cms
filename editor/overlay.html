@@ -32,6 +32,23 @@
 
         <button class="save-btn" onclick="saveImage()">Salva</button>
     </div>
+    <div id="editor-video" class="editor-container" style="display: none;">
+        <div class="editor-header">
+            <h3>Modifica video</h3>
+            <button class="close-btn" onclick="closeEditor()">×</button>
+        </div>
+
+        <!-- <div class="text-group">
+            <label for="video-src">Video URL</label>
+            <input type="text" id="video-src" />
+        </div> -->
+        <div class="text-group">
+            <label for="video-upload">Carica Video</label>
+            <input type="file" id="video-upload" accept="video/*"></input>
+        </div>
+
+        <button class="save-btn" onclick="saveVideo()">Salva</button>
+    </div>
     <div id="editor-repeatable" class="editor-container" style="display: none;">
         <div class="editor-header">
             <h3>Modifica contenuti ripetibili</h3>
@@ -60,7 +77,7 @@
 </div>
 <div class="language-switcher">
     <label for="radio-it">IT</label>
-    <input type="radio" name="radio-it" id="radio-it" value="it"></input>
+    <input type="radio" name="language" id="radio-it" value="it"></input>
     <label for="radio-en">EN</label>
-    <input type="radio" name="radio-it" id="radio-it" value="en"></input>
+    <input type="radio" name="language" id="radio-en" value="en"></input>
 </div>

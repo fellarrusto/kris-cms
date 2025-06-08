@@ -46,7 +46,7 @@
         }
 
         .links {
-            margin-bottom: 3rem;
+            margin-bottom: 1rem;
         }
 
         .btn {
@@ -87,6 +87,14 @@
             color: var(--accent-color);
             font-size: 0.9em;
         }
+
+        .intro-video {
+            margin-top: 1rem;
+            max-width: 200px;
+            width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body>
@@ -102,6 +110,8 @@
     <div class="links">
         <a href="https://github.com/fellarrusto/kris-cms" class="btn" k-edit k-id="button-git">GitHub Repository</a>
     </div>
+
+    <video k-edit k-id="intro-video" class="intro-video" autoplay loop muted playsinline src=""></video>
 
     <div k-component k-template="block" k-id="block-1" style="cursor:pointer;"></div>
 

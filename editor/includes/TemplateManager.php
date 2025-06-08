@@ -7,12 +7,14 @@ class TemplateManager
     private $templatePath;
     private $data;
     private $lang;
+    private $paths;
 
-    public function __construct($templatePath, $data, $lang)
+    public function __construct($templatePath, $data, $lang, $paths)
     {
         $this->templatePath = $templatePath;
         $this->data = $data;
         $this->lang = $lang;
+        $this->paths = $paths;
         $this->initializeDom();
     }
 
@@ -68,6 +70,14 @@ class TemplateManager
             $link->removeAttribute('href');
             $link->setAttribute('style', 'pointer-events: none; color: gray;');
         }
+
+        foreach ($this->dom->getElementsByTagName('video') as $video) {
+            if ($video->hasAttribute('controls')) {
+                $video->removeAttribute('controls');
+            }
+            // ensure a preview is loaded but the video does not auto play
+            $video->setAttribute('preload', 'metadata');
+        }
     }
 
     public function processEditableContent()
@@ -89,9 +99,14 @@ class TemplateManager
             }
 
             switch ($el->tagName) {
-                case 'img':
-                    $this->updateImageEditableElement($el);
-                    $el->setAttribute('onclick', 'editImage(event, this)');
+               case 'img':
+                   $this->updateImageEditableElement($el);
+                   $el->setAttribute('onclick', 'editImage(event, this)');
+                   break;
+
+                case 'video':
+                    $this->updateVideoEditableElement($el);
+                    $el->setAttribute('onclick', 'editVideo(event, this)');
                     break;
 
                 case 'a':
@@ -122,6 +137,14 @@ class TemplateManager
     }
 
     private function updateImageEditableElement($element)
+    {
+        $id = $element->getAttribute('k-id');
+        if (isset($this->data[$id]['src'])) {
+            $element->setAttribute('src', $this->data[$id]['src']);
+        }
+    }
+
+    private function updateVideoEditableElement($element)
     {
         $id = $element->getAttribute('k-id');
         if (isset($this->data[$id]['src'])) {
@@ -160,12 +183,12 @@ class TemplateManager
         // Aggiungi CSS
         $css = $this->dom->createElement('link');
         $css->setAttribute('rel', 'stylesheet');
-        $css->setAttribute('href', $GLOBALS['paths']['editor_css']);
+        $css->setAttribute('href', $this->paths['editor_css']);
         $head->appendChild($css);
 
         // Aggiungi JS
         $js = $this->dom->createElement('script');
-        $js->setAttribute('src', $GLOBALS['paths']['editor_js']);
+        $js->setAttribute('src', $this->paths['editor_js']);
         $body->appendChild($js);
     }
 

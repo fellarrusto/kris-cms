@@ -38,6 +38,12 @@ function replaceComponents($el, $data, $dom, $lang)
                             }
                             break;
 
+                        case 'video':
+                            if (isset($cardContent[$childId]['src'])) {
+                                $childElement->setAttribute('src', $cardContent[$childId]['src']);
+                            }
+                            break;
+
                         case 'a':
                             if (isset($cardContent[$childId]['action'])) {
                                 $childElement->setAttribute('href', $cardContent[$childId]['action']);

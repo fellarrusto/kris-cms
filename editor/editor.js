@@ -9,8 +9,15 @@ function createRepeatableItemElement(key, item, kId) {
 
     Object.keys(item).forEach(subKey => {
         const field = item[subKey];
-        if (field.hasOwnProperty("src")) {
-            // Handle image
+        const isVideo = subKey.toLowerCase().includes('video');
+
+        if (isVideo && field.hasOwnProperty("src")) {
+            html += `
+                <label style="display:block; margin-top: 12px; font-weight: 600;">Upload Video</label>
+                <input type="file" class="video-upload-${subKey}" accept="video/*" />
+                <input type="hidden" class="repeatable-${subKey}-src" value="${field.src || ''}" />
+            `;
+        } else if (field.hasOwnProperty("src")) {
             html += `
                 <label style="display:block; margin-top: 12px; font-weight: 600; cursor: pointer; margin-bottom: 8px;">
                     Upload Image
@@ -19,7 +26,6 @@ function createRepeatableItemElement(key, item, kId) {
                 <input type="hidden" class="image-src-${subKey} repeatable-${subKey}-src" value="${field.src}" />
             `;
         } else if (field.hasOwnProperty("action")) {
-            // Handle action URL
             html += `<label style="display:block; margin-top: 12px; font-weight: 600;">Title (IT):</label>
                 <input type="text" class="repeatable-${subKey}-it" value="${field.it || ''}" 
                     style="width: 100%; padding: 6px; margin-top: 4px; border: 1px solid #ccc; border-radius: 4px;" />
@@ -35,7 +41,6 @@ function createRepeatableItemElement(key, item, kId) {
                     Please enter a valid URL starting with http:// or https://
                 </small>`
         } else if (field.hasOwnProperty("it") && field.hasOwnProperty("en")) {
-            // Handle text (e.g., title or paragraph in different languages)
             html += `
                 <label style="display:block; margin-top: 12px; font-weight: 600;">Description (IT):</label>
                 <textarea class="repeatable-${subKey}-it" 
@@ -75,6 +80,23 @@ function createRepeatableItemElement(key, item, kId) {
                 });
             });
         }
+
+        const videoInput = div.querySelector('.video-upload-' + subKey);
+        if (videoInput) {
+            const hiddenSrcInput = div.querySelector('.repeatable-' + subKey + '-src');
+
+            videoInput.addEventListener("change", () => {
+                const file = videoInput.files[0];
+                if (!file) return;
+
+                const filename = Date.now() + "_" + file.name;
+                const filepath = "/src/" + filename;
+
+                uploadVideoToServer(file, filename, () => {
+                    hiddenSrcInput.value = filepath;
+                });
+            });
+        }
     });
 
     div.querySelector(".delete-repeatable-btn").onclick = () => {
@@ -87,36 +109,37 @@ function createRepeatableItemElement(key, item, kId) {
 function updateRepeatableData(kId) {
     const container = document.getElementById("repeatable-items-container");
     const items = {};
+
     container.querySelectorAll(".repeatable-item").forEach(div => {
         const idx = div.dataset.index;
         const itemData = {};
 
-        // Dynamically handle each key in the item
         Object.keys(window.kData[kId][idx]).forEach(key => {
+            const field = window.kData[kId][idx][key];
             const classPrefix = `repeatable-${key}`;
             const fields = div.querySelectorAll(`[class*='${classPrefix}']`);
-            fields.forEach(field => {
-                const suffixMatch = field.className.match(new RegExp(`repeatable-${key}-(\\S+)`));
 
-                if (suffixMatch) {
-                    const suffix = suffixMatch[1];
-
-                    if (!itemData[key]) {
-                        itemData[key] = {};
+            if (typeof field === "object" && Object.keys(field).length === 1 && field.hasOwnProperty("src")) {
+                const input = div.querySelector(`.repeatable-${key}-src`);
+                itemData[key] = { src: input ? input.value.trim() : "" };
+            } else {
+                itemData[key] = {};
+                fields.forEach(fieldEl => {
+                    const match = fieldEl.className.match(new RegExp(`repeatable-${key}-(\\S+)`));
+                    if (match) {
+                        const suffix = match[1];
+                        itemData[key][suffix] = fieldEl.value.trim();
                     }
-
-                    itemData[key][suffix] = field.value.trim();
-                }
-            });
+                });
+            }
         });
-
-        console.log('Item data for index', idx, ':', itemData);
 
         items[idx] = itemData;
     });
 
     window.kData[kId] = items;
 }
+
 
 // Call this to add a new empty repeatable item block
 function addRepeatableItem(kId) {
@@ -136,7 +159,9 @@ function addRepeatableItem(kId) {
     if (newItemTemplate) {
         Object.keys(newItemTemplate).forEach(subKey => {
             const field = newItemTemplate[subKey];
-            if (field.hasOwnProperty("src")) {
+            if (field.hasOwnProperty("video") || (subKey === 'video' && field.hasOwnProperty('src'))) {
+                newItem[subKey] = { video: "" };
+            } else if (field.hasOwnProperty("src")) {
                 newItem[subKey] = { src: "" };
             } else if (field.hasOwnProperty("action")) {
                 newItem[subKey] = { it: "", en: "", action: "" };
@@ -200,6 +225,7 @@ function editText(e, el) {
     document.getElementById("editorOverlay").style.display = "block";
     document.getElementById("editor-text").style.display = "block";
     document.getElementById("editor-image").style.display = "none";
+    document.getElementById("editor-video").style.display = "none";
     document.getElementById("editor-repeatable").style.display = "none";
 
     const editorIt = document.getElementById("editor-it");
@@ -227,8 +253,21 @@ function editImage(e, el) {
     document.getElementById("editorOverlay").style.display = "block";
     document.getElementById("editor-text").style.display = "none";
     document.getElementById("editor-repeatable").style.display = "none";
+    document.getElementById("editor-video").style.display = "none";
     document.getElementById("editor-image").style.display = "block";
 
+}
+
+function editVideo(e, el) {
+    if (e && typeof e.preventDefault === 'function') {
+        e.preventDefault();
+    }
+    currentElement = el;
+    document.getElementById("editorOverlay").style.display = "block";
+    document.getElementById("editor-text").style.display = "none";
+    document.getElementById("editor-image").style.display = "none";
+    document.getElementById("editor-repeatable").style.display = "none";
+    document.getElementById("editor-video").style.display = "block";
 }
 
 function isValidURL(url) {
@@ -295,6 +334,24 @@ function saveImage() {
     });
 }
 
+function saveVideo() {
+    const fileUpload = document.getElementById("video-upload").files[0];
+    if (!fileUpload) {
+        alert("Seleziona un file prima di salvare.");
+        return;
+    }
+
+    const filename = Date.now() + "_" + fileUpload.name;
+    const filepath = "/src/" + filename;
+    const kId = currentElement.getAttribute("k-id");
+    window.kData[kId].src = filepath;
+
+    uploadVideoToServer(fileUpload, filename, () => {
+        currentElement.src = filepath;
+        saveDataToServer();
+    });
+}
+
 function editButton(e, el) {
     currentElement = el;
 
@@ -331,6 +388,27 @@ function uploadImageToServer(file, filename, callback) {
         .catch(error => console.error("Errore:", error));
 }
 
+function uploadVideoToServer(file, filename, callback) {
+    const formData = new FormData();
+    formData.append("video", file);
+    formData.append("filename", filename);
+
+    fetch("upload_video.php", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            callback();
+        } else {
+            alert("Errore nel caricamento del video.");
+        }
+    })
+    .catch(error => console.error("Errore:", error));
+}
+
+
 function saveDataToServer() {
     fetch("save_data.php", {
         method: "POST",
@@ -356,6 +434,7 @@ function closeEditor() {
     document.getElementById("editorOverlay").style.display = "none";
     document.getElementById("editor-text").style.display = "none";
     document.getElementById("editor-image").style.display = "none";
+    document.getElementById("editor-video").style.display = "none";
     currentElement = null;
 }
 

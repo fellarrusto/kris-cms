@@ -46,35 +46,47 @@
     "logo": {
         "src": "\/src\/logo.svg"
     },
+    "intro-video": {
+        "src": "https:\/\/www.w3schools.com\/html\/mov_bbb.mp4"
+    },
     "block-1": {
         "card-1": {
             "title": {
-                "en": "Lightweight ⚡",
-                "it": "Leggero ⚡"
+                "it": "Leggero ⚡",
+                "en": "Lightweight ⚡"
             },
             "desc": {
-                "en": "Few files great power.",
-                "it": "Pochi files grande potenza."
+                "it": "Pochi files grande potenza.",
+                "en": "Few files great power."
+            },
+            "rep-video": {
+                "src": "https:\/\/www.w3schools.com\/html\/mov_bbb.mp4"
             }
         },
         "card-2": {
             "title": {
-                "en": "Simple 🧩",
-                "it": "Semplice 🧩"
+                "it": "Semplice 🧩",
+                "en": "Simple 🧩"
             },
             "desc": {
-                "en": "No database or complex configurations.",
-                "it": "Nessun database o configurazioni complesse."
+                "it": "Nessun database o configurazioni complesse.",
+                "en": "No database or complex configurations."
+            },
+            "rep-video": {
+                "src": "https:\/\/www.w3schools.com\/html\/mov_bbb.mp4"
             }
         },
         "card-3": {
             "title": {
-                "en": "Direct 🚀",
-                "it": "Immediato 🚀"
+                "it": "Immediato 🚀",
+                "en": "Direct 🚀"
             },
             "desc": {
-                "en": "Just edit the content you see.",
-                "it": "Modifica direttamente ciò che vedi."
+                "it": "Modifica direttamente ciò che vedi.",
+                "en": "Just edit the content you see."
+            },
+            "rep-video": {
+                "src": "https:\/\/www.w3schools.com\/html\/mov_bbb.mp4"
             }
         }
     }
