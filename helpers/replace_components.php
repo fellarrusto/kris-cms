@@ -9,7 +9,7 @@ function replaceComponents($el, $data, $dom, $lang)
 
     $card = null;
     foreach ($el->getElementsByTagName('div') as $childDiv) {
-        if ($childDiv->hasAttribute('k-card')) {
+        if ($childDiv->hasAttribute('k-item')) {
             $card = $childDiv;
             break;
         }

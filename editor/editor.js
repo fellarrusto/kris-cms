@@ -181,6 +181,7 @@ function addRepeatableItem(kId) {
 
 
 async function editRepeatable(e, el) {
+    console.log(el)
     currentElement = el;
     const kId = el.getAttribute("k-id");
     const saveBtn = document.querySelector("#editor-repeatable .save-btn");
