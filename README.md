@@ -1,100 +1,129 @@
-# Kris CMS
+# Kris CMS - README
 
-Kris CMS is a lightweight content management system for static HTML templates. It lets you edit text, images and videos directly on the page and stores the data in a single JSON file.
+## Elementi modificabili
 
-## Features
+### k-id: Campi semplici
+Sostituisce testo o href con dati dall'entity.
 
-- **In‑place editing** of any element marked with `k-edit`.
-- **Repeatable components** using `k-component` and external template files.
-- **Image and video management** with automatic uploads to the `src/` folder.
-- **Two languages** (Italian and English) stored inside `k_data.json`.
-- No database required and a simple authentication system.
-
-## Installation
-
-1. Clone this repository and place it in a directory served by PHP.
-2. Ensure the `src` folder is writable so that uploaded images and videos can be stored.
-3. Start the built in server with:
-
-   ```bash
-   php -S localhost:8000
-   ```
-
-   or use any other web server that can run PHP files.
-
-## Launching the editor
-
-1. Open `/editor/signin.php` in your browser and log in with **Admin** / **password**.
-2. After logging in you are redirected to `/editor/index.php` which loads the selected template with an editing overlay.
-3. Click on elements highlighted by the overlay to change their content.
-
-## JSON data format
-
-All editable content is stored in `k_data.json`. Each element in your templates references an entry by its `k-id` attribute.
-
-- **Text**
-
-  ```json
-  "title": {
-    "en": "Welcome",
-    "it": "Benvenuto"
-  }
-  ```
-
-- **Links and buttons** (include an `action` URL)
-
-  ```json
-  "button-git": {
-    "en": "GitHub Repository",
-    "it": "Repository GitHub",
-    "action": "https://github.com/fellarrusto/kris-cms"
-  }
-  ```
-
-- **Images**
-
-  ```json
-  "logo": {
-    "src": "/src/logo.svg"
-  }
-  ```
-
-- **Videos**
-
-  ```json
-  "intro-video": {
-    "src": "/src/intro.mp4"
-  }
-  ```
-
-- **Repeatable items**
-
-  ```json
-  "block-1": {
-    "card-1": {
-      "title": { "en": "Lightweight", "it": "Leggero" },
-      "desc": { "en": "Few files", "it": "Pochi file" }
-    }
-  }
-  ```
-
-## Creating templates
-
-Mark elements you want to edit with the `k-edit` attribute and give them a unique `k-id` that matches an entry in `k_data.json`:
-
+**HTML:**
 ```html
-<h1 k-edit k-id="title">Welcome to Kris CMS</h1>
-<img k-edit k-id="logo" src="/src/logo.svg" alt="Kris Logo">
+<h1 k-id="homepage.title">Titolo placeholder</h1>
+<a k-id="homepage.link" href="#">Link</a>
 ```
 
-To repeat structures use `k-component` pointing to a component template:
-
-```html
-<div k-component k-template="block" k-id="block-1"></div>
+**JSON:**
+```json
+{
+    "name": "homepage",
+    "data": [
+        {
+            "name": "title",
+            "type": "text",
+            "value": {
+                "it": "Benvenuto",
+                "en": "Welcome"
+            }
+        },
+        {
+            "name": "link",
+            "type": "path",
+            "value": {
+                "it": "/contatti",
+                "en": "/contact"
+            }
+        }
+    ]
+}
 ```
 
-The file `templates/components/block.html` defines the markup that will be repeated for each item stored under `block-1` in `k_data.json`.
+### k-array: Liste ripetibili
+Ripete un template per ogni entity con quel nome.
 
-## Video support
+**HTML:**
+```html
+<div k-array="product" k-template="product-card"></div>
+```
 
-Videos can be referenced in the JSON data like images. Each editable `<video>` (or `<iframe>`) element must have a `k-id` attribute and its `src` is taken from `k_data.json`. Repeatable items can also contain video objects. The editor provides a field to update the video URL which updates the `src` value in the JSON file.
+**template/product-card.html:**
+```html
+<div class="card">
+    <h3 k-id="product.name">Nome</h3>
+    <p k-id="product.price">Prezzo</p>
+</div>
+```
+
+**JSON:**
+```json
+[
+    {"id": 0, "name": "product", "data": [...]},
+    {"id": 1, "name": "product", "data": [...]},
+    {"id": 2, "name": "product", "data": [...]}
+]
+```
+
+### k-component: Componente singolo
+Carica un componente specifico per id.
+
+**HTML:**
+```html
+<div k-component="footer" k-template="footer" k-index="0"></div>
+```
+
+## Convertire HTML esistente
+
+**Prima:**
+```html
+<section>
+    <h1>La nostra azienda</h1>
+    <p>Siamo leader nel settore</p>
+    <a href="/about">Scopri di più</a>
+</section>
+```
+
+**Dopo:**
+```html
+<section>
+    <h1 k-id="about.title">La nostra azienda</h1>
+    <p k-id="about.description">Siamo leader nel settore</p>
+    <a k-id="about.cta_link" href="/about">
+        <span k-id="about.cta_text">Scopri di più</span>
+    </a>
+</section>
+```
+
+**JSON entity:**
+```json
+{
+    "id": 0,
+    "name": "about",
+    "data": [
+        {
+            "name": "title",
+            "type": "text",
+            "value": {"it": "La nostra azienda", "en": "Our company"}
+        },
+        {
+            "name": "description",
+            "type": "text",
+            "value": {"it": "Siamo leader", "en": "We are leaders"}
+        },
+        {
+            "name": "cta_text",
+            "type": "text",
+            "value": {"it": "Scopri di più", "en": "Learn more"}
+        },
+        {
+            "name": "cta_link",
+            "type": "path",
+            "value": {"it": "/chi-siamo", "en": "/about"}
+        }
+    ]
+}
+```
+
+## Uso
+```
+?page=homepage&ln=it
+```
+
+Lingua di fallback: `en`

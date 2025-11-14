@@ -1,0 +1,90 @@
+[
+    {
+        "id": 0,
+        "name": "homepage",
+        "medatada": {
+            "category": "landing",
+            "created_at": "2024-01-15T10:00:00Z"
+        },
+        "data": [
+            {
+                "name": "title",
+                "type": "text",
+                "value": {
+                    "it": "Benvenuto nel nostro sito web!",
+                    "en": "Welcome to our website!",
+                    "es": "¡Bienvenido a nuestro sitio web!"
+                }
+            },
+            {
+                "name": "faq_text",
+                "type": "text",
+                "value": {
+                    "it": "Scopri i nostri servizi e prodotti.",
+                    "en": "Discover our services and products.",
+                    "es": "Descubre nuestros servicios y productos."
+                }
+            },
+            {
+                "name": "faq_link",
+                "type": "path",
+                "value": {
+                    "it": "https://www.wikipedia.org/it",
+                    "en": "https://www.wikipedia.org/en",
+                    "es": "https://www.wikipedia.org/es"
+                }
+            }
+        ]
+    },
+    {
+        "id": 0,
+        "name": "list_test",
+        "medatada": {
+            "category": "cat01"
+        },
+        "data": [
+            {
+                "name": "test_text",
+                "type": "text",
+                "value": {
+                    "it": "Elemento di testo 1",
+                    "en": "Text item 1"
+                }
+            }
+        ]
+    },
+    {
+        "id": 1,
+        "name": "list_test",
+        "medatada": {
+            "category": "cat01"
+        },
+        "data": [
+            {
+                "name": "test_text",
+                "type": "text",
+                "value": {
+                    "it": "Elemento di testo 2",
+                    "en": "Text item 2"
+                }
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "name": "list_test",
+        "medatada": {
+            "category": "cat01"
+        },
+        "data": [
+            {
+                "name": "test_text",
+                "type": "text",
+                "value": {
+                    "it": "Elemento di testo 3",
+                    "en": "Text item 3"
+                }
+            }
+        ]
+    }
+]
