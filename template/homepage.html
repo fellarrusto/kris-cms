@@ -1,13 +1,114 @@
 <!DOCTYPE html>
-<html>
+<html lang="it">
+
 <head>
   <meta charset="UTF-8">
-  <title>Pagina</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title k-id="meta_title">Kris 2 - Lightweight CMS for Static HTML</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="core/scripts/script.js"></script>
 </head>
+
 <body>
-  <h1 k-id="title">Titolo principale</h1>
-  <a k-id="faq_link" href="https://example.com"><p k-id="faq_text"></p></a>
-  <div k-array="list_test" k-template="listelement"></div>
-  <div k-component="list_test" k-template="listcomponent" k-index="1"></div>
+  <header k-component="navbar" k-template="navbar" k-index="0"></header>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 k-id="page_title" class="hero-title">Kris 2</h1>
+        <p k-id="page_subtitle" class="hero-tagline">Lightweight CMS for static HTML templates</p>
+        <p k-id="hero_description" class="hero-description">
+          Edit text, images and videos directly on the page. Store everything in a single JSON file.
+        </p>
+        <div class="hero-actions">
+          <a href="#get-started" class="btn btn-primary"><span k-id="btn_get_started">Get Started</span></a>
+          <a href="#why-kris" class="btn btn-secondary"><span k-id="btn_why_kris">Why Kris?</span></a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="code-preview">
+          <div class="code-header">
+            <div class="code-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span k-id="code_title" class="code-title">content.json</span>
+          </div>
+          <div class="code-content">
+            <pre k-id="code_example">{
+    "id": 0,
+    "name": "homepage",
+    "data": [
+        {
+            "name": "page_title",
+            "type": "text",
+            "value": {
+                "it": "Kris 2 CMS",
+                "en": "Kris 2 CMS"
+            }
+        }
+}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <h2 k-id="features_title" class="section-title">Powerful Features, Simple Setup</h2>
+      <div k-array="feature" k-template="feature-card" class="grid"></div>
+    </div>
+  </section>
+
+  <section class="how-it-works">
+    <div class="container">
+      <h2 k-id="how_it_works_title" class="section-title">How Kris 2 Works</h2>
+      <div class="steps">
+        <!-- TODO ADD COMPONenTS -->
+      </div>
+    </div>
+  </section>
+
+  <section id="get-started" class="cta">
+    <div class="container">
+      <h2 k-id="cta_title">Ready to Get Started?</h2>
+      <p k-id="cta_subtitle">Add Kris 2 to your project in minutes</p>
+      <div class="cta-actions">
+        <a href="#" class="btn btn-primary"><span k-id="btn_download">Download Now</span></a>
+        <a href="#" class="btn btn-secondary"><span k-id="btn_docs">View Documentation</span></a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="logo-container">
+            <img k-id="logo" src="assets/img/logo.svg" alt="Kris 2 Logo" class="logo-img">
+            <span k-id="footer_logo_text" class="logo-text">Kris 2</span>
+          </div>
+          <p k-id="footer_tagline">Lightweight CMS for static HTML</p>
+        </div>
+        <div class="footer-links">
+          <div class="footer-column">
+            <h4 k-id="footer_resources_title">Resources</h4>
+            <a href="#"><span k-id="footer_docs">Documentation</span></a>
+          </div>
+          <div class="footer-column">
+            <h4 k-id="footer_community_title">Community</h4>
+            <a href="#"><span k-id="footer_github">GitHub</span></a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p k-id="footer_copyright">&copy; 2025 Kris 2. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
 </body>
+
 </html>

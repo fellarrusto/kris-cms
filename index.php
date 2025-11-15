@@ -6,7 +6,7 @@ require_once 'core/entity/Entity.php';
 require_once 'core/template/TemplateEngine.php';
 
 $key = $_GET['key'] ?? 'homepage';
-$index = $_GET['index'] ?? 0;
+$index = $_GET['id'] ?? 0;
 $template = $_GET['page'] ?? 'homepage';
 $lang = $_GET['ln'] ?? 'it';
 
