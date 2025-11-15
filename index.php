@@ -1,18 +1,23 @@
 <?php
-// index.php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once 'core/entity/Entity.php';
 require_once 'core/template/TemplateEngine.php';
 
-$page = $_GET['page'] ?? 'homepage';
+$key = $_GET['key'] ?? 'homepage';
+$index = $_GET['index'] ?? 0;
+$template = $_GET['page'] ?? 'homepage';
 $lang = $_GET['ln'] ?? 'it';
 
-$entity = new Entity('k_data', $page);
-$html = file_get_contents("template/{$page}.html");
-
+// Initialize template engine
 $engine = new TemplateEngine($lang);
+
+// Load page entity
+$entity = new Entity('k_data', $key, $index);
+
+// Get page template
+$html = file_get_contents("template/{$template}.html");
+
+// Render and output the page
 echo $engine->render($html, $entity);
-
-// $entity = new Entity('k_data', "list_test", 1);
-
-// echo $entity->getData("test_text", "es");
-
