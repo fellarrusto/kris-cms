@@ -1,129 +1,122 @@
-# Kris CMS - README
+# Kris 2 CMS
 
-## Elementi modificabili
+Transform your static HTML site into a dynamic multilingual site managed through JSON.
 
-### k-id: Campi semplici
-Sostituisce testo o href con dati dall'entity.
+## Base Setup
 
-**HTML:**
-```html
-<h1 k-id="homepage.title">Titolo placeholder</h1>
-<a k-id="homepage.link" href="#">Link</a>
+1. Add core files to your structure:
+```
+/core
+  /entity
+  /template
+  /scripts
+/data
+  k_data.json
+/template
+index.php
 ```
 
-**JSON:**
-```json
-{
-    "name": "homepage",
-    "data": [
-        {
-            "name": "title",
-            "type": "text",
-            "value": {
-                "it": "Benvenuto",
-                "en": "Welcome"
-            }
-        },
-        {
-            "name": "link",
-            "type": "path",
-            "value": {
-                "it": "/contatti",
-                "en": "/contact"
-            }
-        }
-    ]
-}
-```
-
-### k-array: Liste ripetibili
-Ripete un template per ogni entity con quel nome.
-
-**HTML:**
-```html
-<div k-array="product" k-template="product-card"></div>
-```
-
-**template/product-card.html:**
-```html
-<div class="card">
-    <h3 k-id="product.name">Nome</h3>
-    <p k-id="product.price">Prezzo</p>
-</div>
-```
-
-**JSON:**
+2. Create your JSON file in `data/k_data.json`:
 ```json
 [
-    {"id": 0, "name": "product", "data": [...]},
-    {"id": 1, "name": "product", "data": [...]},
-    {"id": 2, "name": "product", "data": [...]}
+  {
+    "id": 0,
+    "name": "homepage",
+    "data": [
+      {
+        "name": "page_title",
+        "type": "text",
+        "value": {
+          "it": "Titolo",
+          "en": "Title"
+        }
+      }
+    ]
+  }
 ]
 ```
 
-### k-component: Componente singolo
-Carica un componente specifico per id.
+## Make Your HTML Dynamic
 
-**HTML:**
+### Simple text
 ```html
-<div k-component="footer" k-template="footer" k-index="0"></div>
+<h1 k-id="page_title">Static title</h1>
 ```
 
-## Convertire HTML esistente
-
-**Prima:**
+### Images
 ```html
-<section>
-    <h1>La nostra azienda</h1>
-    <p>Siamo leader nel settore</p>
-    <a href="/about">Scopri di più</a>
-</section>
+<img k-id="logo" src="placeholder.jpg" alt="Logo">
 ```
 
-**Dopo:**
+### Links
 ```html
-<section>
-    <h1 k-id="about.title">La nostra azienda</h1>
-    <p k-id="about.description">Siamo leader nel settore</p>
-    <a k-id="about.cta_link" href="/about">
-        <span k-id="about.cta_text">Scopri di più</span>
-    </a>
-</section>
+<a k-id="link_download" href="#">Download</a>
 ```
 
-**JSON entity:**
+### Paths (for href/src)
+In JSON use type `"path"`:
 ```json
 {
-    "id": 0,
-    "name": "about",
-    "data": [
-        {
-            "name": "title",
-            "type": "text",
-            "value": {"it": "La nostra azienda", "en": "Our company"}
-        },
-        {
-            "name": "description",
-            "type": "text",
-            "value": {"it": "Siamo leader", "en": "We are leaders"}
-        },
-        {
-            "name": "cta_text",
-            "type": "text",
-            "value": {"it": "Scopri di più", "en": "Learn more"}
-        },
-        {
-            "name": "cta_link",
-            "type": "path",
-            "value": {"it": "/chi-siamo", "en": "/about"}
-        }
-    ]
+  "name": "logo",
+  "type": "path",
+  "value": {
+    "it": "assets/img/logo.svg",
+    "en": "assets/img/logo.svg"
+  }
 }
 ```
 
-## Uso
-```
-?page=homepage&ln=it
+### Reusable components
+```html
+<header k-component="navbar" k-template="navbar" k-index="0"></header>
 ```
 
-Lingua di fallback: `en`
+### Dynamic lists
+```html
+<div k-array="feature" k-template="feature-card"></div>
+```
+
+Each entity with the same `name` must be indexed by an integer incremental `id`:
+```json
+[
+  {
+    "id": 0,
+    "name": "feature",
+    "data": [...]
+  },
+  {
+    "id": 1,
+    "name": "feature",
+    "data": [...]
+  },
+  {
+    "id": 2,
+    "name": "feature",
+    "data": [...]
+  }
+]
+```
+
+## Routing
+
+```
+index.php?page=homepage&key=homepage&id=0&ln=en
+```
+
+- `page`: template to use
+- `key`: entity name in JSON
+- `id`: entity index
+- `ln`: language (it/en)
+
+## Multilingual
+
+You can use the function setLanguage(ln) to change website language:
+```html
+<a onclick="setLanguage('en')">EN</a>
+<a onclick="setLanguage('it')">IT</a>
+```
+
+Include the core script:
+```html
+<script src="core/scripts/script.js"></script>
+```
