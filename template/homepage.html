@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title k-id="meta_title">Kris 2 - Lightweight CMS for Static HTML</title>
+  <title>{{meta_title}}</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="core/scripts/script.js"></script>
@@ -16,14 +16,12 @@
   <section class="hero">
     <div class="container">
       <div class="hero-content">
-        <h1 k-id="page_title" class="hero-title">Kris 2</h1>
-        <p k-id="page_subtitle" class="hero-tagline">Lightweight CMS for static HTML templates</p>
-        <p k-id="hero_description" class="hero-description">
-          Edit text, images and videos directly on the page. Store everything in a single JSON file.
-        </p>
+        <h1 class="hero-title">{{page_title}}</h1>
+        <p class="hero-tagline">{{page_subtitle}}</p>
+        <p class="hero-description">{{hero_description}}</p>
         <div class="hero-actions">
-          <a href="#get-started" class="btn btn-primary"><span k-id="btn_get_started">Get Started</span></a>
-          <a href="#why-kris" class="btn btn-secondary"><span k-id="btn_why_kris">Why Kris?</span></a>
+          <a href="#get-started" class="btn btn-primary">{{btn_get_started}}</a>
+          <a href="#why-kris" class="btn btn-secondary">{{btn_why_kris}}</a>
         </div>
       </div>
       <div class="hero-visual">
@@ -34,22 +32,10 @@
               <span></span>
               <span></span>
             </div>
-            <span k-id="code_title" class="code-title">content.json</span>
+            <span class="code-title">{{code_title}}</span>
           </div>
           <div class="code-content">
-            <pre k-id="code_example">{
-    "id": 0,
-    "name": "homepage",
-    "data": [
-        {
-            "name": "page_title",
-            "type": "text",
-            "value": {
-                "it": "Kris 2 CMS",
-                "en": "Kris 2 CMS"
-            }
-        }
-}</pre>
+            <pre>{{code_example}}</pre>
           </div>
         </div>
       </div>
@@ -58,14 +44,14 @@
 
   <section id="features" class="features">
     <div class="container">
-      <h2 k-id="features_title" class="section-title">Powerful Features, Simple Setup</h2>
+      <h2 class="section-title">{{features_title}}</h2>
       <div k-array="feature" k-template="feature-card" class="grid"></div>
     </div>
   </section>
 
   <section class="how-it-works">
     <div class="container">
-      <h2 k-id="how_it_works_title" class="section-title">How Kris 2 Works</h2>
+      <h2 class="section-title">{{how_it_works_title}}</h2>
       <div class="steps">
         <!-- TODO ADD COMPONenTS -->
       </div>
@@ -74,11 +60,11 @@
 
   <section id="get-started" class="cta">
     <div class="container">
-      <h2 k-id="cta_title">Ready to Get Started?</h2>
-      <p k-id="cta_subtitle">Add Kris 2 to your project in minutes</p>
+      <h2>{{cta_title}}</h2>
+      <p>{{cta_subtitle}}</p>
       <div class="cta-actions">
-        <a href="#" class="btn btn-primary"><span k-id="btn_download">Download Now</span></a>
-        <a href="#" class="btn btn-secondary"><span k-id="btn_docs">View Documentation</span></a>
+        <a href="#" class="btn btn-primary">{{btn_download}}</a>
+        <a href="#" class="btn btn-secondary">{{btn_docs}}</a>
       </div>
     </div>
   </section>
@@ -88,24 +74,24 @@
       <div class="footer-content">
         <div class="footer-brand">
           <div class="logo-container">
-            <img k-id="logo" src="assets/img/logo.svg" alt="Kris 2 Logo" class="logo-img">
-            <span k-id="footer_logo_text" class="logo-text">Kris 2</span>
+            <img src="{{logo}}" alt="Kris 2 Logo" class="logo-img">
+            <span class="logo-text">{{footer_logo_text}}</span>
           </div>
-          <p k-id="footer_tagline">Lightweight CMS for static HTML</p>
+          <p>{{footer_tagline}}</p>
         </div>
         <div class="footer-links">
           <div class="footer-column">
-            <h4 k-id="footer_resources_title">Resources</h4>
-            <a href="#"><span k-id="footer_docs">Documentation</span></a>
+            <h4>{{footer_resources_title}}</h4>
+            <a href="#">{{footer_docs}}</a>
           </div>
           <div class="footer-column">
-            <h4 k-id="footer_community_title">Community</h4>
-            <a href="#"><span k-id="footer_github">GitHub</span></a>
+            <h4>{{footer_community_title}}</h4>
+            <a href="#">{{footer_github}}</a>
           </div>
         </div>
       </div>
       <div class="footer-bottom">
-        <p k-id="footer_copyright">&copy; 2025 Kris 2. All rights reserved.</p>
+        <p>{{footer_copyright}}</p>
       </div>
     </div>
   </footer>

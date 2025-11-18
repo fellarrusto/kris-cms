@@ -1,46 +1,27 @@
-<a k-id="link" class="card-link" href="#">
+<a class="card-link" href="{{link}}">
+    {{#if category == "feature_a"}}
     <div class="card">
-        <div k-id="icon" class="card-icon">⚡</div>
-        <h3 k-id="title" class="card-title">Sviluppo Rapido</h3>
-        <p k-id="description" class="card-description">
-            Get your static site up and running in minutes. No complex setup, just pure HTML and JSON.
-        </p>
+        <div class="card-icon">{{icon}}</div>
+        <h3 class="card-title">{{title}}</h3>
+        <p class="card-description" style="font-style: italic;">{{description}}</p>
     </div>
+    {{#elif category == "feature_b"}}
+    <div class="card">
+        <div class="card-icon">{{icon}}</div>
+        <h3 class="card-title">{{title}}</h3>
+        <p class="card-description" style="text-decoration: overline;">{{description}}</p>
+    </div>
+    {{#elif category == "feature_c"}}
+    <div class="card">
+        <div class="card-icon">{{icon}}</div>
+        <h3 class="card-title">{{title}}</h3>
+        <p class="card-description" style="text-decoration: underline;">{{description}}</p>
+    </div>
+    {{#else}}
+    <div class="card">
+        <div class="card-icon">{{icon}}</div>
+        <h3 class="card-title">{{title}}</h3>
+        <p class="card-description">{{description}}</p>
+    </div>
+    {{/if}}
 </a>
-<!-- <div class="card">
-    <div class="card-icon">⚡</div>
-    <h3 class="card-title">Sviluppo Rapido</h3>
-    <p class="card-description">
-        Get your static site up and running in minutes. No complex setup, just pure HTML and JSON.
-    </p>
-</div>
-<div class="card">
-    <div class="card-icon">🎨</div>
-    <h3 class="card-title">Completamente Personalizzabile</h3>
-    <p class="card-description">
-        Use your existing HTML templates. Kris 2 works with any design without forcing a specific structure.
-    </p>
-</div>
-<div class="card">
-    <div class="card-icon">🗄️</div>
-    <h3 class="card-title">No Database</h3>
-    <p class="card-description">
-        All your content lives in a single JSON file. No database setup, no server maintenance.
-    </p>
-</div> -->
-
-<!-- <div class="step">
-    <div class="step-number">1</div>
-    <h3>Create Your HTML</h3>
-    <p>Build your static website with regular HTML, CSS and JavaScript.</p>
-</div>
-<div class="step">
-    <div class="step-number">2</div>
-    <h3>Add Kris Attributes</h3>
-    <p>Mark editable areas with simple data attributes.</p>
-</div>
-<div class="step">
-    <div class="step-number">4</div>
-    <h3>Save to JSON</h3>
-    <p>All changes are saved to a single JSON file automatically.</p>
-</div> -->

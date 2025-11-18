@@ -256,6 +256,10 @@
         "name": "feature",
         "data": [
             {
+                "name": "category",
+                "value": "feature_a"
+            },
+            {
                 "name": "icon",
                 "type": "text",
                 "value": {
@@ -294,6 +298,10 @@
         "name": "feature",
         "data": [
             {
+                "name": "category",
+                "value": "feature_b"
+            },
+            {
                 "name": "icon",
                 "type": "text",
                 "value": {
@@ -331,6 +339,10 @@
         "id": 2,
         "name": "feature",
         "data": [
+            {
+                "name": "category",
+                "value": "feature_c"
+            },
             {
                 "name": "icon",
                 "type": "text",
