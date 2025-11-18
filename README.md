@@ -1,122 +1,104 @@
-# Kris 2 CMS
+Here is a practical, user-oriented guide. It focuses on **how to build** rather than how the code works.
 
-Transform your static HTML site into a dynamic multilingual site managed through JSON.
+-----
 
-## Base Setup
+# 🚀 Kris 2 CMS - Builder's Guide
 
-1. Add core files to your structure:
-```
-/core
-  /entity
-  /template
-  /scripts
-/data
-  k_data.json
-/template
-index.php
-```
+**Philosophy:** You write standard HTML for your design, and use the Admin Panel to manage the text and images. No database installation required.
 
-2. Create your JSON file in `data/k_data.json`:
-```json
-[
-  {
-    "id": 0,
-    "name": "homepage",
-    "data": [
-      {
-        "name": "page_title",
-        "type": "text",
-        "value": {
-          "it": "Titolo",
-          "en": "Title"
-        }
-      }
-    ]
-  }
-]
-```
+-----
 
-## Make Your HTML Dynamic
+## 1\. The Workflow
 
-### Simple text
+1.  **Design:** Create your HTML files in the `template/` folder.
+2.  **Define:** Create data entries in the Admin Panel (or `data/k_data.json`).
+3.  **Connect:** Use "Magic Tags" in your HTML to pull that data in.
+
+-----
+
+## 2\. Displaying Simple Content
+
+To show text or an image, use double curly braces `{{ }}`. The name inside must match the **name** you gave the item in your data.
+
+**In your HTML:**
+
 ```html
-<h1 k-id="page_title">Static title</h1>
+<h1>{{page_title}}</h1>
+
+<img src="{{logo}}" alt="My Logo">
 ```
 
-### Images
-```html
-<img k-id="logo" src="placeholder.jpg" alt="Logo">
-```
+*Note: The system automatically switches between English and Italian based on the user's selection.*
 
-### Links
-```html
-<a k-id="link_download" href="#">Download</a>
-```
+-----
 
-### Paths (for href/src)
-In JSON use type `"path"`:
-```json
-{
-  "name": "logo",
-  "type": "path",
-  "value": {
-    "it": "assets/img/logo.svg",
-    "en": "assets/img/logo.svg"
-  }
-}
-```
+## 3\. Reusable Components (Header/Footer)
 
-### Reusable components
+If you have a piece of code you want on every page (like a Navbar), don't copy-paste it. Save it as a separate file (e.g., `navbar.html`) and inject it.
+
+**How to inject:**
+
 ```html
 <header k-component="navbar" k-template="navbar" k-index="0"></header>
 ```
 
-### Dynamic lists
+  * `k-component`: The group name in your data.
+  * `k-template`: The filename of your HTML template.
+  * `k-index`: Usually `0` (unless you have multiple versions of a navbar).
+
+-----
+
+## 4\. Lists and Grids (The "Loop")
+
+To create a list of items (like Features, Blog Posts, or Team Members), you don't need to duplicate HTML code. Create **one** HTML card, and the system will repeat it for every item in your data.
+
+1.  Create a snippet file (e.g., `feature-card.html`).
+2.  In your main page, use `k-array`:
+
+<!-- end list -->
+
 ```html
-<div k-array="feature" k-template="feature-card"></div>
+<div class="grid-container" k-array="feature" k-template="feature-card">
+    </div>
 ```
 
-Each entity with the same `name` must be indexed by an integer incremental `id`:
-```json
-[
-  {
-    "id": 0,
-    "name": "feature",
-    "data": [...]
-  },
-  {
-    "id": 1,
-    "name": "feature",
-    "data": [...]
-  },
-  {
-    "id": 2,
-    "name": "feature",
-    "data": [...]
-  }
-]
-```
+-----
 
-## Routing
+## 5\. Smart Logic (If/Else)
 
-```
-index.php?page=homepage&key=homepage&id=0&ln=en
-```
+You can change the design based on the data.
 
-- `page`: template to use
-- `key`: entity name in JSON
-- `id`: entity index
-- `ln`: language (it/en)
-
-## Multilingual
-
-You can use the function setLanguage(ln) to change website language:
 ```html
-<a onclick="setLanguage('en')">EN</a>
-<a onclick="setLanguage('it')">IT</a>
+{{#if category == "new"}}
+    <span class="badge-green">New Arrival!</span>
+{{#elif category == "sale"}}
+    <span class="badge-red">On Sale</span>
+{{#else}}
+    <span>Standard Item</span>
+{{/if}}
 ```
 
-Include the core script:
+-----
+
+## 6\. Linking Pages
+
+To link to a specific detail page (like a specific blog post), use this URL structure:
+
+`index.php?page=[TEMPLATE_NAME]&key=[DATA_GROUP]&id=[ID]`
+
+**Example:**
+
 ```html
-<script src="core/scripts/script.js"></script>
+<a href="index.php?page=detail&key=feature&id=1">Read More</a>
 ```
+
+-----
+
+## 7\. Managing Content (The Admin)
+
+You don't need to touch code to change text.
+
+1.  Go to `/editor/` in your browser.
+2.  **Edit:** Click a group to see all items. Change text for both languages (IT/EN).
+3.  **Add New:** Click "Add New" to create a new blog post or feature. The system handles the ID automatically.
+4.  **Save:** Updates are instant.
