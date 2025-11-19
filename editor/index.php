@@ -1,10 +1,73 @@
 <?php
 /**
- * KRIS 2 CMS - Professional UI Edition (Richtext + Media Integration)
- * File: /editor/cms.php
+ * KRIS 2 CMS - Professional UI Edition (Secured)
+ * File: /editor/index.php
  */
 
 session_start();
+
+// --- SISTEMA DI LOGIN (GATEKEEPER) ---
+$ADMIN_USER = 'admin';      // <--- Cambia il tuo username
+$ADMIN_PASS = 'password';   // <--- Cambia la tua password
+
+// Logout Logic
+if (isset($_GET['logout'])) {
+    session_destroy();
+    header("Location: index.php");
+    exit;
+}
+
+// Login Logic
+$login_error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_login'])) {
+    if ($_POST['user'] === $ADMIN_USER && $_POST['pass'] === $ADMIN_PASS) {
+        $_SESSION['kris_auth'] = true;
+        header("Location: index.php");
+        exit;
+    } else {
+        $login_error = "Credenziali non valide.";
+    }
+}
+
+// Gatekeeper Check
+if (!isset($_SESSION['kris_auth']) || $_SESSION['kris_auth'] !== true) {
+?>
+    <!DOCTYPE html>
+    <html lang="it">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Login - Kris CMS</title>
+        <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .login-card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
+            h2 { margin: 0 0 20px 0; color: #111827; font-size: 1.5rem; }
+            input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e5e7eb; border-radius: 6px; box-sizing: border-box; font-size: 1rem; }
+            button { width: 100%; padding: 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+            button:hover { background: #2563eb; }
+            .error { background: #fee2e2; color: #b91c1c; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 0.9rem; }
+            .brand { font-weight: 800; color: #3b82f6; margin-bottom: 10px; display: inline-block; letter-spacing: -1px; font-size: 1.2rem;}
+        </style>
+    </head>
+    <body>
+        <div class="login-card">
+            <div class="brand">KRIS CMS</div>
+            <h2>Accesso Riservato</h2>
+            <?php if($login_error): ?><div class="error"><?= $login_error ?></div><?php endif; ?>
+            <form method="POST">
+                <input type="hidden" name="do_login" value="1">
+                <input type="text" name="user" placeholder="Username" required autofocus>
+                <input type="password" name="pass" placeholder="Password" required>
+                <button type="submit">Accedi</button>
+            </form>
+        </div>
+    </body>
+    </html>
+<?php
+    exit; // <--- BLOCCO CRITICO: Ferma l'esecuzione se non loggato
+}
+
+// --- FINE LOGIN --- (Il CMS inizia qui sotto)
 
 // --- CONFIGURAZIONE ---
 $dataFile = __DIR__ . '/../data/k_data.json';
@@ -57,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($name && !isset($models[$name])) {
             $models[$name] = [];
             saveJson($modelFile, $models);
-            header("Location: cms.php?action=structure&group=$name");
+            header("Location: index.php?action=structure&group=$name");
             exit;
         }
     }
@@ -83,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['delete_collection'])) {
         unset($models[$_POST['group_name']]);
         saveJson($modelFile, $models);
-        header("Location: cms.php");
+        header("Location: index.php");
         exit;
     }
     // 4. Salva Entità
@@ -134,14 +197,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newId = $maxId + 1;
         $data[] = ['id' => $newId, 'name' => $g, 'data' => $skeleton];
         saveJson($dataFile, $data);
-        header("Location: cms.php?action=edit&group=$g&id=$newId");
+        header("Location: index.php?action=edit&group=$g&id=$newId");
         exit;
     }
     // 6. Elimina Istanza
     if (isset($_POST['delete_instance'])) {
         $data = array_filter($data, fn($d) => !($d['name'] == $_POST['group'] && $d['id'] == $_POST['id']));
         saveJson($dataFile, array_values($data));
-        header("Location: cms.php?action=list&group=" . $_POST['group']);
+        header("Location: index.php?action=list&group=" . $_POST['group']);
         exit;
     }
     // 7. Upload & Settings
@@ -150,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (isset($_POST['save_settings'])) {
         saveJson($settingsFile, ['languages' => $_POST['langs'] ?? ['it']]);
-        header("Location: cms.php?action=settings");
+        header("Location: index.php?action=settings");
         exit;
     }
 }
@@ -258,6 +321,17 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
 
         .nav-item.active svg {
             opacity: 1;
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            margin-top: auto;
+            border-top: 1px solid #1f2937;
+            color: #ef4444;
+        }
+        .logout-btn:hover {
+            background: #371b1b;
+            color: #f87171;
         }
 
         /* MAIN CONTENT */
@@ -629,6 +703,15 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                 </path>
             </svg>
             Impostazioni
+        </a>
+
+        <a href="?logout=1" class="nav-item logout-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Esci
         </a>
 
     </aside>
