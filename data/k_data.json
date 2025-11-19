@@ -28,43 +28,19 @@
                 }
             },
             {
+                "name": "hero_description",
+                "type": "richtext",
+                "value": {
+                    "it": "<p>Modifica testi, immagini e video direttamente sulla pagina. Salva tutto in un unico file JSON.<\/p>",
+                    "en": "<p>Edit text, images and videos directly on the page. Store everything in a single JSON file.<\/p>"
+                }
+            },
+            {
                 "name": "logo",
                 "type": "image",
                 "value": {
-                    "it": "assets/uploads/logo.svg",
-                    "en": "assets/uploads/logo.svg"
-                }
-            },
-            {
-                "name": "nav_features",
-                "type": "text",
-                "value": {
-                    "it": "Funzionalità",
-                    "en": "Features"
-                }
-            },
-            {
-                "name": "nav_docs",
-                "type": "text",
-                "value": {
-                    "it": "Documentazione",
-                    "en": "Documentation"
-                }
-            },
-            {
-                "name": "nav_github",
-                "type": "text",
-                "value": {
-                    "it": "GitHub",
-                    "en": "GitHub"
-                }
-            },
-            {
-                "name": "hero_description",
-                "type": "text",
-                "value": {
-                    "it": "Modifica testi, immagini e video direttamente sulla pagina. Salva tutto in un unico file JSON.",
-                    "en": "Edit text, images and videos directly on the page. Store everything in a single JSON file."
+                    "it": "assets\/uploads\/logo.svg",
+                    "en": "assets\/uploads\/logo.svg"
                 }
             },
             {
@@ -94,7 +70,7 @@
             {
                 "name": "code_example",
                 "type": "plain",
-                "value": "{\n    \"id\": 0,\n    \"name\": \"homepage\",\n    \"data\": [\n        {\n            \"name\": \"page_title\",\n            \"type\": \"text\",\n            \"value\": {\n                \"it\": \"Kris 2 CMS\",\n                \"en\": \"Kris 2 CMS\"\n            }\n        }\n}"
+                "value": "{\r\n    \"id\": 0,\r\n    \"name\": \"homepage\",\r\n    \"data\": [\r\n        {\r\n            \"name\": \"page_title\",\r\n            \"type\": \"text\",\r\n            \"value\": {\r\n                \"it\": \"Kris 2 CMS\",\r\n                \"en\": \"Kris 2 CMS\"\r\n            }\r\n        }\r\n}"
             },
             {
                 "name": "features_title",
@@ -102,14 +78,6 @@
                 "value": {
                     "it": "Funzionalità Potenti, Configurazione Semplice",
                     "en": "Powerful Features, Simple Setup"
-                }
-            },
-            {
-                "name": "how_it_works_title",
-                "type": "text",
-                "value": {
-                    "it": "Come Funziona Kris 2",
-                    "en": "How Kris 2 Works"
                 }
             },
             {
@@ -129,75 +97,11 @@
                 }
             },
             {
-                "name": "btn_download",
-                "type": "text",
-                "value": {
-                    "it": "Scarica Ora",
-                    "en": "Download Now"
-                }
-            },
-            {
-                "name": "btn_docs",
-                "type": "text",
-                "value": {
-                    "it": "Vedi Documentazione",
-                    "en": "View Documentation"
-                }
-            },
-            {
-                "name": "footer_logo_text",
-                "type": "text",
-                "value": {
-                    "it": "Kris 2",
-                    "en": "Kris 2"
-                }
-            },
-            {
-                "name": "footer_tagline",
-                "type": "text",
-                "value": {
-                    "it": "CMS leggero per HTML statico",
-                    "en": "Lightweight CMS for static HTML"
-                }
-            },
-            {
-                "name": "footer_resources_title",
-                "type": "text",
-                "value": {
-                    "it": "Risorse",
-                    "en": "Resources"
-                }
-            },
-            {
-                "name": "footer_docs",
-                "type": "text",
-                "value": {
-                    "it": "Documentazione",
-                    "en": "Documentation"
-                }
-            },
-            {
-                "name": "footer_community_title",
-                "type": "text",
-                "value": {
-                    "it": "Community",
-                    "en": "Community"
-                }
-            },
-            {
-                "name": "footer_github",
-                "type": "text",
-                "value": {
-                    "it": "GitHub",
-                    "en": "GitHub"
-                }
-            },
-            {
                 "name": "footer_copyright",
                 "type": "text",
                 "value": {
-                    "it": "&copy; 2025 Kris 2. Tutti i diritti riservati.",
-                    "en": "&copy; 2025 Kris 2. All rights reserved."
+                    "it": "© 2025 Kris 2. Tutti i diritti riservati.",
+                    "en": "© 2025 Kris 2. All rights reserved."
                 }
             }
         ]
@@ -210,8 +114,8 @@
                 "name": "logo",
                 "type": "image",
                 "value": {
-                    "it": "assets/img/logo.svg",
-                    "en": "assets/img/logo.svg"
+                    "it": "assets\/uploads\/logo.svg",
+                    "en": "assets\/uploads\/logo.svg"
                 }
             },
             {
@@ -285,8 +189,8 @@
                 "name": "link",
                 "type": "text",
                 "value": {
-                    "it": "/index.php?page=detail&key=feature&id=0&ln=it",
-                    "en": "/index.php?page=detail&key=feature&id=0&ln=en"
+                    "it": "\/index.php?page=detail&key=feature&id=0&ln=it",
+                    "en": "\/index.php?page=detail&key=feature&id=0&ln=en"
                 }
             }
         ]
@@ -328,8 +232,8 @@
                 "name": "link",
                 "type": "text",
                 "value": {
-                    "it": "/index.php?page=detail&key=feature&id=1&ln=it",
-                    "en": "/index.php?page=detail&key=feature&id=1&ln=en"
+                    "it": "\/index.php?page=detail&key=feature&id=1&ln=it",
+                    "en": "\/index.php?page=detail&key=feature&id=1&ln=en"
                 }
             }
         ]
@@ -371,8 +275,8 @@
                 "name": "link",
                 "type": "text",
                 "value": {
-                    "it": "/index.php?page=detail&key=feature&id=2&ln=it",
-                    "en": "/index.php?page=detail&key=feature&id=2&ln=en"
+                    "it": "\/index.php?page=detail&key=feature&id=2&ln=it",
+                    "en": "\/index.php?page=detail&key=feature&id=2&ln=en"
                 }
             }
         ]

@@ -147,6 +147,7 @@ body {
 
 .hero-actions {
     display: flex;
+    margin-top: 15pt;
     gap: 1rem;
 }
 

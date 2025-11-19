@@ -1,6 +1,6 @@
 <?php
 /**
- * KRIS 2 CMS - Professional UI Edition
+ * KRIS 2 CMS - Professional UI Edition (Richtext + Media Integration)
  * File: /editor/cms.php
  */
 
@@ -49,7 +49,7 @@ $action = $_GET['action'] ?? 'dashboard';
 $group = $_GET['group'] ?? null;
 $msg = '';
 
-// --- LOGICA POST (Identica alla precedente per funzionalità) ---
+// --- LOGICA POST ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 1. Crea Collezione
     if (isset($_POST['create_collection'])) {
@@ -163,7 +163,7 @@ foreach ($data as $d) {
     if (isset($counts[$d['name']]))
         $counts[$d['name']]++;
 }
-$images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
+$images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -172,6 +172,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kris 2 CMS</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
     <style>
         :root {
             --primary: #3b82f6;
@@ -259,15 +260,6 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
             opacity: 1;
         }
 
-        .nav-divider {
-            margin: 20px 24px 10px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-            color: #4b5563;
-        }
-
         /* MAIN CONTENT */
         main {
             flex: 1;
@@ -278,6 +270,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding-bottom: 100px;
         }
 
         /* TYPOGRAPHY & UI */
@@ -372,6 +365,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
             font-size: 0.95rem;
             transition: border 0.2s;
             background: #fff;
+            box-sizing: border-box;
         }
 
         input:focus,
@@ -553,7 +547,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.5);
-            z-index: 50;
+            z-index: 9999; /* Alto z-index per stare sopra a TinyMCE */
             align-items: center;
             justify-content: center;
             backdrop-filter: blur(2px);
@@ -593,6 +587,12 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
             display: flex;
             justify-content: flex-end;
             gap: 12px;
+        }
+        
+        /* TinyMCE Fixes */
+        .tox-tinymce {
+            border: 1px solid var(--border) !important;
+            border-radius: 6px !important;
         }
     </style>
 </head>
@@ -743,7 +743,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
                                     foreach ($list as $item):
                                         $prev = '<em style="color:#9ca3af">Vuoto</em>';
                                         foreach ($item['data'] as $d) {
-                                            if (in_array($d['type'], ['text', 'plain'])) {
+                                            if (in_array($d['type'], ['text', 'plain', 'richtext'])) {
                                                 $v = is_array($d['value']) ? reset($d['value']) : $d['value'];
                                                 if ($v) {
                                                     $prev = mb_substr(strip_tags($v), 0, 70) . '...';
@@ -797,11 +797,10 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
                                         <input type="text" name="fields[<?= $idx ?>][name]" value="<?= $f['name'] ?>"
                                             placeholder="Nome campo (es. title)">
                                         <select name="fields[<?= $idx ?>][type]" style="width:250px">
-                                            <option value="text" <?= $f['type'] == 'text' ? 'selected' : '' ?>>Testo Multilingua
-                                            </option>
+                                            <option value="text" <?= $f['type'] == 'text' ? 'selected' : '' ?>>Testo Multilingua</option>
+                                            <option value="richtext" <?= $f['type'] == 'richtext' ? 'selected' : '' ?>>Richtext (HTML / Editor)</option>
                                             <option value="image" <?= $f['type'] == 'image' ? 'selected' : '' ?>>Media / File</option>
-                                            <option value="plain" <?= $f['type'] == 'plain' ? 'selected' : '' ?>>Testo Semplice (es.
-                                                ID, Codici)</option>
+                                            <option value="plain" <?= $f['type'] == 'plain' ? 'selected' : '' ?>>Testo Semplice (ID, Codici)</option>
                                         </select>
                                         <button type="button" class="btn btn-white" onclick="this.parentElement.remove()"
                                             style="color:var(--danger);">✕</button>
@@ -815,6 +814,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
                                     <input type="text" name="new_field_name" placeholder="Nome nuovo campo...">
                                     <select name="new_field_type" style="width:250px">
                                         <option value="text">Testo Multilingua</option>
+                                        <option value="richtext">Richtext (HTML / Editor)</option>
                                         <option value="image">Media / File</option>
                                         <option value="plain">Testo Semplice</option>
                                     </select>
@@ -887,7 +887,6 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
                                                             onclick="pickMedia('in_<?= $n ?>_<?= $l ?>')">Scegli</button>
                                                     </div>
                                                     <?php if ($v):
-                                                        // FIX VISIVO: Se manca il ../ lo aggiunge solo per l'anteprima
                                                         $previewSrc = (strpos($v, '../') === false && strpos($v, 'http') !== 0) ? '../' . $v : $v;
                                                         ?>
                                                         <div
@@ -896,6 +895,10 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
                                                                 style="height:100px; display:block; object-fit:cover;">
                                                         </div>
                                                     <?php endif; ?>
+                                                
+                                                <?php elseif ($t === 'richtext'): ?>
+                                                    <textarea name="<?= $n ?>[<?= $l ?>]" class="richtext"><?= htmlspecialchars($v) ?></textarea>
+
                                                 <?php else: ?>
                                                     <textarea name="<?= $n ?>[<?= $l ?>]" rows="4"
                                                         style="min-height:100px;"><?= $v ?></textarea>
@@ -950,8 +953,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
                 <form method="POST" class="card">
                     <div class="card-body">
                         <h3>Lingue supportate</h3>
-                        <p style="color:#6b7280; margin-bottom:20px;">Seleziona le lingue che vuoi gestire nel CMS. Questo
-                            modificherà i campi di input disponibili.</p>
+                        <p style="color:#6b7280; margin-bottom:20px;">Seleziona le lingue che vuoi gestire nel CMS.</p>
                         <div class="grid">
                             <?php foreach ($DEFAULT_LANGS as $code => $label): ?>
                                 <label class="card"
@@ -1000,15 +1002,57 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg}', GLOB_BRACE);
 
     <script>
         let tgt = null;
-        function pickMedia(id) { tgt = id; document.getElementById('mediaOverlay').style.display = 'flex'; }
-        function selectMedia(u) { document.getElementById(tgt).value = u; document.getElementById('mediaOverlay').style.display = 'none'; }
+        let tinymceCallback = null; // Callback per l'editor Rich Text
+
+        // Apertura per Input Normali
+        function pickMedia(id) { 
+            tgt = id; 
+            tinymceCallback = null; // Resetta modo TinyMCE
+            document.getElementById('mediaOverlay').style.display = 'flex'; 
+        }
+
+        // Apertura per TinyMCE
+        function openCmsMediaPicker(callback, value, meta) {
+            tinymceCallback = callback;
+            tgt = null; // Resetta modo Input
+            document.getElementById('mediaOverlay').style.display = 'flex';
+        }
+
+        // Selezione file universale
+        function selectMedia(u) { 
+            if(tinymceCallback) {
+                // Siamo in modalità TinyMCE -> Inseriamo l'URL nel dialog di TinyMCE
+                tinymceCallback(u, { title: u.split('/').pop() });
+                tinymceCallback = null;
+            } else if(tgt) {
+                // Siamo in modalità Input classico
+                document.getElementById(tgt).value = u; 
+            }
+            document.getElementById('mediaOverlay').style.display = 'none'; 
+        }
+
         function openTab(el, cid, grp) {
             document.querySelectorAll('.group-' + grp).forEach(x => x.classList.remove('active'));
             document.getElementById(cid).classList.add('active');
             el.parentElement.querySelectorAll('.tab-btn').forEach(x => x.classList.remove('active'));
             el.classList.add('active');
         }
+
+        // Inizializza TinyMCE
+        document.addEventListener("DOMContentLoaded", function() {
+            if(document.querySelector('.richtext')) {
+                tinymce.init({
+                    selector: '.richtext',
+                    height: 400,
+                    menubar: false,
+                    plugins: 'image link lists code',
+                    toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
+                    // Integrazione File Manager Custom
+                    file_picker_callback: openCmsMediaPicker,
+                    content_style: 'body { font-family:Segoe UI,Arial,sans-serif; font-size:14px }'
+                });
+            }
+        });
     </script>
 </body>
-
 </html>
