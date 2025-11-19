@@ -30,11 +30,7 @@ class ElementProcessor {
         preg_match_all('/\{\{(\w+)\}\}/', $html, $matches);
         
         foreach (array_unique($matches[1]) as $key) {
-            $data = $entity->getData($key);
-            
-            $value = is_array($data) 
-                ? ($data[$this->lang] ?? $data['en'] ?? '') 
-                : ($data ?? '');
+            $value = $entity->getData($key, $this->lang) ?? '';
             
             $html = str_replace('{{' . $key . '}}', $value, $html);
         }
