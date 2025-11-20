@@ -216,6 +216,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: index.php?action=settings");
         exit;
     }
+    // 8. Elimina Media
+    if (isset($_POST['delete_media'])) {
+        // basename() è fondamentale per la sicurezza (impedisce di cancellare file di sistema con ../)
+        $filename = basename($_POST['file_name']); 
+        $targetFile = $uploadDir . $filename;
+        
+        if (file_exists($targetFile)) {
+            unlink($targetFile); // Cancella fisicamente il file
+            $msg = "File eliminato con successo.";
+        } else {
+            $msg = "Errore: File non trovato.";
+        }
+    }
 }
 
 // View Data
@@ -1002,11 +1015,12 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
         <?php elseif ($action === 'media'): ?>
             <div class="container">
                 <h1>Media Library</h1>
+                
                 <div class="card" style="margin-bottom:20px;">
                     <div class="card-body" style="background:#f9fafb;">
                         <form method="POST" enctype="multipart/form-data"
                             style="display:flex; gap:10px; align-items:center;">
-                            <input type="file" name="file" style="background:white;">
+                            <input type="file" name="file" style="background:white;" required>
                             <button class="btn btn-primary">Carica File</button>
                         </form>
                     </div>
@@ -1014,17 +1028,32 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
 
                 <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
                     <?php foreach ($images as $img):
-                        $url = $uploadUrl . basename($img); ?>
-                        <div class="card" onclick="prompt('URL del file:', '<?= $url ?>')"
-                            style="cursor:pointer; transition:transform 0.1s;">
-                            <div
-                                style="aspect-ratio:1; overflow:hidden; border-bottom:1px solid var(--border); background:#eee; display:flex; align-items:center; justify-content:center;">
-                                <img src="<?= $url ?>" style="width:100%; height:100%; object-fit:cover;">
+                        $fileName = basename($img);
+                        // $uploadUrl qui è 'assets/uploads/' (senza puntini, come modificato nella config)
+                        $publicUrl = $uploadUrl . $fileName; 
+                    ?>
+                        <div class="card" style="transition:transform 0.1s; position: relative;">
+                            
+                            <form method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente <?= $fileName ?>?')" 
+                                  style="position: absolute; top: 5px; right: 5px; z-index: 10;">
+                                <input type="hidden" name="delete_media" value="1">
+                                <input type="hidden" name="file_name" value="<?= $fileName ?>">
+                                <button type="submit" 
+                                        onclick="event.stopPropagation();" 
+                                        style="background:#ef4444; color:white; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                    ✕
+                                </button>
+                            </form>
+
+                            <div onclick="prompt('URL da copiare:', '<?= $publicUrl ?>')" style="cursor:pointer;">
+                                <div style="aspect-ratio:1; overflow:hidden; border-bottom:1px solid var(--border); background:#eee; display:flex; align-items:center; justify-content:center;">
+                                    <img src="../<?= $publicUrl ?>" style="width:100%; height:100%; object-fit:cover;">
+                                </div>
+                                <div style="padding:10px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#374151;">
+                                    <?= $fileName ?>
+                                </div>
                             </div>
-                            <div
-                                style="padding:10px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                <?= basename($img) ?>
-                            </div>
+
                         </div>
                     <?php endforeach; ?>
                 </div>
