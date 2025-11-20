@@ -781,7 +781,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-white"
-                            onclick="document.getElementById('createModal').style.display='none'">Annulla</button>
+                            onclick="document.getElementById('createModal').style.display='none'">Back</button>
                         <button name="create_collection" class="btn btn-primary">Crea Collezione</button>
                     </div>
                 </form>
@@ -941,7 +941,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
             ?>
             <div class="container">
                 <h1>Modifica Elemento <span class="badge" style="font-size:1rem; margin-left:10px;">#<?= $id ?></span>
-                    <a href="?action=list&group=<?= $group ?>" class="btn btn-white">Annulla</a>
+                    <a href="?action=list&group=<?= $group ?>" class="btn btn-white" onclick="return confirmExit(event)">Back</a>
                 </h1>
 
                 <form method="POST" class="card">
@@ -1114,31 +1114,49 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
 
     <script>
         let tgt = null;
-        let tinymceCallback = null; // Callback per l'editor Rich Text
+        let tinymceCallback = null;
+        // Variabile globale per tracciare le modifiche
+        let hasUnsavedChanges = false;
 
-        // Apertura per Input Normali
+        // --- GESTIONE MODIFICHE ---
+        function markAsDirty() {
+            hasUnsavedChanges = true;
+        }
+
+        function confirmExit(e) {
+            if (hasUnsavedChanges) {
+                const choice = confirm("Hai modifiche non salvate.\nSe esci ora, andranno perse.\n\nSei sicuro di voler uscire?");
+                if (!choice) {
+                    e.preventDefault(); // Blocca il click
+                    return false;
+                }
+            }
+            return true; // Procede
+        }
+
+        // --- GESTIONE MEDIA ---
         function pickMedia(id) { 
             tgt = id; 
-            tinymceCallback = null; // Resetta modo TinyMCE
+            tinymceCallback = null; 
             document.getElementById('mediaOverlay').style.display = 'flex'; 
         }
 
-        // Apertura per TinyMCE
         function openCmsMediaPicker(callback, value, meta) {
             tinymceCallback = callback;
-            tgt = null; // Resetta modo Input
-            document.getElementById('mediaOverlay').style.display = 'flex';
+            tgt = null; 
+            document.getElementById('mediaOverlay').style.display = 'flex'; 
         }
 
-        // Selezione file universale
         function selectMedia(u) { 
             if(tinymceCallback) {
-                // Siamo in modalità TinyMCE -> Inseriamo l'URL nel dialog di TinyMCE
                 tinymceCallback(u, { title: u.split('/').pop() });
                 tinymceCallback = null;
+                // Se seleziono un'immagine nell'editor, è una modifica!
+                markAsDirty();
             } else if(tgt) {
-                // Siamo in modalità Input classico
-                document.getElementById(tgt).value = u; 
+                document.getElementById(tgt).value = u;
+                // Se cambio un input immagine, è una modifica!
+                markAsDirty();
             }
             document.getElementById('mediaOverlay').style.display = 'none'; 
         }
@@ -1150,8 +1168,25 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
             el.classList.add('active');
         }
 
-        // Inizializza TinyMCE
+        // --- INIZIALIZZAZIONE ---
         document.addEventListener("DOMContentLoaded", function() {
+            
+            // 1. Rileva modifiche su input normali (text, textarea)
+            const inputs = document.querySelectorAll('form.card input, form.card textarea, form.card select');
+            inputs.forEach(input => {
+                input.addEventListener('input', markAsDirty);
+                input.addEventListener('change', markAsDirty);
+            });
+
+            // 2. Rileva modifiche sul form submit (per evitare l'alert quando si salva davvero)
+            const form = document.querySelector('form.card');
+            if (form) {
+                form.addEventListener('submit', () => {
+                    hasUnsavedChanges = false; // Resetta se stiamo salvando
+                });
+            }
+
+            // 3. Inizializza TinyMCE
             if(document.querySelector('.richtext')) {
                 tinymce.init({
                     selector: '.richtext',
@@ -1159,9 +1194,14 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                     menubar: false,
                     plugins: 'image link lists code',
                     toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
-                    // Integrazione File Manager Custom
                     file_picker_callback: openCmsMediaPicker,
-                    content_style: 'body { font-family:Segoe UI,Arial,sans-serif; font-size:14px }'
+                    content_style: 'body { font-family:Segoe UI,Arial,sans-serif; font-size:14px }',
+                    // QUINTESSENZIALE: Configurazione per rilevare le modifiche nell'editor
+                    setup: function(editor) {
+                        editor.on('change', markAsDirty);
+                        editor.on('keyup', markAsDirty);
+                        editor.on('NodeChange', markAsDirty);
+                    }
                 });
             }
         });
