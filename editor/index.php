@@ -74,7 +74,7 @@ $dataFile = __DIR__ . '/../data/k_data.json';
 $modelFile = __DIR__ . '/../data/k_model.json';
 $settingsFile = __DIR__ . '/../data/cms_settings.json';
 $uploadDir = __DIR__ . '/../assets/uploads/';
-$uploadUrl = '../assets/uploads/';
+$uploadUrl = 'assets/uploads/';
 
 $DEFAULT_LANGS = [
     'it' => 'Italiano',

@@ -30,7 +30,14 @@ class ElementProcessor {
         preg_match_all('/\{\{(\w+)\}\}/', $html, $matches);
         
         foreach (array_unique($matches[1]) as $key) {
-            $value = $entity->getData($key, $this->lang) ?? '';
+            // --- MODIFICA QUI ---
+            // Se la chiave è 'language', usa $this->lang, altrimenti cerca nell'entity
+            if ($key === 'language') {
+                $value = $this->lang;
+            } else {
+                $value = $entity->getData($key, $this->lang) ?? '';
+            }
+            // --------------------
             
             $html = str_replace('{{' . $key . '}}', $value, $html);
         }
@@ -42,7 +49,11 @@ class ElementProcessor {
         $compareValue = trim($matches[3]);
         $ifContent = $matches[4];
         
-        $fieldValue = $entity->getData($field);
+        if ($field === 'language') {
+            $fieldValue = $this->lang;
+        } else {
+            $fieldValue = $entity->getData($field);
+        }
         
         if ($fieldValue === null) {
             throw new Exception("Field '{$field}' not found");
@@ -60,7 +71,15 @@ class ElementProcessor {
                 $elifVal = trim($elif[3]);
                 $elifContent = $elif[4];
                 
-                $elifFieldValue = $entity->getData($elifField);
+                // --- MODIFICA QUI ---
+                // Gestione speciale per 'language' negli elif
+                if ($elifField === 'language') {
+                    $elifFieldValue = $this->lang;
+                } else {
+                    $elifFieldValue = $entity->getData($elifField);
+                }
+                // --------------------
+
                 if ($elifFieldValue === null) {
                     throw new Exception("Field '{$elifField}' not found");
                 }

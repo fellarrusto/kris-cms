@@ -21,6 +21,13 @@ class Entity
         if (!$this->data) {
             throw new Exception("Entity {$name} with id {$id} not found");
         }
+
+        // Aggiungi id ai data per renderlo accessibile via getData()
+        $this->data['data'][] = [
+            'name' => 'id',
+            'type' => 'plain',
+            'value' => $this->data['id']
+        ];
     }
 
     public function get($field = null)
