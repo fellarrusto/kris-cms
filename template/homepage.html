@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{meta_title}}</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="core/scripts/script.js"></script>
+</head>
+
+<body>
+  <header k-component="navbar" k-template="navbar" k-index="0"></header>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title">{{page_title}}</h1>
+        <p class="hero-tagline">{{page_subtitle}}</p>
+        <p class="hero-description">{{hero_description}}</p>
+        <div class="hero-actions">
+          <a href="#get-started" class="btn btn-primary">{{btn_get_started}}</a>
+          <a href="#why-kris" class="btn btn-secondary">{{btn_why_kris}}</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="code-preview">
+          <div class="code-header">
+            <div class="code-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span class="code-title">{{code_title}}</span>
+          </div>
+          <div class="code-content">
+            <pre>{{code_example}}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <h2 class="section-title">{{features_title}}</h2>
+      <div k-array="feature" k-template="feature-card" class="grid"></div>
+    </div>
+  </section>
+
+  <section class="how-it-works">
+    <div class="container">
+      <h2 class="section-title">{{how_it_works_title}}</h2>
+      <div class="steps">
+        <!-- TODO ADD COMPONenTS -->
+      </div>
+    </div>
+  </section>
+
+  <section id="get-started" class="cta">
+    <div class="container">
+      <h2>{{cta_title}}</h2>
+      <p>{{cta_subtitle}}</p>
+      <div class="cta-actions">
+        <a href="#" class="btn btn-primary">{{btn_download}}</a>
+        <a href="#" class="btn btn-secondary">{{btn_docs}}</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="logo-container">
+            <img src="{{logo}}" alt="Kris 2 Logo" class="logo-img">
+            <span class="logo-text">{{footer_logo_text}}</span>
+          </div>
+          <p>{{footer_tagline}}</p>
+        </div>
+        <div class="footer-links">
+          <div class="footer-column">
+            <h4>{{footer_resources_title}}</h4>
+            <a href="#">{{footer_docs}}</a>
+          </div>
+          <div class="footer-column">
+            <h4>{{footer_community_title}}</h4>
+            <a href="#">{{footer_github}}</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>{{footer_copyright}}</p>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

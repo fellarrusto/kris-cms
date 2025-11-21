@@ -1,100 +1,104 @@
-# Kris CMS
+Here is a practical, user-oriented guide. It focuses on **how to build** rather than how the code works.
 
-Kris CMS is a lightweight content management system for static HTML templates. It lets you edit text, images and videos directly on the page and stores the data in a single JSON file.
+-----
 
-## Features
+# 🚀 Kris 2 CMS - Builder's Guide
 
-- **In‑place editing** of any element marked with `k-edit`.
-- **Repeatable components** using `k-component` and external template files.
-- **Image and video management** with automatic uploads to the `src/` folder.
-- **Two languages** (Italian and English) stored inside `k_data.json`.
-- No database required and a simple authentication system.
+**Philosophy:** You write standard HTML for your design, and use the Admin Panel to manage the text and images. No database installation required.
 
-## Installation
+-----
 
-1. Clone this repository and place it in a directory served by PHP.
-2. Ensure the `src` folder is writable so that uploaded images and videos can be stored.
-3. Start the built in server with:
+## 1\. The Workflow
 
-   ```bash
-   php -S localhost:8000
-   ```
+1.  **Design:** Create your HTML files in the `template/` folder.
+2.  **Define:** Create data entries in the Admin Panel (or `data/k_data.json`).
+3.  **Connect:** Use "Magic Tags" in your HTML to pull that data in.
 
-   or use any other web server that can run PHP files.
+-----
 
-## Launching the editor
+## 2\. Displaying Simple Content
 
-1. Open `/editor/signin.php` in your browser and log in with **Admin** / **password**.
-2. After logging in you are redirected to `/editor/index.php` which loads the selected template with an editing overlay.
-3. Click on elements highlighted by the overlay to change their content.
+To show text or an image, use double curly braces `{{ }}`. The name inside must match the **name** you gave the item in your data.
 
-## JSON data format
-
-All editable content is stored in `k_data.json`. Each element in your templates references an entry by its `k-id` attribute.
-
-- **Text**
-
-  ```json
-  "title": {
-    "en": "Welcome",
-    "it": "Benvenuto"
-  }
-  ```
-
-- **Links and buttons** (include an `action` URL)
-
-  ```json
-  "button-git": {
-    "en": "GitHub Repository",
-    "it": "Repository GitHub",
-    "action": "https://github.com/fellarrusto/kris-cms"
-  }
-  ```
-
-- **Images**
-
-  ```json
-  "logo": {
-    "src": "/src/logo.svg"
-  }
-  ```
-
-- **Videos**
-
-  ```json
-  "intro-video": {
-    "src": "/src/intro.mp4"
-  }
-  ```
-
-- **Repeatable items**
-
-  ```json
-  "block-1": {
-    "card-1": {
-      "title": { "en": "Lightweight", "it": "Leggero" },
-      "desc": { "en": "Few files", "it": "Pochi file" }
-    }
-  }
-  ```
-
-## Creating templates
-
-Mark elements you want to edit with the `k-edit` attribute and give them a unique `k-id` that matches an entry in `k_data.json`:
+**In your HTML:**
 
 ```html
-<h1 k-edit k-id="title">Welcome to Kris CMS</h1>
-<img k-edit k-id="logo" src="/src/logo.svg" alt="Kris Logo">
+<h1>{{page_title}}</h1>
+
+<img src="{{logo}}" alt="My Logo">
 ```
 
-To repeat structures use `k-component` pointing to a component template:
+*Note: The system automatically switches between English and Italian based on the user's selection.*
+
+-----
+
+## 3\. Reusable Components (Header/Footer)
+
+If you have a piece of code you want on every page (like a Navbar), don't copy-paste it. Save it as a separate file (e.g., `navbar.html`) and inject it.
+
+**How to inject:**
 
 ```html
-<div k-component k-template="block" k-id="block-1"></div>
+<header k-component="navbar" k-template="navbar" k-index="0"></header>
 ```
 
-The file `templates/components/block.html` defines the markup that will be repeated for each item stored under `block-1` in `k_data.json`.
+  * `k-component`: The group name in your data.
+  * `k-template`: The filename of your HTML template.
+  * `k-index`: Usually `0` (unless you have multiple versions of a navbar).
 
-## Video support
+-----
 
-Videos can be referenced in the JSON data like images. Each editable `<video>` (or `<iframe>`) element must have a `k-id` attribute and its `src` is taken from `k_data.json`. Repeatable items can also contain video objects. The editor provides a field to update the video URL which updates the `src` value in the JSON file.
+## 4\. Lists and Grids (The "Loop")
+
+To create a list of items (like Features, Blog Posts, or Team Members), you don't need to duplicate HTML code. Create **one** HTML card, and the system will repeat it for every item in your data.
+
+1.  Create a snippet file (e.g., `feature-card.html`).
+2.  In your main page, use `k-array`:
+
+<!-- end list -->
+
+```html
+<div class="grid-container" k-array="feature" k-template="feature-card">
+    </div>
+```
+
+-----
+
+## 5\. Smart Logic (If/Else)
+
+You can change the design based on the data.
+
+```html
+{{#if category == "new"}}
+    <span class="badge-green">New Arrival!</span>
+{{#elif category == "sale"}}
+    <span class="badge-red">On Sale</span>
+{{#else}}
+    <span>Standard Item</span>
+{{/if}}
+```
+
+-----
+
+## 6\. Linking Pages
+
+To link to a specific detail page (like a specific blog post), use this URL structure:
+
+`index.php?page=[TEMPLATE_NAME]&key=[DATA_GROUP]&id=[ID]`
+
+**Example:**
+
+```html
+<a href="index.php?page=detail&key=feature&id=1">Read More</a>
+```
+
+-----
+
+## 7\. Managing Content (The Admin)
+
+You don't need to touch code to change text.
+
+1.  Go to `/editor/` in your browser.
+2.  **Edit:** Click a group to see all items. Change text for both languages (IT/EN).
+3.  **Add New:** Click "Add New" to create a new blog post or feature. The system handles the ID automatically.
+4.  **Save:** Updates are instant.

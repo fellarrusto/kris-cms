@@ -1,0 +1,284 @@
+[
+    {
+        "id": 0,
+        "name": "homepage",
+        "data": [
+            {
+                "name": "meta_title",
+                "type": "text",
+                "value": {
+                    "it": "Kris 2 - CMS leggero per HTML statico",
+                    "en": "Kris 2 - Lightweight CMS for Static HTML"
+                }
+            },
+            {
+                "name": "page_title",
+                "type": "text",
+                "value": {
+                    "it": "Kris 2",
+                    "en": "Kris 2"
+                }
+            },
+            {
+                "name": "page_subtitle",
+                "type": "text",
+                "value": {
+                    "it": "CMS leggero per template HTML statici",
+                    "en": "Lightweight CMS for static HTML templates"
+                }
+            },
+            {
+                "name": "hero_description",
+                "type": "richtext",
+                "value": {
+                    "it": "<p>Modifica testi, immagini e video direttamente sulla pagina. Salva tutto in un unico file JSON.<\/p>",
+                    "en": "<p>Edit text, images and videos directly on the page. Store everything in a single JSON file.<\/p>"
+                }
+            },
+            {
+                "name": "logo",
+                "type": "image",
+                "value": {
+                    "it": "assets\/uploads\/logo.svg",
+                    "en": "assets\/uploads\/logo.svg"
+                }
+            },
+            {
+                "name": "btn_get_started",
+                "type": "text",
+                "value": {
+                    "it": "Inizia Ora",
+                    "en": "Get Started"
+                }
+            },
+            {
+                "name": "btn_why_kris",
+                "type": "text",
+                "value": {
+                    "it": "Perché Kris?",
+                    "en": "Why Kris?"
+                }
+            },
+            {
+                "name": "code_title",
+                "type": "text",
+                "value": {
+                    "it": "content.json",
+                    "en": "content.json"
+                }
+            },
+            {
+                "name": "code_example",
+                "type": "plain",
+                "value": "{\r\n    \"id\": 0,\r\n    \"name\": \"homepage\",\r\n    \"data\": [\r\n        {\r\n            \"name\": \"page_title\",\r\n            \"type\": \"text\",\r\n            \"value\": {\r\n                \"it\": \"Kris 2 CMS\",\r\n                \"en\": \"Kris 2 CMS\"\r\n            }\r\n        }\r\n}"
+            },
+            {
+                "name": "features_title",
+                "type": "text",
+                "value": {
+                    "it": "Funzionalità Potenti, Configurazione Semplice",
+                    "en": "Powerful Features, Simple Setup"
+                }
+            },
+            {
+                "name": "cta_title",
+                "type": "text",
+                "value": {
+                    "it": "Pronto per Iniziare?",
+                    "en": "Ready to Get Started?"
+                }
+            },
+            {
+                "name": "cta_subtitle",
+                "type": "text",
+                "value": {
+                    "it": "Aggiungi Kris 2 al tuo progetto in pochi minuti",
+                    "en": "Add Kris 2 to your project in minutes"
+                }
+            },
+            {
+                "name": "footer_copyright",
+                "type": "text",
+                "value": {
+                    "it": "© 2025 Kris 2. Tutti i diritti riservati.",
+                    "en": "© 2025 Kris 2. All rights reserved."
+                }
+            }
+        ]
+    },
+    {
+        "id": 0,
+        "name": "navbar",
+        "data": [
+            {
+                "name": "logo",
+                "type": "image",
+                "value": {
+                    "it": "assets\/uploads\/logo.svg",
+                    "en": "assets\/uploads\/logo.svg"
+                }
+            },
+            {
+                "name": "page_title",
+                "type": "text",
+                "value": {
+                    "it": "Kris 2",
+                    "en": "Kris 2"
+                }
+            },
+            {
+                "name": "nav_features",
+                "type": "text",
+                "value": {
+                    "it": "Funzionalità",
+                    "en": "Features"
+                }
+            },
+            {
+                "name": "nav_docs",
+                "type": "text",
+                "value": {
+                    "it": "Documentazione",
+                    "en": "Documentation"
+                }
+            },
+            {
+                "name": "nav_github",
+                "type": "text",
+                "value": {
+                    "it": "GitHub",
+                    "en": "GitHub"
+                }
+            }
+        ]
+    },
+    {
+        "id": 0,
+        "name": "feature",
+        "data": [
+            {
+                "name": "category",
+                "type": "plain",
+                "value": "feature_a"
+            },
+            {
+                "name": "icon",
+                "type": "text",
+                "value": {
+                    "it": "⚡",
+                    "en": "⚡"
+                }
+            },
+            {
+                "name": "title",
+                "type": "text",
+                "value": {
+                    "it": "Sviluppo Rapido",
+                    "en": "Fast integration"
+                }
+            },
+            {
+                "name": "description",
+                "type": "text",
+                "value": {
+                    "it": "Avvia il tuo sito statico in pochi minuti. Niente configurazioni complesse, solo puro HTML e JSON.",
+                    "en": "Get your static site up and running in minutes. No complex setup, just pure HTML and JSON."
+                }
+            },
+            {
+                "name": "link",
+                "type": "text",
+                "value": {
+                    "it": "\/index.php?page=detail&key=feature&id=0&ln=it",
+                    "en": "\/index.php?page=detail&key=feature&id=0&ln=en"
+                }
+            }
+        ]
+    },
+    {
+        "id": 1,
+        "name": "feature",
+        "data": [
+            {
+                "name": "category",
+                "type": "plain",
+                "value": "feature_b"
+            },
+            {
+                "name": "icon",
+                "type": "text",
+                "value": {
+                    "it": "🎨",
+                    "en": "🎨"
+                }
+            },
+            {
+                "name": "title",
+                "type": "text",
+                "value": {
+                    "it": "Completamente Personalizzabile",
+                    "en": "Fully Customizable"
+                }
+            },
+            {
+                "name": "description",
+                "type": "text",
+                "value": {
+                    "it": "Usa i tuoi template HTML esistenti. Kris 2 funziona con qualsiasi design senza forzare una struttura specifica.",
+                    "en": "Use your existing HTML templates. Kris 2 works with any design without forcing a specific structure."
+                }
+            },
+            {
+                "name": "link",
+                "type": "text",
+                "value": {
+                    "it": "\/index.php?page=detail&key=feature&id=1&ln=it",
+                    "en": "\/index.php?page=detail&key=feature&id=1&ln=en"
+                }
+            }
+        ]
+    },
+    {
+        "id": 2,
+        "name": "feature",
+        "data": [
+            {
+                "name": "category",
+                "type": "plain",
+                "value": "feature_c"
+            },
+            {
+                "name": "icon",
+                "type": "text",
+                "value": {
+                    "it": "🗄️",
+                    "en": "🗄️"
+                }
+            },
+            {
+                "name": "title",
+                "type": "text",
+                "value": {
+                    "it": "No Database",
+                    "en": "No Database"
+                }
+            },
+            {
+                "name": "description",
+                "type": "text",
+                "value": {
+                    "it": "Tutti i contenuti in un singolo file JSON. Nessun database da configurare, nessuna manutenzione server.",
+                    "en": "All your content lives in a single JSON file. No database setup, no server maintenance."
+                }
+            },
+            {
+                "name": "link",
+                "type": "text",
+                "value": {
+                    "it": "\/index.php?page=detail&key=feature&id=2&ln=it",
+                    "en": "\/index.php?page=detail&key=feature&id=2&ln=en"
+                }
+            }
+        ]
+    }
+]
