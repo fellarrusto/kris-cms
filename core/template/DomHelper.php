@@ -1,4 +1,6 @@
 <?php
+namespace Kris\Template;
+use DOMDocument;
 
 class DomHelper {
     public static function loadHtml($html) {

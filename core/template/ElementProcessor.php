@@ -1,4 +1,6 @@
 <?php
+namespace Kris\Template;
+use Exception;
 
 class ElementProcessor {
     private $lang;

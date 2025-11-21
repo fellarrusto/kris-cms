@@ -1,4 +1,5 @@
 <?php
+namespace Kris\Entity;
 class JsonRepository {
     private static array $cache = [];
     private string $dataPath;

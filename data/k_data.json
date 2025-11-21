@@ -103,6 +103,78 @@
                     "it": "© 2025 Kris 2. Tutti i diritti riservati.",
                     "en": "© 2025 Kris 2. All rights reserved."
                 }
+            },
+            {
+                "name": "how_it_works_title",
+                "type": "text",
+                "value": {
+                    "it": "Come funziona",
+                    "en": "How it works"
+                }
+            },
+            {
+                "name": "btn_download",
+                "type": "text",
+                "value": {
+                    "it": "Scarica",
+                    "en": "Download"
+                }
+            },
+            {
+                "name": "btn_docs",
+                "type": "text",
+                "value": {
+                    "it": "Documentazione",
+                    "en": "Documentation"
+                }
+            },
+            {
+                "name": "footer_logo_text",
+                "type": "text",
+                "value": {
+                    "it": "Kris 2",
+                    "en": "Kris 2"
+                }
+            },
+            {
+                "name": "footer_tagline",
+                "type": "text",
+                "value": {
+                    "it": "Il CMS statico semplice e veloce.",
+                    "en": "The simple and fast static CMS."
+                }
+            },
+            {
+                "name": "footer_resources_title",
+                "type": "text",
+                "value": {
+                    "it": "Risorse",
+                    "en": "Resources"
+                }
+            },
+            {
+                "name": "footer_docs",
+                "type": "text",
+                "value": {
+                    "it": "Manuale Utente",
+                    "en": "User Manual"
+                }
+            },
+            {
+                "name": "footer_community_title",
+                "type": "text",
+                "value": {
+                    "it": "Community",
+                    "en": "Community"
+                }
+            },
+            {
+                "name": "footer_github",
+                "type": "text",
+                "value": {
+                    "it": "Repository GitHub",
+                    "en": "GitHub Repository"
+                }
             }
         ]
     },

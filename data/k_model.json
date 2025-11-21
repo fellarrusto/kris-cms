@@ -51,6 +51,42 @@
         {
             "name": "footer_copyright",
             "type": "text"
+        },
+        {
+            "name": "how_it_works_title",
+            "type": "text"
+        },
+        {
+            "name": "btn_download",
+            "type": "text"
+        },
+        {
+            "name": "btn_docs",
+            "type": "text"
+        },
+        {
+            "name": "footer_logo_text",
+            "type": "text"
+        },
+        {
+            "name": "footer_tagline",
+            "type": "text"
+        },
+        {
+            "name": "footer_resources_title",
+            "type": "text"
+        },
+        {
+            "name": "footer_docs",
+            "type": "text"
+        },
+        {
+            "name": "footer_community_title",
+            "type": "text"
+        },
+        {
+            "name": "footer_github",
+            "type": "text"
         }
     ],
     "navbar": [

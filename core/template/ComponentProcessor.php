@@ -1,4 +1,7 @@
 <?php
+namespace Kris\Template;
+use Kris\Entity\Entity;
+use DOMXPath;
 
 class ComponentProcessor {
     private $lang;
