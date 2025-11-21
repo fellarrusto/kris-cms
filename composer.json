@@ -1,0 +1,12 @@
+{
+    "name": "tuonome/kris2",
+    "autoload": {
+        "psr-4": {
+            "Kris\\Entity\\": "core/entity/",
+            "Kris\\Template\\": "core/template/"
+        }
+    },
+    "require": {
+        "php": ">=8.0"
+    }
+}

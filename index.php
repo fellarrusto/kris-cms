@@ -1,9 +1,8 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+require_once 'vendor/autoload.php';
 
-require_once 'core/entity/Entity.php';
-require_once 'core/template/TemplateEngine.php';
+use Kris\Entity\Entity;
+use Kris\Template\TemplateEngine;
 
 $key = $_GET['key'] ?? 'homepage';
 $index = $_GET['id'] ?? 0;

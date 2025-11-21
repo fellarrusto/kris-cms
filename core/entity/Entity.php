@@ -1,5 +1,6 @@
 <?php
-require_once __DIR__ . '/JsonRepository.php';
+namespace Kris\Entity;
+use Exception;
 
 class Entity
 {

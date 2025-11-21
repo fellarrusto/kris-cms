@@ -1,11 +1,8 @@
 <?php
- 
-require_once __DIR__ . '/DomHelper.php';
-require_once __DIR__ . '/ArrayProcessor.php';
-require_once __DIR__ . '/ComponentProcessor.php';
-require_once __DIR__ . '/ElementProcessor.php';
-require_once __DIR__ . '/../entity/Entity.php';
-require_once __DIR__ . '/../entity/JsonRepository.php';
+namespace Kris\Template;
+
+use Kris\Entity\Entity;
+use Kris\Entity\JsonRepository;
 
 class TemplateEngine {
     private $lang;

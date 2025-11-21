@@ -1,4 +1,8 @@
 <?php
+namespace Kris\Template;
+use Kris\Entity\Entity;
+use Kris\Entity\JsonRepository;
+use DOMXPath;  
 
 class ArrayProcessor {
     private $lang;
