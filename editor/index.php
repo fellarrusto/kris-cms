@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 /**
  * KRIS 2 CMS - Professional UI Edition (Secured)
  * File: /editor/index.php
@@ -93,11 +95,11 @@ if (!file_exists($dataFile))
     file_put_contents($dataFile, '[]');
 
 // --- HELPER ---
-function getJson($path, $def = [])
+function getJson(string $path, array $def = []): array
 {
     return file_exists($path) ? (json_decode(file_get_contents($path), true) ?? $def) : $def;
 }
-function saveJson($path, $data)
+function saveJson(string $path, array $data): void
 {
     file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }

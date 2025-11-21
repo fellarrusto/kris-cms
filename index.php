@@ -1,11 +1,13 @@
 <?php
+declare(strict_types=1);
+
 require_once 'vendor/autoload.php';
 
 use Kris\Entity\Entity;
 use Kris\Template\TemplateEngine;
 
 $key = $_GET['key'] ?? 'homepage';
-$index = $_GET['id'] ?? 0;
+$index = (int)($_GET['id'] ?? 0);
 $template = $_GET['page'] ?? 'homepage';
 $lang = $_GET['ln'] ?? 'it';
 

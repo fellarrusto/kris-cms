@@ -1,15 +1,19 @@
 <?php
+declare(strict_types=1);
+
 namespace Kris\Template;
+
 use Exception;
+use Kris\Entity\Entity;
 
 class ElementProcessor {
-    private $lang;
-    
-    public function __construct($lang) {
+    private string $lang;
+
+    public function __construct(string $lang) {
         $this->lang = $lang;
     }
-    
-    public function process(&$html, $entity) {
+
+    public function process(string &$html, Entity $entity): void {
         // Replace conditionals
         $html = preg_replace_callback(
             '/\{\{#if\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+?)\}\}(.*?)(?:\{\{#elif\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+?)\}\}(.*?))*(?:\{\{#else\}\}(.*?))?\{\{\/if\}\}/s',
@@ -45,26 +49,26 @@ class ElementProcessor {
         }
     }
     
-    private function evaluateCondition($matches, $entity) {
+    private function evaluateCondition(array $matches, Entity $entity): string {
         $field = $matches[1];
         $operator = $matches[2];
         $compareValue = trim($matches[3]);
         $ifContent = $matches[4];
-        
+
         if ($field === 'language') {
             $fieldValue = $this->lang;
         } else {
             $fieldValue = $entity->getData($field);
         }
-        
+
         if ($fieldValue === null) {
             throw new Exception("Field '{$field}' not found");
         }
-        
+
         if ($this->compare($fieldValue, $operator, $compareValue)) {
             return $ifContent;
         }
-        
+
         $html = $matches[0];
         if (preg_match_all('/\{\{#elif\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+?)\}\}(.*?)(?=\{\{#elif|\{\{#else|\{\{\/if)/s', $html, $elifMatches, PREG_SET_ORDER)) {
             foreach ($elifMatches as $elif) {
@@ -72,7 +76,7 @@ class ElementProcessor {
                 $elifOp = $elif[2];
                 $elifVal = trim($elif[3]);
                 $elifContent = $elif[4];
-                
+
                 // --- MODIFICA QUI ---
                 // Gestione speciale per 'language' negli elif
                 if ($elifField === 'language') {
@@ -85,23 +89,23 @@ class ElementProcessor {
                 if ($elifFieldValue === null) {
                     throw new Exception("Field '{$elifField}' not found");
                 }
-                
+
                 if ($this->compare($elifFieldValue, $elifOp, $elifVal)) {
                     return $elifContent;
                 }
             }
         }
-        
+
         if (preg_match('/\{\{#else\}\}(.*?)\{\{\/if\}\}/s', $html, $elseMatch)) {
             return $elseMatch[1];
         }
-        
+
         return '';
     }
-    
-    private function compare($a, $op, $b) {
+
+    private function compare(mixed $a, string $op, string $b): bool {
         $b = trim($b, '"\'');
-        
+
         switch ($op) {
             case '==': return $a == $b;
             case '!=': return $a != $b;
