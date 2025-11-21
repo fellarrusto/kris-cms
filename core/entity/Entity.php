@@ -1,4 +1,6 @@
 <?php
+declare(strict_types=1);
+
 namespace Kris\Entity;
 use Exception;
 
@@ -11,7 +13,7 @@ class Entity
     private JsonRepository $repo;
     private bool $modified = false;
 
-    public function __construct($filename, $name, $id = 0)
+    public function __construct(string $filename, string $name, int $id = 0)
     {
         $this->repo = new JsonRepository();
         $this->file = $filename;
@@ -31,12 +33,12 @@ class Entity
         ];
     }
 
-    public function get($field = null)
+    public function get(?string $field = null): mixed
     {
         return $field ? ($this->data[$field] ?? null) : $this->data;
     }
 
-    public function getData($name, $lang = null)
+    public function getData(string $name, ?string $lang = null): mixed
     {
         foreach ($this->data['data'] as $item) {
             if ($item['name'] === $name) {
@@ -56,13 +58,13 @@ class Entity
         return null;
     }
 
-    public function set($field, $value)
+    public function set(string $field, mixed $value): void
     {
         $this->data[$field] = $value;
         $this->modified = true;
     }
 
-    public function setData($name, $value, $lang = null)
+    public function setData(string $name, mixed $value, ?string $lang = null): void
     {
         foreach ($this->data['data'] as &$item) {
             if ($item['name'] === $name) {
@@ -77,7 +79,7 @@ class Entity
         }
     }
 
-    public function save()
+    public function save(): void
     {
         if (!$this->modified)
             return;
@@ -85,7 +87,7 @@ class Entity
         $this->modified = false;
     }
 
-    public function toJson()
+    public function toJson(): string
     {
         return json_encode($this->data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
