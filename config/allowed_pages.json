@@ -1,8 +1,6 @@
 {
   "allowed_pages": [
     "homepage",
-    "detail",
-    "feature-card",
-    "navbar"
+    "detail"
   ]
 }
