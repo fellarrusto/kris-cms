@@ -6,111 +6,165 @@ namespace Kris\Template;
 use Exception;
 use Kris\Entity\Entity;
 
-class ElementProcessor {
+class ElementProcessor
+{
     private string $lang;
 
-    public function __construct(string $lang) {
+    public function __construct(string $lang)
+    {
         $this->lang = $lang;
     }
 
-    public function process(string &$html, Entity $entity): void {
-        // Replace conditionals
-        $html = preg_replace_callback(
-            '/\{\{#if\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+?)\}\}(.*?)(?:\{\{#elif\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+?)\}\}(.*?))*(?:\{\{#else\}\}(.*?))?\{\{\/if\}\}/s',
-            function($matches) use ($entity) {
-                try {
-                    return $this->evaluateCondition($matches, $entity);
-                } catch (Exception $e) {
-                    return '<span style="color:red;font-weight:bold;">ERROR: ' . htmlspecialchars($e->getMessage()) . '</span>';
-                }
-            },
-            $html
-        );
-        
-        // Check for unclosed conditionals
-        if (preg_match('/\{\{#if\s/', $html) && !preg_match('/\{\{\/if\}\}/', $html)) {
-            $html = preg_replace('/\{\{#if.*$/s', '<span style="color:red;font-weight:bold;">ERROR: Unclosed {{#if}} block</span>', $html);
-        }
-        
-        // Replace variables
-        preg_match_all('/\{\{(\w+)\}\}/', $html, $matches);
-        
-        foreach (array_unique($matches[1]) as $key) {
-            // --- MODIFICA QUI ---
-            // Se la chiave è 'language', usa $this->lang, altrimenti cerca nell'entity
-            if ($key === 'language') {
-                $value = $this->lang;
-            } else {
-                $value = $entity->getData($key, $this->lang) ?? '';
-            }
-            // --------------------
-            
-            $html = str_replace('{{' . $key . '}}', $value, $html);
-        }
+    public function process(string &$html, Entity $entity): void
+    {
+        $tokens = $this->tokenize($html);
+        $tree = $this->parse($tokens);
+        $html = $this->evaluate($tree, $entity);
     }
-    
-    private function evaluateCondition(array $matches, Entity $entity): string {
-        $field = $matches[1];
-        $operator = $matches[2];
-        $compareValue = trim($matches[3]);
-        $ifContent = $matches[4];
 
-        if ($field === 'language') {
-            $fieldValue = $this->lang;
-        } else {
-            $fieldValue = $entity->getData($field);
-        }
+    private function tokenize(string $html): array
+    {
+        $tokens = [];
+        $offset = 0;
 
-        if ($fieldValue === null) {
-            throw new Exception("Field '{$field}' not found");
-        }
+        while (($pos = strpos($html, '{{', $offset)) !== false) {
+            if ($pos > $offset) {
+                $tokens[] = ['type' => 'text', 'value' => substr($html, $offset, $pos - $offset)];
+            }
 
-        if ($this->compare($fieldValue, $operator, $compareValue)) {
-            return $ifContent;
-        }
+            $end = strpos($html, '}}', $pos);
+            if ($end === false) break;
 
-        $html = $matches[0];
-        if (preg_match_all('/\{\{#elif\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+?)\}\}(.*?)(?=\{\{#elif|\{\{#else|\{\{\/if)/s', $html, $elifMatches, PREG_SET_ORDER)) {
-            foreach ($elifMatches as $elif) {
-                $elifField = $elif[1];
-                $elifOp = $elif[2];
-                $elifVal = trim($elif[3]);
-                $elifContent = $elif[4];
+            $tag = trim(substr($html, $pos + 2, $end - $pos - 2));
+            $offset = $end + 2;
 
-                // --- MODIFICA QUI ---
-                // Gestione speciale per 'language' negli elif
-                if ($elifField === 'language') {
-                    $elifFieldValue = $this->lang;
-                } else {
-                    $elifFieldValue = $entity->getData($elifField);
-                }
-                // --------------------
-
-                if ($elifFieldValue === null) {
-                    throw new Exception("Field '{$elifField}' not found");
-                }
-
-                if ($this->compare($elifFieldValue, $elifOp, $elifVal)) {
-                    return $elifContent;
-                }
+            if (preg_match('/^#if\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)$/', $tag, $m)) {
+                $tokens[] = ['type' => 'if', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
+            } elseif (preg_match('/^#elif\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)$/', $tag, $m)) {
+                $tokens[] = ['type' => 'elif', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
+            } elseif ($tag === '#else') {
+                $tokens[] = ['type' => 'else'];
+            } elseif ($tag === '/if') {
+                $tokens[] = ['type' => 'endif'];
+            } else {
+                $tokens[] = ['type' => 'variable', 'name' => $tag];
             }
         }
 
-        if (preg_match('/\{\{#else\}\}(.*?)\{\{\/if\}\}/s', $html, $elseMatch)) {
-            return $elseMatch[1];
+        if ($offset < strlen($html)) {
+            $tokens[] = ['type' => 'text', 'value' => substr($html, $offset)];
+        }
+
+        return $tokens;
+    }
+
+    private function parse(array $tokens): array
+    {
+        $root = ['type' => 'root', 'children' => []];
+        $stack = [&$root];
+
+        foreach ($tokens as $token) {
+            $current = &$stack[count($stack) - 1];
+
+            switch ($token['type']) {
+                case 'if':
+                    $node = [
+                        'type' => 'conditional',
+                        'branches' => [
+                            ['field' => $token['field'], 'op' => $token['op'], 'value' => $token['value'], 'children' => []]
+                        ],
+                        'else' => null
+                    ];
+                    $current['children'][] = &$node;
+                    $stack[] = &$node;
+                    unset($node);
+                    break;
+
+                case 'elif':
+                    $current['branches'][] = [
+                        'field' => $token['field'], 'op' => $token['op'], 'value' => $token['value'], 'children' => []
+                    ];
+                    break;
+
+                case 'else':
+                    $current['else'] = [];
+                    break;
+
+                case 'endif':
+                    array_pop($stack);
+                    break;
+
+                default:
+                    // text o variable — appendono al ramo attivo del conditional, oppure ai children del nodo corrente
+                    if ($current['type'] === 'conditional') {
+                        if ($current['else'] !== null) {
+                            $current['else'][] = $token;
+                        } else {
+                            $branch = &$current['branches'][count($current['branches']) - 1];
+                            $branch['children'][] = $token;
+                            unset($branch);
+                        }
+                    } else {
+                        $current['children'][] = $token;
+                    }
+                    break;
+            }
+        }
+
+        return $root;
+    }
+
+    private function evaluate(array $node, Entity $entity): string
+    {
+        $out = '';
+
+        $children = $node['children'] ?? [];
+        foreach ($children as $child) {
+            switch ($child['type']) {
+                case 'text':
+                    $out .= $child['value'];
+                    break;
+
+                case 'variable':
+                    $name = $child['name'];
+                    $out .= ($name === 'language') ? $this->lang : ($entity->getData($name, $this->lang) ?? '');
+                    break;
+
+                case 'conditional':
+                    $out .= $this->evaluateConditional($child, $entity);
+                    break;
+            }
+        }
+
+        return $out;
+    }
+
+    private function evaluateConditional(array $node, Entity $entity): string
+    {
+        foreach ($node['branches'] as $branch) {
+            $fieldValue = ($branch['field'] === 'language') ? $this->lang : $entity->getData($branch['field']);
+
+            if ($fieldValue !== null && $this->compare($fieldValue, $branch['op'], $branch['value'])) {
+                return $this->evaluate(['children' => $branch['children']], $entity);
+            }
+        }
+
+        if ($node['else'] !== null) {
+            return $this->evaluate(['children' => $node['else']], $entity);
         }
 
         return '';
     }
 
-    private function compare(mixed $a, string $op, string $b): bool {
+    private function compare(mixed $a, string $op, string $b): bool
+    {
         $b = trim($b, '"\'');
 
         switch ($op) {
             case '==': return $a == $b;
             case '!=': return $a != $b;
-            case '>': return $a > $b;
-            case '<': return $a < $b;
+            case '>':  return $a > $b;
+            case '<':  return $a < $b;
             case '>=': return $a >= $b;
             case '<=': return $a <= $b;
             default: throw new Exception("Invalid operator '{$op}'");
