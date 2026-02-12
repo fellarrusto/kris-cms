@@ -1103,7 +1103,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                         $url = $uploadUrl . basename($img); ?>
                         <div onclick="selectMedia('<?= $url ?>')"
                             style="background:white; border-radius:6px; overflow:hidden; cursor:pointer; border:2px solid transparent; box-shadow:0 1px 2px rgba(0,0,0,0.1);">
-                            <img src="<?= $url ?>" style="width:100%; aspect-ratio:1; object-fit:cover;">
+                            <img src="../<?= $url ?>" style="width:100%; aspect-ratio:1; object-fit:cover;">
                             <div
                                 style="padding:5px; font-size:0.7rem; text-align:center; overflow:hidden; white-space:nowrap;">
                                 <?= basename($img) ?></div>
