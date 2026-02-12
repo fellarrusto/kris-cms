@@ -1250,8 +1250,8 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                     selector: '.richtext',
                     height: 400,
                     menubar: false,
-                    plugins: 'image link lists code',
-                    toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
+                    plugins: 'image link lists code fullscreen',
+                    toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code fullscreen',
                     file_picker_callback: openCmsMediaPicker,
                     content_style: 'body { font-family:Segoe UI,Arial,sans-serif; font-size:14px }',
                     setup: function(editor) {
