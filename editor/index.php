@@ -1020,7 +1020,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                 
                 <div class="card" style="margin-bottom:20px;">
                     <div class="card-body" style="background:#f9fafb;">
-                        <form method="POST" enctype="multipart/form-data"
+                        <form method="POST" enctype="multipart/form-data" action="./upload.php"
                             style="display:flex; gap:10px; align-items:center;">
                             <input type="file" name="file" style="background:white;" required>
                             <button class="btn btn-primary">Carica File</button>
@@ -1031,7 +1031,6 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                 <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
                     <?php foreach ($images as $img):
                         $fileName = basename($img);
-                        // $uploadUrl qui è 'assets/uploads/' (senza puntini, come modificato nella config)
                         $publicUrl = $uploadUrl . $fileName; 
                     ?>
                         <div class="card" style="transition:transform 0.1s; position: relative;">
@@ -1098,7 +1097,15 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                     style="border:none;">✕</button>
             </div>
             <div class="modal-body" style="background:#f3f4f6;">
-                <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:15px;">
+                <div id="mediaGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:15px;">
+                    <div onclick="document.getElementById('overlayUpload').click()"
+                        style="background:white; border-radius:6px; cursor:pointer; border:2px dashed #d1d5db; box-shadow:0 1px 2px rgba(0,0,0,0.1); display:flex; flex-direction:column; align-items:center; justify-content:center; aspect-ratio:1; color:#6b7280;"
+                        onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'"
+                        onmouseout="this.style.borderColor='#d1d5db';this.style.color='#6b7280'">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span style="font-size:0.7rem; margin-top:5px;">Carica</span>
+                    </div>
+                    <input type="file" id="overlayUpload" style="display:none" accept="image/*" onchange="uploadFromOverlay(this)">
                     <?php foreach ($images as $img):
                         $url = $uploadUrl . basename($img); ?>
                         <div onclick="selectMedia('<?= $url ?>')"
@@ -1153,11 +1160,20 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
             if(tinymceCallback) {
                 tinymceCallback(u, { title: u.split('/').pop() });
                 tinymceCallback = null;
-                // Se seleziono un'immagine nell'editor, è una modifica!
                 markAsDirty();
             } else if(tgt) {
                 document.getElementById(tgt).value = u;
-                // Se cambio un input immagine, è una modifica!
+                // Aggiorna preview
+                var container = document.getElementById(tgt).closest('.tab-content');
+                var preview = container.querySelector('img');
+                if (preview) {
+                    preview.src = '../' + u;
+                } else {
+                    var div = document.createElement('div');
+                    div.style.cssText = 'margin-top:10px;padding:5px;border:1px solid var(--border);border-radius:6px;display:inline-block;background:white';
+                    div.innerHTML = '<img src="../' + u + '" style="height:100px;display:block;object-fit:cover">';
+                    container.appendChild(div);
+                }
                 markAsDirty();
             }
             document.getElementById('mediaOverlay').style.display = 'none'; 
@@ -1170,9 +1186,31 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
             el.classList.add('active');
         }
 
+        function uploadFromOverlay(input) {
+            if (!input.files[0]) return;
+            const form = new FormData();
+            form.append('file', input.files[0]);
+
+            fetch('./upload.php', {
+                    method: 'POST',
+                    body: form,
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    const card = document.createElement('div');
+                    card.onclick = () => selectMedia(data.url);
+                    card.style.cssText = 'background:white;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;box-shadow:0 1px 2px rgba(0,0,0,0.1)';
+                    card.innerHTML = '<img src="../' + data.url + '" style="width:100%;aspect-ratio:1;object-fit:cover"><div style="padding:5px;font-size:0.7rem;text-align:center;overflow:hidden;white-space:nowrap">' + data.url.split('/').pop() + '</div>';
+                    document.getElementById('mediaGrid').children[1].after(card);
+                    input.value = '';
+                });
+        }
+
         // --- INIZIALIZZAZIONE ---
         document.addEventListener("DOMContentLoaded", function() {
-            
+    
             // 1. Rileva modifiche su input normali (text, textarea)
             const inputs = document.querySelectorAll('form.card input, form.card textarea, form.card select');
             inputs.forEach(input => {
@@ -1184,11 +1222,29 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
             const form = document.querySelector('form.card');
             if (form) {
                 form.addEventListener('submit', () => {
-                    hasUnsavedChanges = false; // Resetta se stiamo salvando
+                    hasUnsavedChanges = false;
                 });
             }
 
-            // 3. Inizializza TinyMCE
+            // 3. Intercetta click su tutti i link
+            document.querySelectorAll('a[href]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    if (hasUnsavedChanges) {
+                        if (!confirm("Hai modifiche non salvate.\nSe esci ora, andranno perse.\n\nSei sicuro di voler uscire?")) {
+                            e.preventDefault();
+                        }
+                    }
+                });
+            });
+
+            // 4. Intercetta refresh e chiusura tab (dialog nativo del browser)
+            window.addEventListener('beforeunload', function(e) {
+                if (hasUnsavedChanges) {
+                    e.preventDefault();
+                }
+            });
+
+            // 5. Inizializza TinyMCE
             if(document.querySelector('.richtext')) {
                 tinymce.init({
                     selector: '.richtext',
@@ -1198,7 +1254,6 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                     toolbar: 'undo redo | blocks | bold italic | alignleft aligncenter alignright | bullist numlist | link image | code',
                     file_picker_callback: openCmsMediaPicker,
                     content_style: 'body { font-family:Segoe UI,Arial,sans-serif; font-size:14px }',
-                    // QUINTESSENZIALE: Configurazione per rilevare le modifiche nell'editor
                     setup: function(editor) {
                         editor.on('change', markAsDirty);
                         editor.on('keyup', markAsDirty);
