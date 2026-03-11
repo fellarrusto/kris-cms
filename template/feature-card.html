@@ -1,27 +1,20 @@
-<a class="card-link" href="{{link}}">
-    {{#if category == "feature_a"}}
-    <div class="card">
-        <div class="card-icon">{{icon}}</div>
-        <h3 class="card-title">{{title}}</h3>
-        <p class="card-description" style="font-style: italic;">{{description}}</p>
-    </div>
-    {{#elif category == "feature_b"}}
-    <div class="card">
-        <div class="card-icon">{{icon}}</div>
-        <h3 class="card-title">{{title}}</h3>
-        <p class="card-description" style="text-decoration: overline;">{{description}}</p>
-    </div>
-    {{#elif category == "feature_c"}}
-    <div class="card">
-        <div class="card-icon">{{icon}}</div>
-        <h3 class="card-title">{{title}}</h3>
-        <p class="card-description" style="text-decoration: underline;">{{description}}</p>
-    </div>
-    {{#else}}
-    <div class="card">
-        <div class="card-icon">{{icon}}</div>
-        <h3 class="card-title">{{title}}</h3>
-        <p class="card-description">{{description}}</p>
-    </div>
-    {{/if}}
-</a>
+<div class="feature-item" data-tags="{{tags}}">
+    <a class="card-link" href="{{link}}">
+        <div class="card">
+            <div class="card-icon">{{icon}}</div>
+            <h3 class="card-title">{{title}}</h3>
+            
+            {{#if category == "feature_a"}}
+                <p class="card-description" style="font-style: italic;">{{description}}</p>
+            {{#elif category == "feature_b"}}
+                <p class="card-description" style="text-decoration: overline;">{{description}}</p>
+            {{#elif category == "feature_c"}}
+                <p class="card-description" style="text-decoration: underline;">{{description}}</p>
+            {{#else}}
+                <p class="card-description">{{description}}</p>
+            {{/if}}
+
+            {{#if tags has "tech"}}<span class="badge bg-primary">Tech</span>{{/if}}
+        </div>
+    </a>
+</div>
