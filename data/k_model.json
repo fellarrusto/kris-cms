@@ -1,136 +1,41 @@
 {
     "homepage": [
-        {
-            "name": "meta_title",
-            "type": "text"
-        },
-        {
-            "name": "page_title",
-            "type": "text"
-        },
-        {
-            "name": "page_subtitle",
-            "type": "text"
-        },
-        {
-            "name": "hero_description",
-            "type": "richtext"
-        },
-        {
-            "name": "logo",
-            "type": "image"
-        },
-        {
-            "name": "btn_get_started",
-            "type": "text"
-        },
-        {
-            "name": "btn_why_kris",
-            "type": "text"
-        },
-        {
-            "name": "code_title",
-            "type": "text"
-        },
-        {
-            "name": "code_example",
-            "type": "plain"
-        },
-        {
-            "name": "features_title",
-            "type": "text"
-        },
-        {
-            "name": "cta_title",
-            "type": "text"
-        },
-        {
-            "name": "cta_subtitle",
-            "type": "text"
-        },
-        {
-            "name": "footer_copyright",
-            "type": "text"
-        },
-        {
-            "name": "how_it_works_title",
-            "type": "text"
-        },
-        {
-            "name": "btn_download",
-            "type": "text"
-        },
-        {
-            "name": "btn_docs",
-            "type": "text"
-        },
-        {
-            "name": "footer_logo_text",
-            "type": "text"
-        },
-        {
-            "name": "footer_tagline",
-            "type": "text"
-        },
-        {
-            "name": "footer_resources_title",
-            "type": "text"
-        },
-        {
-            "name": "footer_docs",
-            "type": "text"
-        },
-        {
-            "name": "footer_community_title",
-            "type": "text"
-        },
-        {
-            "name": "footer_github",
-            "type": "text"
-        }
+        { "name": "meta_title", "type": "text" },
+        { "name": "page_title", "type": "text" },
+        { "name": "page_subtitle", "type": "text" },
+        { "name": "hero_description", "type": "richtext" },
+        { "name": "logo", "type": "image" },
+        { "name": "btn_get_started", "type": "text" },
+        { "name": "btn_why_kris", "type": "text" },
+        { "name": "code_title", "type": "text" },
+        { "name": "code_example", "type": "plain" },
+        { "name": "features_title", "type": "text" },
+        { "name": "cta_title", "type": "text" },
+        { "name": "cta_subtitle", "type": "text" },
+        { "name": "footer_copyright", "type": "text" },
+        { "name": "how_it_works_title", "type": "text" },
+        { "name": "btn_download", "type": "text" },
+        { "name": "btn_docs", "type": "text" },
+        { "name": "footer_logo_text", "type": "text" },
+        { "name": "footer_tagline", "type": "text" },
+        { "name": "footer_resources_title", "type": "text" },
+        { "name": "footer_docs", "type": "text" },
+        { "name": "footer_community_title", "type": "text" },
+        { "name": "footer_github", "type": "text" }
     ],
     "navbar": [
-        {
-            "name": "logo",
-            "type": "image"
-        },
-        {
-            "name": "page_title",
-            "type": "text"
-        },
-        {
-            "name": "nav_features",
-            "type": "text"
-        },
-        {
-            "name": "nav_docs",
-            "type": "text"
-        },
-        {
-            "name": "nav_github",
-            "type": "text"
-        }
+        { "name": "logo", "type": "image" },
+        { "name": "page_title", "type": "text" },
+        { "name": "nav_features", "type": "text" },
+        { "name": "nav_docs", "type": "text" },
+        { "name": "nav_github", "type": "text" }
     ],
     "feature": [
-        {
-            "name": "category",
-            "type": "plain"
-        },
-        {
-            "name": "icon",
-            "type": "text"
-        },
-        {
-            "name": "title",
-            "type": "text"
-        },
-        {
-            "name": "description",
-            "type": "text"
-        },
-        {
-            "name": "link",
-            "type": "text"
-        }
+        { "name": "category", "type": "plain" },
+        { "name": "icon", "type": "text" },
+        { "name": "title", "type": "text" },
+        { "name": "description", "type": "text" },
+        { "name": "link", "type": "text" },
+        { "name": "tags", "type": "plain" }
     ]
 }

@@ -38,9 +38,9 @@ class ElementProcessor
             $tag = trim(substr($html, $pos + 2, $end - $pos - 2));
             $offset = $end + 2;
 
-            if (preg_match('/^#if\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)$/', $tag, $m)) {
+            if (preg_match('/^#if\s+(\w+)\s*(==|!=|>|<|>=|<=|has)\s*(.+)$/', $tag, $m)) {
                 $tokens[] = ['type' => 'if', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
-            } elseif (preg_match('/^#elif\s+(\w+)\s*(==|!=|>|<|>=|<=)\s*(.+)$/', $tag, $m)) {
+            } elseif (preg_match('/^#elif\s+(\w+)\s*(==|!=|>|<|>=|<=|has)\s*(.+)$/', $tag, $m)) {
                 $tokens[] = ['type' => 'elif', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
             } elseif ($tag === '#else') {
                 $tokens[] = ['type' => 'else'];
@@ -167,6 +167,9 @@ class ElementProcessor
             case '<':  return $a < $b;
             case '>=': return $a >= $b;
             case '<=': return $a <= $b;
+            case 'has':
+                $tags = array_map('trim', explode(',', (string)$a));
+                return in_array($b, $tags);
             default: throw new Exception("Invalid operator '{$op}'");
         }
     }

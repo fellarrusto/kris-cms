@@ -45,6 +45,16 @@
   <section id="features" class="features">
     <div class="container">
       <h2 class="section-title">{{features_title}}</h2>
+
+      <div class="filters" style="text-align: center; margin-bottom: 3rem;">
+        <button class="btn btn-primary filter-btn" onclick="filterItems(this, '', '.feature-item')"
+          style="margin-right: 10px;">Tutti</button>
+        <button class="btn btn-secondary filter-btn" onclick="filterItems(this, 'tech', '.feature-item')"
+          style="margin-right: 10px;">Tech</button>
+        <button class="btn btn-secondary filter-btn" onclick="filterItems(this, 'ui', '.feature-item')"
+          style="margin-right: 10px;">UI</button>
+        <button class="btn btn-secondary filter-btn" onclick="filterItems(this, 'flat', '.feature-item')">Flat</button>
+      </div>
       <div k-array="feature" k-template="feature-card" class="grid"></div>
     </div>
   </section>
@@ -53,7 +63,7 @@
     <div class="container">
       <h2 class="section-title">{{how_it_works_title}}</h2>
       <div class="steps">
-        <!-- TODO ADD COMPONenTS -->
+        <!-- TODO ADD COMPONENTS -->
       </div>
     </div>
   </section>
