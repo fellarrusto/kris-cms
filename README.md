@@ -96,6 +96,17 @@ To link to a specific detail page (like a specific blog post), use this URL stru
 <a href="index.php?page=detail&key=feature&id=1">Read More</a>
 ```
 
+**Important: Page Whitelist**
+Every new HTML template must be authorized in `config/allowed_pages.json`, otherwise the system will return a 404 error.
+
+```json
+{
+  "allowed_pages": [
+    "homepage",
+    "your-new-template"
+  ]
+}
+
 -----
 
 ## 7\. Managing Content (The Admin)
