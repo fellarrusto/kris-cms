@@ -47,13 +47,14 @@
       <h2 class="section-title">{{features_title}}</h2>
 
       <div class="filters" style="text-align: center; margin-bottom: 3rem;">
-        <button class="btn btn-primary filter-btn" onclick="filterItems(this, '', '.feature-item')"
+        <button class="btn btn-primary" onclick="filterItems(this, '', '.feature-item', 'btn-primary', 'btn-secondary')"
           style="margin-right: 10px;">Tutti</button>
-        <button class="btn btn-secondary filter-btn" onclick="filterItems(this, 'tech', '.feature-item')"
+        <button class="btn btn-secondary" onclick="filterItems(this, 'tech', '.feature-item', 'btn-primary', 'btn-secondary')"
           style="margin-right: 10px;">Tech</button>
-        <button class="btn btn-secondary filter-btn" onclick="filterItems(this, 'ui', '.feature-item')"
+        <button class="btn btn-secondary" onclick="filterItems(this, 'ui', '.feature-item', 'btn-primary', 'btn-secondary')"
           style="margin-right: 10px;">UI</button>
-        <button class="btn btn-secondary filter-btn" onclick="filterItems(this, 'flat', '.feature-item')">Flat</button>
+        <button class="btn btn-secondary"
+          onclick="filterItems(this, 'flat', '.feature-item', 'btn-primary', 'btn-secondary')">Flat</button>
       </div>
       <div k-array="feature" k-template="feature-card" class="grid"></div>
     </div>

@@ -16,17 +16,14 @@ function updateActiveLanguage() {
     if (activeBtn) activeBtn.classList.add('active');
 }
 
-// Nuova utility core per filtrare i k-array
-function filterItems(btn, tag, itemSelector) {
-    // Gestisce lo stile dei bottoni "fratelli"
+function filterItems(btn, tag, itemSelector, activeClass = 'filter-active', inactiveClass = 'filter-inactive') {
     Array.from(btn.parentElement.children).forEach(b => {
-        b.classList.remove('btn-primary');
-        b.classList.add('btn-secondary');
+        b.classList.remove(activeClass, inactiveClass);
+        b.classList.add(inactiveClass);
     });
-    btn.classList.remove('btn-secondary');
-    btn.classList.add('btn-primary');
+    btn.classList.remove(inactiveClass);
+    btn.classList.add(activeClass);
 
-    // Filtra gli elementi in base al data-tags
     document.querySelectorAll(itemSelector).forEach(el => {
         const tags = el.dataset.tags ? el.dataset.tags.split(',').map(t => t.trim()) : [];
         el.style.display = (!tag || tags.includes(tag)) ? 'block' : 'none';
