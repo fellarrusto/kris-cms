@@ -10,6 +10,8 @@ $key = $_GET['key'] ?? 'homepage';
 $index = (int)($_GET['id'] ?? 0);
 $requestedPage = $_GET['page'] ?? 'homepage';
 $lang = $_GET['ln'] ?? 'it';
+$rawPath = $_GET['path'] ?? '';
+$path = $rawPath === '' ? [] : array_values(array_filter(explode('/', $rawPath), fn($s) => $s !== ''));
 
 // Load allowed pages whitelist
 $configPath = __DIR__ . '/config/allowed_pages.json';
@@ -26,8 +28,13 @@ $template = $requestedPage;
 // Initialize template engine
 $engine = new TemplateEngine($lang);
 
-// Load page entity
-$entity = new Entity('k_data', $key, $index);
+// Load page entity (resolves nested sub-entities via path)
+try {
+    $entity = Entity::fromPath('k_data', $key, $index, $path);
+} catch (Exception $e) {
+    require_once __DIR__ . '/404.php';
+    exit;
+}
 
 // Get page template
 $html = file_get_contents("template/{$template}.html");

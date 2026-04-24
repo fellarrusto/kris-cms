@@ -21,7 +21,18 @@
         { "name": "footer_resources_title", "type": "text" },
         { "name": "footer_docs", "type": "text" },
         { "name": "footer_community_title", "type": "text" },
-        { "name": "footer_github", "type": "text" }
+        { "name": "footer_github", "type": "text" },
+        { "name": "features", "type": "array", "of": [
+            { "name": "category", "type": "plain" },
+            { "name": "icon", "type": "text" },
+            { "name": "title", "type": "text" },
+            { "name": "description", "type": "text" },
+            { "name": "tags", "type": "plain" },
+            { "name": "highlights", "type": "array", "of": [
+                { "name": "title", "type": "text" },
+                { "name": "description", "type": "text" }
+            ]}
+        ]}
     ],
     "navbar": [
         { "name": "logo", "type": "image" },
@@ -29,13 +40,5 @@
         { "name": "nav_features", "type": "text" },
         { "name": "nav_docs", "type": "text" },
         { "name": "nav_github", "type": "text" }
-    ],
-    "feature": [
-        { "name": "category", "type": "plain" },
-        { "name": "icon", "type": "text" },
-        { "name": "title", "type": "text" },
-        { "name": "description", "type": "text" },
-        { "name": "link", "type": "text" },
-        { "name": "tags", "type": "plain" }
     ]
 }
