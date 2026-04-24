@@ -3,20 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dettaglio Feature - Kris 2</title>
+    <title>{{title}} - Kris 2</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <script src="core/scripts/script.js"></script>
 </head>
 <body>
     <header k-component="navbar" k-template="navbar" k-index="0"></header>
+
     <section class="detail-hero">
         <div class="container">
-            <a href="/index.php?ln=it" class="back-link">← Torna alle features</a>
+            <a href="/index.php?ln={{language}}#features" class="back-link">← Torna alle features</a>
             <div class="detail-content">
                 <div class="detail-icon">{{icon}}</div>
                 <h1 class="detail-title">{{title}}</h1>
                 <p class="detail-description">{{description}}</p>
             </div>
+        </div>
+    </section>
+
+    <section class="detail-highlights">
+        <div class="container">
+            <h2 class="section-title">Punti chiave</h2>
+            <div class="highlights" k-array="highlights" k-template="highlight-item"></div>
         </div>
     </section>
 </body>

@@ -17,7 +17,7 @@ class ArrayProcessor {
         $this->repo = new JsonRepository();
     }
 
-    public function process(DOMDocument $dom): void {
+    public function process(DOMDocument $dom, ?Entity $parent = null): void {
         $xpath = new DOMXPath($dom);
         $arrays = iterator_to_array($xpath->query('//*[@k-array]'));
 
@@ -26,10 +26,10 @@ class ArrayProcessor {
             $templateName = $array->getAttribute('k-template');
             $template = file_get_contents("template/{$templateName}.html");
 
-            $entities = $this->repo->findAll('k_data', $entityName);
+            $entities = $this->resolveEntities($entityName, $parent);
 
             foreach ($entities as $entityData) {
-                $entity = new Entity('k_data', $entityName, $entityData['id']);
+                $entity = Entity::fromArray($entityData, $entityName);
                 $engine = new TemplateEngine($this->lang);
                 $rendered = $engine->render($template, $entity);
 
@@ -40,5 +40,15 @@ class ArrayProcessor {
             $array->removeAttribute('k-array');
             $array->removeAttribute('k-template');
         }
+    }
+
+    private function resolveEntities(string $name, ?Entity $parent): array {
+        if ($parent !== null) {
+            $local = $parent->getArray($name);
+            if ($local !== null) {
+                return $local;
+            }
+        }
+        return $this->repo->findAll('k_data', $name);
     }
 }

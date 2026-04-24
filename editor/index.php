@@ -104,6 +104,158 @@ function saveJson(string $path, array $data): void
     file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
 }
 
+// --- NESTED PATH HELPERS ---
+// Path format: "fieldName/subId/fieldName/subId..." (may end on a field name for list views)
+function parsePath(?string $raw): array
+{
+    if ($raw === null || $raw === '') return [];
+    return array_values(array_filter(explode('/', $raw), fn($s) => $s !== ''));
+}
+
+function pathToString(array $path): string
+{
+    return implode('/', $path);
+}
+
+// Walk the path inside a root entity ($rootEntity has keys id/name/data).
+// Returns a reference to the node addressed by the path:
+//   - even-length path  → sub-entity ['id'=>..., 'data'=>[...]]
+//   - odd-length path   → field definition ['name', 'type'=>'array', 'value'=>[...]]
+//   - empty path        → the root entity itself
+function &walkEntityPath(array &$rootEntity, array $path)
+{
+    $cur = &$rootEntity;
+    $i = 0;
+    $n = count($path);
+    while ($i < $n) {
+        $fieldName = $path[$i];
+        $fieldIdx = -1;
+        foreach ($cur['data'] as $k => $d) {
+            if ($d['name'] === $fieldName) { $fieldIdx = $k; break; }
+        }
+        if ($fieldIdx < 0 || ($cur['data'][$fieldIdx]['type'] ?? null) !== 'array') {
+            $null = null; return $null;
+        }
+        $field = &$cur['data'][$fieldIdx];
+        if ($i + 1 >= $n) {
+            return $field;
+        }
+        $subId = (int) $path[$i + 1];
+        $subIdx = -1;
+        foreach ($field['value'] as $k => $s) {
+            if ((int) ($s['id'] ?? -1) === $subId) { $subIdx = $k; break; }
+        }
+        if ($subIdx < 0) { $null = null; return $null; }
+        unset($cur);
+        $cur = &$field['value'][$subIdx];
+        unset($field);
+        $i += 2;
+    }
+    return $cur;
+}
+
+// Walk the model path: returns the schema (list of field defs) that applies at the position.
+// - Empty path         → schema of the root group
+// - Ends on field name → the sub-schema 'of' of that array field (used for children)
+// - Ends on sub-id     → the sub-schema 'of' (used for an individual sub-entity form)
+function resolveSchemaAtPath(array $models, string $rootGroup, array $path): array
+{
+    $schema = $models[$rootGroup] ?? [];
+    $i = 0;
+    $n = count($path);
+    while ($i < $n) {
+        $fieldName = $path[$i];
+        $found = null;
+        foreach ($schema as $f) {
+            if ($f['name'] === $fieldName) { $found = $f; break; }
+        }
+        if ($found === null || ($found['type'] ?? null) !== 'array') return [];
+        $schema = $found['of'] ?? [];
+        $i += ($i + 1 < $n) ? 2 : 1;
+    }
+    return $schema;
+}
+
+function findRootIndex(array $data, string $group, int $id): int
+{
+    foreach ($data as $i => $d) {
+        if ($d['name'] === $group && (int) $d['id'] === $id) return $i;
+    }
+    return -1;
+}
+
+// Build an empty skeleton for a schema. Array fields default to empty list.
+function buildSkeleton(array $schema, array $activeLangs): array
+{
+    $out = [];
+    foreach ($schema as $f) {
+        if (($f['type'] ?? null) === 'array') {
+            $out[] = ['name' => $f['name'], 'type' => 'array', 'value' => []];
+        } elseif ($f['type'] === 'plain') {
+            $out[] = ['name' => $f['name'], 'type' => 'plain', 'value' => ''];
+        } else {
+            $out[] = ['name' => $f['name'], 'type' => $f['type'], 'value' => array_fill_keys($activeLangs, '')];
+        }
+    }
+    return $out;
+}
+
+// Apply POSTed fields onto an existing data[] list, preserving array-type values (which are managed separately).
+function applyPostToData(array $existing, array $schema, array $post, array $activeLangs): array
+{
+    // Index existing by field name for lookup (to preserve array values)
+    $byName = [];
+    foreach ($existing as $item) $byName[$item['name']] = $item;
+
+    $out = [];
+    foreach ($schema as $def) {
+        $fname = $def['name'];
+        $ftype = $def['type'];
+        if ($ftype === 'array') {
+            // preserve existing nested value, or start empty
+            $out[] = ['name' => $fname, 'type' => 'array', 'value' => $byName[$fname]['value'] ?? []];
+        } elseif ($ftype === 'plain') {
+            $out[] = ['name' => $fname, 'type' => 'plain', 'value' => $post[$fname]['val'] ?? ''];
+        } else {
+            $vals = [];
+            foreach ($activeLangs as $l) $vals[$l] = $post[$fname][$l] ?? '';
+            $out[] = ['name' => $fname, 'type' => $ftype, 'value' => $vals];
+        }
+    }
+    return $out;
+}
+
+// Render ricorsivo dei campi dello schema nell'editor struttura.
+// $depth controlla l'indentazione visiva (max consigliato: 3-4 livelli).
+function renderSchemaFields(array $schema, int $depth = 0): void
+{
+    $typeLabels = [
+        'text'     => 'Testo Multilingua',
+        'richtext' => 'Richtext',
+        'image'    => 'Media / File',
+        'plain'    => 'Testo Semplice',
+        'array'    => 'Array (lista innestata)',
+    ];
+    foreach ($schema as $f):
+        $isArray = ($f['type'] ?? '') === 'array'; ?>
+        <div class="sf-row" data-depth="<?= $depth ?>">
+            <div class="sf-header">
+                <input type="text" class="sf-name" value="<?= htmlspecialchars($f['name'] ?? '') ?>" placeholder="Nome campo (es. title)">
+                <select class="sf-type" onchange="sfTypeChange(this)">
+                    <?php foreach ($typeLabels as $val => $label): ?>
+                        <option value="<?= $val ?>" <?= ($f['type'] ?? '') === $val ? 'selected' : '' ?>><?= $label ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <button type="button" class="btn btn-white sf-remove" style="color:var(--danger);">✕</button>
+            </div>
+            <div class="sf-nested" <?= $isArray ? '' : 'style="display:none"' ?>>
+                <?php if ($isArray): renderSchemaFields($f['of'] ?? [], $depth + 1); endif; ?>
+                <button type="button" class="btn btn-white sf-add-child" onclick="sfAddField(this.closest('.sf-nested'))">+ Sotto-campo</button>
+            </div>
+        </div>
+    <?php endforeach;
+}
+
 // --- DATI ---
 $data = getJson($dataFile);
 $models = getJson($modelFile);
@@ -129,18 +281,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 2. Salva Struttura
     if (isset($_POST['save_structure'])) {
         $g = $_POST['group_name'];
-        $newFields = [];
-        if (isset($_POST['fields'])) {
-            foreach ($_POST['fields'] as $f) {
-                if (trim($f['name']) !== '') {
-                    $newFields[] = ['name' => preg_replace('/[^a-z0-9_]/', '', strtolower($f['name'])), 'type' => $f['type']];
-                }
-            }
-        }
-        if (!empty($_POST['new_field_name'])) {
-            $newFields[] = ['name' => preg_replace('/[^a-z0-9_]/', '', strtolower($_POST['new_field_name'])), 'type' => $_POST['new_field_type']];
-        }
-        $models[$g] = $newFields;
+        $decoded = json_decode($_POST['schema_json'] ?? '[]', true);
+        $models[$g] = is_array($decoded) ? $decoded : [];
         saveJson($modelFile, $models);
         $msg = "Struttura aggiornata con successo.";
     }
@@ -151,63 +293,104 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: index.php");
         exit;
     }
-    // 4. Salva Entità
+    // 4. Salva Entità (root o nested via path)
     if (isset($_POST['save_entity'])) {
-        $id = $_POST['id'];
+        $id = (int) $_POST['id'];
         $g = $_POST['group'];
-        $targetIdx = -1;
-        foreach ($data as $i => $d) {
-            if ($d['name'] === $g && $d['id'] == $id) {
-                $targetIdx = $i;
-                break;
-            }
-        }
+        $path = parsePath($_POST['path'] ?? '');
+        $rootIdx = findRootIndex($data, $g, $id);
 
-        $itemData = [];
-        if (isset($models[$g])) {
-            foreach ($models[$g] as $def) {
-                $fname = $def['name'];
-                $ftype = $def['type'];
-                if ($ftype === 'plain') {
-                    $itemData[] = ['name' => $fname, 'type' => 'plain', 'value' => $_POST[$fname]['val'] ?? ''];
-                } else {
-                    $vals = [];
-                    foreach ($activeLangs as $l)
-                        $vals[$l] = $_POST[$fname][$l] ?? '';
-                    $itemData[] = ['name' => $fname, 'type' => $ftype, 'value' => $vals];
-                }
+        $schema = resolveSchemaAtPath($models, $g, $path);
+
+        if ($rootIdx < 0) {
+            // Only root can be created via this path (nested entities are created via create_nested)
+            $itemData = applyPostToData([], $schema, $_POST, $activeLangs);
+            $data[] = ['id' => $id, 'name' => $g, 'data' => $itemData];
+        } else {
+            $target = &walkEntityPath($data[$rootIdx], $path);
+            if ($target === null) {
+                $msg = "Percorso non valido.";
+            } else {
+                $target['data'] = applyPostToData($target['data'] ?? [], $schema, $_POST, $activeLangs);
             }
+            unset($target);
         }
-        $entityObj = ['id' => (int) $id, 'name' => $g, 'data' => $itemData];
-        if ($targetIdx >= 0)
-            $data[$targetIdx] = $entityObj;
-        else
-            $data[] = $entityObj;
         saveJson($dataFile, $data);
         $msg = "Contenuto salvato.";
     }
-    // 5. Crea Istanza
+    // 5. Crea Istanza (root)
     if (isset($_POST['create_instance'])) {
         $g = $_POST['group'];
         $maxId = -1;
         foreach ($data as $d)
             if ($d['name'] === $g)
                 $maxId = max($maxId, $d['id']);
-        $skeleton = [];
-        foreach ($models[$g] as $f)
-            $skeleton[] = ['name' => $f['name'], 'type' => $f['type'], 'value' => ($f['type'] == 'plain' ? '' : array_fill_keys($activeLangs, ''))];
+        $skeleton = buildSkeleton($models[$g] ?? [], $activeLangs);
         $newId = $maxId + 1;
         $data[] = ['id' => $newId, 'name' => $g, 'data' => $skeleton];
         saveJson($dataFile, $data);
         header("Location: index.php?action=edit&group=$g&id=$newId");
         exit;
     }
-    // 6. Elimina Istanza
+    // 5b. Crea sub-istanza nested (path deve terminare su un field array)
+    if (isset($_POST['create_nested'])) {
+        $g = $_POST['group'];
+        $id = (int) $_POST['id'];
+        $path = parsePath($_POST['path'] ?? '');
+        $rootIdx = findRootIndex($data, $g, $id);
+        if ($rootIdx >= 0 && count($path) % 2 === 1) {
+            $schema = resolveSchemaAtPath($models, $g, $path);
+            $field = &walkEntityPath($data[$rootIdx], $path);
+            if ($field !== null && ($field['type'] ?? null) === 'array') {
+                $maxSubId = -1;
+                foreach ($field['value'] as $s)
+                    $maxSubId = max($maxSubId, (int) ($s['id'] ?? -1));
+                $newSubId = $maxSubId + 1;
+                $field['value'][] = ['id' => $newSubId, 'data' => buildSkeleton($schema, $activeLangs)];
+                saveJson($dataFile, $data);
+                $childPath = pathToString([...$path, (string) $newSubId]);
+                header("Location: index.php?action=edit&group=$g&id=$id&path=" . urlencode($childPath));
+                exit;
+            }
+            unset($field);
+        }
+    }
+    // 6. Elimina Istanza (root)
     if (isset($_POST['delete_instance'])) {
         $data = array_filter($data, fn($d) => !($d['name'] == $_POST['group'] && $d['id'] == $_POST['id']));
         saveJson($dataFile, array_values($data));
         header("Location: index.php?action=list&group=" . $_POST['group']);
         exit;
+    }
+    // 6b. Elimina sub-istanza nested (path deve terminare su un sub-id)
+    if (isset($_POST['delete_nested'])) {
+        $g = $_POST['group'];
+        $id = (int) $_POST['id'];
+        $path = parsePath($_POST['path'] ?? '');
+        $rootIdx = findRootIndex($data, $g, $id);
+        if ($rootIdx >= 0 && count($path) >= 2 && count($path) % 2 === 0) {
+            $parentPath = array_slice($path, 0, -2);
+            $fieldName = $path[count($path) - 2];
+            $subId = (int) $path[count($path) - 1];
+            $parent = &walkEntityPath($data[$rootIdx], $parentPath);
+            if ($parent !== null) {
+                foreach ($parent['data'] as &$item) {
+                    if ($item['name'] === $fieldName && ($item['type'] ?? null) === 'array') {
+                        $item['value'] = array_values(array_filter(
+                            $item['value'],
+                            fn($s) => (int) ($s['id'] ?? -1) !== $subId
+                        ));
+                        break;
+                    }
+                }
+                unset($item);
+            }
+            unset($parent);
+            saveJson($dataFile, $data);
+            $back = pathToString($parentPath);
+            header("Location: index.php?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
+            exit;
+        }
     }
     // 7. Upload & Settings
     if (isset($_FILES['file'])) {
@@ -251,439 +434,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kris 2 CMS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
-    <style>
-        :root {
-            --primary: #3b82f6;
-            --primary-dark: #2563eb;
-            --bg: #f3f4f6;
-            --sidebar-bg: #111827;
-            --sidebar-txt: #9ca3af;
-            --surface: #ffffff;
-            --border: #e5e7eb;
-            --text: #1f2937;
-            --danger: #ef4444;
-        }
-
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* SIDEBAR */
-        aside {
-            width: 260px;
-            background: var(--sidebar-bg);
-            color: var(--sidebar-txt);
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #1f2937;
-            flex-shrink: 0;
-        }
-
-        .brand {
-            padding: 24px;
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #fff;
-            letter-spacing: -0.5px;
-            border-bottom: 1px solid #1f2937;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .brand svg {
-            color: var(--primary);
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 24px;
-            color: inherit;
-            text-decoration: none;
-            transition: all 0.2s;
-            font-weight: 500;
-            font-size: 0.95rem;
-        }
-
-        .nav-item svg {
-            width: 20px;
-            height: 20px;
-            margin-right: 12px;
-            opacity: 0.7;
-        }
-
-        .nav-item:hover {
-            background: #1f2937;
-            color: #fff;
-        }
-
-        .nav-item:hover svg {
-            opacity: 1;
-        }
-
-        .nav-item.active {
-            background: var(--primary);
-            color: #fff;
-        }
-
-        .nav-item.active svg {
-            opacity: 1;
-        }
-
-        /* Logout Button */
-        .logout-btn {
-            margin-top: auto;
-            border-top: 1px solid #1f2937;
-            color: #ef4444;
-        }
-        .logout-btn:hover {
-            background: #371b1b;
-            color: #f87171;
-        }
-
-        /* MAIN CONTENT */
-        main {
-            flex: 1;
-            overflow-y: auto;
-            padding: 40px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding-bottom: 100px;
-        }
-
-        /* TYPOGRAPHY & UI */
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #111827;
-            margin: 0 0 25px 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        h1 .actions {
-            display: flex;
-            gap: 10px;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 10px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-            text-decoration: none;
-        }
-
-        .btn svg {
-            width: 18px;
-            height: 18px;
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-white {
-            background: white;
-            border: 1px solid var(--border);
-            color: var(--text);
-        }
-
-        .btn-white:hover {
-            background: #f9fafb;
-            border-color: #d1d5db;
-        }
-
-        /* FORMS */
-        .card {
-            background: var(--surface);
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-        }
-
-        .card-body {
-            padding: 24px;
-        }
-
-        label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #374151;
-            font-size: 0.9rem;
-        }
-
-        input[type="text"],
-        select,
-        textarea {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-size: 0.95rem;
-            transition: border 0.2s;
-            background: #fff;
-            box-sizing: border-box;
-        }
-
-        input:focus,
-        select:focus,
-        textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        /* DASHBOARD GRID */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 24px;
-        }
-
-        .dash-card {
-            background: white;
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 24px;
-            text-decoration: none;
-            color: inherit;
-            transition: transform 0.2s, box-shadow 0.2s;
-            display: flex;
-            flex-direction: column;
-            height: 160px;
-            justify-content: space-between;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .dash-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.1);
-            border-color: var(--primary);
-        }
-
-        .dash-card h3 {
-            margin: 0;
-            font-size: 1.25rem;
-            color: #111827;
-        }
-
-        .dash-card p {
-            margin: 5px 0 0;
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
-
-        .dash-card .count {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--primary);
-            opacity: 0.1;
-            position: absolute;
-            bottom: -10px;
-            right: 10px;
-        }
-
-        .dash-add {
-            border: 2px dashed #e5e7eb;
-            background: transparent;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            color: #6b7280;
-        }
-
-        .dash-add:hover {
-            border-color: var(--primary);
-            color: var(--primary);
-        }
-
-        /* TABLE */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th {
-            background: #f9fafb;
-            text-align: left;
-            padding: 12px 20px;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #6b7280;
-            border-bottom: 1px solid var(--border);
-        }
-
-        td {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border);
-            color: #374151;
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background: #f9fafb;
-        }
-
-        /* TABS */
-        .tabs-container {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            overflow: hidden;
-            margin-bottom: 24px;
-        }
-
-        .tabs-header {
-            display: flex;
-            background: #f9fafb;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .tab-btn {
-            padding: 12px 20px;
-            cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #6b7280;
-            border-right: 1px solid var(--border);
-            transition: background 0.1s;
-        }
-
-        .tab-btn:hover {
-            background: #f3f4f6;
-        }
-
-        .tab-btn.active {
-            background: white;
-            color: var(--primary);
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            border-bottom-color: white;
-        }
-
-        .tab-content {
-            display: none;
-            padding: 20px;
-            background: white;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        /* UTILS */
-        .alert {
-            padding: 16px;
-            background: #ecfdf5;
-            color: #065f46;
-            border: 1px solid #a7f3d0;
-            border-radius: 6px;
-            margin-bottom: 24px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 99px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: #e5e7eb;
-            color: #374151;
-        }
-
-        /* Modal */
-        .modal-backdrop {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999; /* Alto z-index per stare sopra a TinyMCE */
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(2px);
-        }
-
-        .modal {
-            background: white;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 500px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .modal-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .modal-header h3 {
-            margin: 0;
-        }
-
-        .modal-body {
-            padding: 24px;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        .modal-footer {
-            padding: 16px 24px;
-            background: #f9fafb;
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-        }
-        
-        /* TinyMCE Fixes */
-        .tox-tinymce {
-            border: 1px solid var(--border) !important;
-            border-radius: 6px !important;
-        }
-    </style>
+    <link rel="stylesheet" href="<?= htmlspecialchars(rtrim(dirname($_SERVER['PHP_SELF']), '/') . '/css/style.css') ?>">
 </head>
 
 <body>
@@ -881,50 +632,21 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
 
                 <div class="card">
                     <div class="card-body">
-                        <form method="POST">
+                        <form method="POST" id="structureForm">
                             <input type="hidden" name="save_structure" value="1">
                             <input type="hidden" name="group_name" value="<?= $group ?>">
+                            <input type="hidden" name="schema_json" id="schema_json">
 
-                            <div style="background:#f9fafb; padding:15px; border-radius:6px; margin-bottom:20px;">
-                                <h4 style="margin:0 0 10px 0;">Campi Esistenti</h4>
-                                <?php if (empty($models[$group]))
-                                    echo "<p style='font-size:0.9rem; color:#6b7280;'>Nessun campo definito.</p>"; ?>
-
-                                <?php foreach ($models[$group] as $idx => $f): ?>
-                                    <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
-                                        <input type="text" name="fields[<?= $idx ?>][name]" value="<?= $f['name'] ?>"
-                                            placeholder="Nome campo (es. title)">
-                                        <select name="fields[<?= $idx ?>][type]" style="width:250px">
-                                            <option value="text" <?= $f['type'] == 'text' ? 'selected' : '' ?>>Testo Multilingua</option>
-                                            <option value="richtext" <?= $f['type'] == 'richtext' ? 'selected' : '' ?>>Richtext (HTML / Editor)</option>
-                                            <option value="image" <?= $f['type'] == 'image' ? 'selected' : '' ?>>Media / File</option>
-                                            <option value="plain" <?= $f['type'] == 'plain' ? 'selected' : '' ?>>Testo Semplice (ID, Codici)</option>
-                                        </select>
-                                        <button type="button" class="btn btn-white" onclick="this.parentElement.remove()"
-                                            style="color:var(--danger);">✕</button>
-                                    </div>
-                                <?php endforeach; ?>
+                            <div id="root-schema" class="sf-container">
+                                <?php renderSchemaFields($models[$group] ?? []); ?>
                             </div>
+                            <button type="button" class="btn btn-white" style="margin-top:8px;"
+                                onclick="sfAddField(document.getElementById('root-schema'))">+ Campo</button>
 
-                            <div style="margin-bottom:20px; padding:15px; border:1px dashed #d1d5db; border-radius:6px;">
-                                <h4 style="margin:0 0 10px 0;">Aggiungi Campo</h4>
-                                <div style="display:flex; gap:10px;">
-                                    <input type="text" name="new_field_name" placeholder="Nome nuovo campo...">
-                                    <select name="new_field_type" style="width:250px">
-                                        <option value="text">Testo Multilingua</option>
-                                        <option value="richtext">Richtext (HTML / Editor)</option>
-                                        <option value="image">Media / File</option>
-                                        <option value="plain">Testo Semplice</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div
-                                style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:20px;">
+                            <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
                                 <button type="submit" name="delete_collection" class="btn btn-white"
                                     style="color:var(--danger);"
-                                    onclick="return confirm('ATTENZIONE: Stai per eliminare l\'intera collezione e la sua struttura. Continuare?')">Elimina
-                                    Collezione</button>
+                                    onclick="return confirm('ATTENZIONE: Stai per eliminare l\'intera collezione e la sua struttura. Continuare?')">Elimina Collezione</button>
                                 <button type="submit" class="btn btn-primary">Salva Struttura</button>
                             </div>
                         </form>
@@ -932,25 +654,154 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                 </div>
             </div>
 
+            <style>
+                .sf-container { display:flex; flex-direction:column; gap:6px; }
+                .sf-row { background:#f9fafb; border:1px solid var(--border); border-radius:6px; padding:10px; }
+                .sf-header { display:flex; gap:8px; align-items:center; }
+                .sf-header .sf-name { flex:1; min-width:0; }
+                .sf-header .sf-type { width:200px; flex-shrink:0; }
+                .sf-nested {
+                    margin-top:10px;
+                    padding:10px;
+                    background:#fff;
+                    border-left:3px solid var(--primary, #3b82f6);
+                    border-radius:0 4px 4px 0;
+                    display:flex;
+                    flex-direction:column;
+                    gap:6px;
+                }
+                .sf-add-child { align-self:flex-start; font-size:0.85rem; padding:4px 10px; }
+            </style>
+
+            <script>
+                const SF_TYPES = [
+                    ['text',     'Testo Multilingua'],
+                    ['richtext', 'Richtext'],
+                    ['image',    'Media / File'],
+                    ['plain',    'Testo Semplice'],
+                    ['array',    'Array (lista innestata)'],
+                ];
+
+                function sfTypeChange(select) {
+                    const nested = select.closest('.sf-row').querySelector('.sf-nested');
+                    nested.style.display = select.value === 'array' ? 'flex' : 'none';
+                }
+
+                function sfAddField(container) {
+                    const typeOptions = SF_TYPES.map(([v, l]) =>
+                        `<option value="${v}">${l}</option>`).join('');
+                    const row = document.createElement('div');
+                    row.className = 'sf-row';
+                    row.innerHTML = `
+                        <div class="sf-header">
+                            <input type="text" class="sf-name" placeholder="Nome campo (es. title)">
+                            <select class="sf-type" onchange="sfTypeChange(this)">${typeOptions}</select>
+                            <button type="button" class="btn btn-white sf-remove" style="color:var(--danger);">✕</button>
+                        </div>
+                        <div class="sf-nested" style="display:none">
+                            <button type="button" class="btn btn-white sf-add-child"
+                                onclick="sfAddField(this.closest('.sf-nested'))">+ Sotto-campo</button>
+                        </div>`;
+                    row.querySelector('.sf-remove').addEventListener('click', () => row.remove());
+                    const addBtn = [...container.children].find(c => c.tagName === 'BUTTON' && c.classList.contains('sf-add-child'));
+                    container.insertBefore(row, addBtn ?? null);
+                }
+
+                function sfSerialize(container) {
+                    return [...container.children]
+                        .filter(c => c.classList.contains('sf-row'))
+                        .map(row => {
+                            const name = row.querySelector('.sf-name').value
+                                .trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+                            const type = row.querySelector('.sf-type').value;
+                            if (!name) return null;
+                            const entry = { name, type };
+                            if (type === 'array') {
+                                entry.of = sfSerialize(row.querySelector('.sf-nested'));
+                            }
+                            return entry;
+                        })
+                        .filter(Boolean);
+                }
+
+                // Wire remove buttons on server-rendered rows
+                document.querySelectorAll('.sf-remove').forEach(btn => {
+                    btn.addEventListener('click', () => btn.closest('.sf-row').remove());
+                });
+
+                document.getElementById('structureForm').addEventListener('submit', function() {
+                    document.getElementById('schema_json').value =
+                        JSON.stringify(sfSerialize(document.getElementById('root-schema')));
+                });
+            </script>
+
         <?php elseif ($action === 'edit'):
-            $id = $_GET['id'];
+            $id = (int) $_GET['id'];
+            $pathRaw = $_GET['path'] ?? '';
+            $path = parsePath($pathRaw);
+            $rootIdx = findRootIndex($data, $group, $id);
+            $rootEntity = $rootIdx >= 0 ? $data[$rootIdx] : null;
+
+            // Navigate to the target sub-entity
             $entity = null;
-            foreach ($data as $d)
-                if ($d['name'] == $group && $d['id'] == $id)
-                    $entity = $d;
-            $schema = $models[$group];
-            $getVal = fn($n) => array_column($entity['data'], 'value', 'name')[$n] ?? null;
+            if ($rootEntity !== null) {
+                if (empty($path)) {
+                    $entity = $rootEntity;
+                } else {
+                    $rootCopy = $rootEntity;
+                    $target = &walkEntityPath($rootCopy, $path);
+                    if ($target !== null && isset($target['data'])) {
+                        $entity = ['id' => $target['id'] ?? 0, 'data' => $target['data']];
+                    }
+                    unset($target);
+                }
+            }
+            $schema = resolveSchemaAtPath($models, $group, $path);
+            $getVal = fn($n) => $entity ? (array_column($entity['data'], 'value', 'name')[$n] ?? null) : null;
+
+            // Breadcrumb
+            $crumbs = [['label' => ucfirst($group), 'href' => "?action=list&group={$group}"]];
+            if (!empty($path)) {
+                $crumbs[] = ['label' => "#{$id}", 'href' => "?action=edit&group={$group}&id={$id}"];
+                for ($i = 0; $i < count($path); $i += 2) {
+                    $prefix = pathToString(array_slice($path, 0, $i + 2));
+                    $crumbs[] = [
+                        'label' => $path[$i] . ' #' . ($path[$i + 1] ?? '?'),
+                        'href' => "?action=edit&group={$group}&id={$id}&path=" . urlencode($prefix)
+                    ];
+                }
+            }
+            $backHref = $crumbs[count($crumbs) - 2]['href'] ?? "?action=list&group={$group}";
+            $crumbLabel = end($crumbs)['label'];
             ?>
             <div class="container">
-                <h1>Modifica Elemento <span class="badge" style="font-size:1rem; margin-left:10px;">#<?= $id ?></span>
-                    <a href="?action=list&group=<?= $group ?>" class="btn btn-white" onclick="return confirmExit(event)">Back</a>
+                <h1>Modifica <?= htmlspecialchars($crumbLabel) ?>
+                    <?php if (!empty($path)): ?>
+                        <span class="badge" style="font-size:0.85rem; margin-left:10px;">#<?= (int) ($entity['id'] ?? 0) ?></span>
+                    <?php else: ?>
+                        <span class="badge" style="font-size:1rem; margin-left:10px;">#<?= $id ?></span>
+                    <?php endif; ?>
+                    <a href="<?= $backHref ?>" class="btn btn-white" onclick="return confirmExit(event)">Back</a>
                 </h1>
 
+                <?php if (count($crumbs) > 1): ?>
+                    <div style="margin-bottom:20px; font-size:0.9rem; color:#6b7280;">
+                        <?php foreach ($crumbs as $i => $c): ?>
+                            <?php if ($i > 0) echo '<span style="margin:0 6px;">/</span>'; ?>
+                            <a href="<?= $c['href'] ?>" style="color:#374151; text-decoration:none;"><?= htmlspecialchars($c['label']) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($entity === null): ?>
+                    <div class="card"><div class="card-body">Elemento non trovato.</div></div>
+                <?php else: ?>
                 <form method="POST" class="card">
                     <div class="card-body">
                         <input type="hidden" name="save_entity" value="1">
                         <input type="hidden" name="group" value="<?= $group ?>">
                         <input type="hidden" name="id" value="<?= $id ?>">
+                        <input type="hidden" name="path" value="<?= htmlspecialchars($pathRaw) ?>">
 
                         <?php foreach ($schema as $f):
                             $n = $f['name'];
@@ -960,7 +811,55 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                                 <label><?= $n ?> <span
                                         style="font-weight:normal; color:#9ca3af; font-size:0.8em; margin-left:5px;"><?= strtoupper($t) ?></span></label>
 
-                                <?php if ($t === 'plain'): ?>
+                                <?php if ($t === 'array'):
+                                    $children = is_array($saved) ? $saved : [];
+                                    $childPathPrefix = $pathRaw === '' ? $n : ($pathRaw . '/' . $n);
+                                    ?>
+                                    <div style="background:#f9fafb; border:1px solid var(--border); border-radius:6px; padding:15px;">
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                                            <span style="color:#6b7280; font-size:0.9rem;">
+                                                <?= count($children) ?> elemento/i
+                                            </span>
+                                            <button type="button" class="btn btn-white"
+                                                onclick="document.getElementById('create_nested_<?= $n ?>').submit()">+ Nuovo</button>
+                                        </div>
+                                        <?php if (empty($children)): ?>
+                                            <p style="color:#9ca3af; margin:0; font-size:0.9rem;">Nessun elemento. Aggiungi il primo.</p>
+                                        <?php else: ?>
+                                            <table>
+                                                <thead>
+                                                    <tr><th width="60">ID</th><th>Anteprima</th><th width="140" style="text-align:right">Azioni</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($children as $ch):
+                                                        $chId = (int) ($ch['id'] ?? 0);
+                                                        $prev = '<em style="color:#9ca3af">Vuoto</em>';
+                                                        foreach ($ch['data'] ?? [] as $d) {
+                                                            if (in_array($d['type'] ?? '', ['text','plain','richtext'])) {
+                                                                $v = is_array($d['value']) ? reset($d['value']) : $d['value'];
+                                                                if ($v) { $prev = mb_substr(strip_tags((string)$v), 0, 70) . '...'; break; }
+                                                            }
+                                                        }
+                                                        $childPath = $childPathPrefix . '/' . $chId;
+                                                        ?>
+                                                        <tr>
+                                                            <td><span class="badge">#<?= $chId ?></span></td>
+                                                            <td><?= $prev ?></td>
+                                                            <td style="text-align:right;">
+                                                                <a href="?action=edit&group=<?= $group ?>&id=<?= $id ?>&path=<?= urlencode($childPath) ?>"
+                                                                    class="btn btn-white" style="padding:6px 10px;">Edit</a>
+                                                                <button type="button" class="btn btn-white"
+                                                                    style="padding:6px 10px; color:var(--danger); border-color:var(--border);"
+                                                                    onclick="if(confirm('Eliminare questo elemento?')){document.getElementById('del_nested_<?= $n ?>_<?= $chId ?>').submit();}">✕</button>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        <?php endif; ?>
+                                    </div>
+
+                                <?php elseif ($t === 'plain'): ?>
                                     <textarea name="<?= $n ?>[val]" rows="2"><?= is_array($saved) ? '' : $saved ?></textarea>
 
                                 <?php else: ?>
@@ -1012,6 +911,34 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                         <button class="btn btn-primary" style="padding:12px 30px; font-size:1rem;">Salva Modifiche</button>
                     </div>
                 </form>
+
+                <?php // Helper forms for nested create/delete (outside the main edit form)
+                foreach ($schema as $f):
+                    if (($f['type'] ?? '') !== 'array') continue;
+                    $n = $f['name'];
+                    $saved = $getVal($n);
+                    $children = is_array($saved) ? $saved : [];
+                    $childPathPrefix = $pathRaw === '' ? $n : ($pathRaw . '/' . $n);
+                    ?>
+                    <form method="POST" id="create_nested_<?= $n ?>" style="display:none;">
+                        <input type="hidden" name="create_nested" value="1">
+                        <input type="hidden" name="group" value="<?= $group ?>">
+                        <input type="hidden" name="id" value="<?= $id ?>">
+                        <input type="hidden" name="path" value="<?= htmlspecialchars($childPathPrefix) ?>">
+                    </form>
+                    <?php foreach ($children as $ch):
+                        $chId = (int) ($ch['id'] ?? 0);
+                        $childPath = $childPathPrefix . '/' . $chId;
+                        ?>
+                        <form method="POST" id="del_nested_<?= $n ?>_<?= $chId ?>" style="display:none;">
+                            <input type="hidden" name="delete_nested" value="1">
+                            <input type="hidden" name="group" value="<?= $group ?>">
+                            <input type="hidden" name="id" value="<?= $id ?>">
+                            <input type="hidden" name="path" value="<?= htmlspecialchars($childPath) ?>">
+                        </form>
+                    <?php endforeach; ?>
+                <?php endforeach; ?>
+                <?php endif; ?>
             </div>
 
         <?php elseif ($action === 'media'): ?>
@@ -1210,42 +1137,24 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
 
         // --- INIZIALIZZAZIONE ---
         document.addEventListener("DOMContentLoaded", function() {
-    
+
             // 1. Rileva modifiche su input normali (text, textarea)
-            const inputs = document.querySelectorAll('form.card input, form.card textarea, form.card select');
-            inputs.forEach(input => {
-                input.addEventListener('input', markAsDirty);
-                input.addEventListener('change', markAsDirty);
+            document.querySelectorAll('form.card input, form.card textarea, form.card select').forEach(el => {
+                el.addEventListener('input', markAsDirty);
+                el.addEventListener('change', markAsDirty);
             });
 
-            // 2. Rileva modifiche sul form submit (per evitare l'alert quando si salva davvero)
+            // 2. Reset dirty flag al submit del form (salvataggio reale)
             const form = document.querySelector('form.card');
-            if (form) {
-                form.addEventListener('submit', () => {
-                    hasUnsavedChanges = false;
-                });
-            }
+            if (form) form.addEventListener('submit', () => { hasUnsavedChanges = false; });
 
-            // 3. Intercetta click su tutti i link
-            document.querySelectorAll('a[href]').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    if (hasUnsavedChanges) {
-                        if (!confirm("Hai modifiche non salvate.\nSe esci ora, andranno perse.\n\nSei sicuro di voler uscire?")) {
-                            e.preventDefault();
-                        }
-                    }
-                });
-            });
-
-            // 4. Intercetta refresh e chiusura tab (dialog nativo del browser)
+            // 3. Dialog nativo solo su refresh/chiusura tab — non blocca ogni click nella pagina
             window.addEventListener('beforeunload', function(e) {
-                if (hasUnsavedChanges) {
-                    e.preventDefault();
-                }
+                if (hasUnsavedChanges) e.preventDefault();
             });
 
-            // 5. Inizializza TinyMCE
-            if(document.querySelector('.richtext')) {
+            // 4. Inizializza TinyMCE
+            if (document.querySelector('.richtext')) {
                 tinymce.init({
                     selector: '.richtext',
                     height: 400,
@@ -1255,9 +1164,13 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                     file_picker_callback: openCmsMediaPicker,
                     content_style: 'body { font-family:Segoe UI,Arial,sans-serif; font-size:14px }',
                     setup: function(editor) {
-                        editor.on('change', markAsDirty);
-                        editor.on('keyup', markAsDirty);
-                        editor.on('NodeChange', markAsDirty);
+                        // isReady evita che gli eventi di init di TinyMCE marchino dirty
+                        let isReady = false;
+                        editor.on('init', function() {
+                            setTimeout(() => { isReady = true; }, 300);
+                        });
+                        editor.on('change', function() { if (isReady) markAsDirty(); });
+                        editor.on('keyup',  function() { if (isReady) markAsDirty(); });
                     }
                 });
             }

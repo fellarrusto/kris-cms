@@ -23,7 +23,7 @@ class TemplateEngine {
 
         $dom = DomHelper::loadHtml($html);
 
-        $this->arrayProcessor->process($dom);
+        $this->arrayProcessor->process($dom, $entity);
         $this->componentProcessor->process($dom);
 
         return $dom->saveHTML();

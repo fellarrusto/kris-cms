@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l core/entity/Entity.php)",
+      "Bash(php -l core/template/ArrayProcessor.php)",
+      "Bash(php -l core/template/TemplateEngine.php)",
+      "Bash(php -l editor/index.php)",
+      "Bash(php -r \"json_decode\\(file_get_contents\\('data/k_model.json'\\), true\\); echo 'model: '.json_last_error_msg\\(\\).PHP_EOL; json_decode\\(file_get_contents\\('data/k_data.json'\\), true\\); echo 'data: '.json_last_error_msg\\(\\).PHP_EOL;\")"
+    ]
+  }
+}

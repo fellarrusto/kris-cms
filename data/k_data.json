@@ -14,10 +14,7 @@
             {
                 "name": "page_title",
                 "type": "text",
-                "value": {
-                    "it": "Kris 2",
-                    "en": "Kris 2"
-                }
+                "value": { "it": "Kris 2", "en": "Kris 2" }
             },
             {
                 "name": "page_subtitle",
@@ -31,41 +28,29 @@
                 "name": "hero_description",
                 "type": "richtext",
                 "value": {
-                    "it": "<p>Modifica testi, immagini e video direttamente sulla pagina. Salva tutto in un unico file JSON.<\/p>",
-                    "en": "<p>Edit text, images and videos directly on the page. Store everything in a single JSON file.<\/p>"
+                    "it": "<p>Modifica testi, immagini e video direttamente sulla pagina. Salva tutto in un unico file JSON.</p>",
+                    "en": "<p>Edit text, images and videos directly on the page. Store everything in a single JSON file.</p>"
                 }
             },
             {
                 "name": "logo",
                 "type": "image",
-                "value": {
-                    "it": "assets\/uploads\/logo.svg",
-                    "en": "assets\/uploads\/logo.svg"
-                }
+                "value": { "it": "assets/uploads/logo.svg", "en": "assets/uploads/logo.svg" }
             },
             {
                 "name": "btn_get_started",
                 "type": "text",
-                "value": {
-                    "it": "Inizia Ora",
-                    "en": "Get Started"
-                }
+                "value": { "it": "Inizia Ora", "en": "Get Started" }
             },
             {
                 "name": "btn_why_kris",
                 "type": "text",
-                "value": {
-                    "it": "Perché Kris?",
-                    "en": "Why Kris?"
-                }
+                "value": { "it": "Perché Kris?", "en": "Why Kris?" }
             },
             {
                 "name": "code_title",
                 "type": "text",
-                "value": {
-                    "it": "content.json",
-                    "en": "content.json"
-                }
+                "value": { "it": "content.json", "en": "content.json" }
             },
             {
                 "name": "code_example",
@@ -83,10 +68,7 @@
             {
                 "name": "cta_title",
                 "type": "text",
-                "value": {
-                    "it": "Pronto per Iniziare?",
-                    "en": "Ready to Get Started?"
-                }
+                "value": { "it": "Pronto per Iniziare?", "en": "Ready to Get Started?" }
             },
             {
                 "name": "cta_subtitle",
@@ -107,34 +89,22 @@
             {
                 "name": "how_it_works_title",
                 "type": "text",
-                "value": {
-                    "it": "Come funziona",
-                    "en": "How it works"
-                }
+                "value": { "it": "Come funziona", "en": "How it works" }
             },
             {
                 "name": "btn_download",
                 "type": "text",
-                "value": {
-                    "it": "Scarica",
-                    "en": "Download"
-                }
+                "value": { "it": "Scarica", "en": "Download" }
             },
             {
                 "name": "btn_docs",
                 "type": "text",
-                "value": {
-                    "it": "Documentazione",
-                    "en": "Documentation"
-                }
+                "value": { "it": "Documentazione", "en": "Documentation" }
             },
             {
                 "name": "footer_logo_text",
                 "type": "text",
-                "value": {
-                    "it": "Kris 2",
-                    "en": "Kris 2"
-                }
+                "value": { "it": "Kris 2", "en": "Kris 2" }
             },
             {
                 "name": "footer_tagline",
@@ -147,34 +117,139 @@
             {
                 "name": "footer_resources_title",
                 "type": "text",
-                "value": {
-                    "it": "Risorse",
-                    "en": "Resources"
-                }
+                "value": { "it": "Risorse", "en": "Resources" }
             },
             {
                 "name": "footer_docs",
                 "type": "text",
-                "value": {
-                    "it": "Manuale Utente",
-                    "en": "User Manual"
-                }
+                "value": { "it": "Manuale Utente", "en": "User Manual" }
             },
             {
                 "name": "footer_community_title",
                 "type": "text",
-                "value": {
-                    "it": "Community",
-                    "en": "Community"
-                }
+                "value": { "it": "Community", "en": "Community" }
             },
             {
                 "name": "footer_github",
                 "type": "text",
-                "value": {
-                    "it": "Repository GitHub",
-                    "en": "GitHub Repository"
-                }
+                "value": { "it": "Repository GitHub", "en": "GitHub Repository" }
+            },
+            {
+                "name": "features",
+                "type": "array",
+                "value": [
+                    {
+                        "id": 0,
+                        "data": [
+                            { "name": "category", "type": "plain", "value": "feature_a" },
+                            { "name": "icon", "type": "text", "value": { "it": "⚡", "en": "⚡" } },
+                            { "name": "title", "type": "text", "value": { "it": "Sviluppo Rapido", "en": "Fast integration" } },
+                            { "name": "description", "type": "text", "value": { "it": "Avvia il tuo sito statico in pochi minuti, senza configurazioni complesse.", "en": "Spin up your static site in minutes, no complex setup required." } },
+                            { "name": "tags", "type": "plain", "value": "veloce, tech" },
+                            {
+                                "name": "highlights",
+                                "type": "array",
+                                "value": [
+                                    {
+                                        "id": 0,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Zero configurazione", "en": "Zero configuration" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Bastano composer install e un web server: nessun database, nessun build step.", "en": "Just composer install and a web server: no database, no build step." } }
+                                        ]
+                                    },
+                                    {
+                                        "id": 1,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "HTML standard", "en": "Standard HTML" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Scrivi il tuo markup come sempre, Kris si integra tramite magic tag non invasivi.", "en": "Write your markup as usual — Kris integrates via non-invasive magic tags." } }
+                                        ]
+                                    },
+                                    {
+                                        "id": 2,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Live preview", "en": "Live preview" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Salva dall'editor e ricarica: le modifiche sono immediate.", "en": "Save from the editor and reload: changes are instant." } }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "id": 1,
+                        "data": [
+                            { "name": "category", "type": "plain", "value": "feature_b" },
+                            { "name": "icon", "type": "text", "value": { "it": "🎨", "en": "🎨" } },
+                            { "name": "title", "type": "text", "value": { "it": "Completamente Personalizzabile", "en": "Fully Customizable" } },
+                            { "name": "description", "type": "text", "value": { "it": "Usa i tuoi template HTML e il tuo CSS: nessun framework imposto.", "en": "Bring your own HTML templates and CSS — no framework locked in." } },
+                            { "name": "tags", "type": "plain", "value": "ui, css" },
+                            {
+                                "name": "highlights",
+                                "type": "array",
+                                "value": [
+                                    {
+                                        "id": 0,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Il tuo CSS", "en": "Your own CSS" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Kris non impone stili: mantieni il design system che hai già.", "en": "Kris imposes no styles: keep the design system you already have." } }
+                                        ]
+                                    },
+                                    {
+                                        "id": 1,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Magic tag espliciti", "en": "Explicit magic tags" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Integri Kris solo dove serve con {{tag}}, k-array e k-component.", "en": "Integrate Kris only where needed using {{tag}}, k-array and k-component." } }
+                                        ]
+                                    },
+                                    {
+                                        "id": 2,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Component riusabili", "en": "Reusable components" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Navbar, footer e pattern condivisi vivono in un unico snippet.", "en": "Navbars, footers and shared patterns live in a single snippet." } }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "id": 2,
+                        "data": [
+                            { "name": "category", "type": "plain", "value": "feature_c" },
+                            { "name": "icon", "type": "text", "value": { "it": "🗄️", "en": "🗄️" } },
+                            { "name": "title", "type": "text", "value": { "it": "No Database", "en": "No Database" } },
+                            { "name": "description", "type": "text", "value": { "it": "Tutti i contenuti vivono in un singolo file JSON, versionabile e portabile.", "en": "All your content lives in a single JSON file — versionable and portable." } },
+                            { "name": "tags", "type": "plain", "value": "tech, flat" },
+                            {
+                                "name": "highlights",
+                                "type": "array",
+                                "value": [
+                                    {
+                                        "id": 0,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Un solo file", "en": "A single file" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Tutti i testi, le immagini referenziate e le liste stanno in k_data.json.", "en": "All texts, referenced media and lists live in k_data.json." } }
+                                        ]
+                                    },
+                                    {
+                                        "id": 1,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Versionabile in git", "en": "Git-friendly" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Diff leggibili, review dei contenuti come fossero codice, rollback semplice.", "en": "Readable diffs, content review as if it were code, simple rollbacks." } }
+                                        ]
+                                    },
+                                    {
+                                        "id": 2,
+                                        "data": [
+                                            { "name": "title", "type": "text", "value": { "it": "Hosting ovunque", "en": "Host anywhere" } },
+                                            { "name": "description", "type": "text", "value": { "it": "Basta un qualsiasi shared hosting con PHP: niente database, niente costi extra.", "en": "Any shared PHP hosting works: no database, no extra costs." } }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
             }
         ]
     },
@@ -185,79 +260,28 @@
             {
                 "name": "logo",
                 "type": "image",
-                "value": {
-                    "it": "assets\/uploads\/logo.svg",
-                    "en": "assets\/uploads\/logo.svg"
-                }
+                "value": { "it": "assets/uploads/logo.svg", "en": "assets/uploads/logo.svg" }
             },
             {
                 "name": "page_title",
                 "type": "text",
-                "value": {
-                    "it": "Kris 2",
-                    "en": "Kris 2"
-                }
+                "value": { "it": "Kris 2", "en": "Kris 2" }
             },
             {
                 "name": "nav_features",
                 "type": "text",
-                "value": {
-                    "it": "Funzionalità",
-                    "en": "Features"
-                }
+                "value": { "it": "Funzionalità", "en": "Features" }
             },
             {
                 "name": "nav_docs",
                 "type": "text",
-                "value": {
-                    "it": "Documentazione",
-                    "en": "Documentation"
-                }
+                "value": { "it": "Documentazione", "en": "Documentation" }
             },
             {
                 "name": "nav_github",
                 "type": "text",
-                "value": {
-                    "it": "GitHub",
-                    "en": "GitHub"
-                }
+                "value": { "it": "GitHub", "en": "GitHub" }
             }
-        ]
-    },
-    {
-        "id": 0,
-        "name": "feature",
-        "data": [
-            { "name": "category", "type": "plain", "value": "feature_a" },
-            { "name": "icon", "type": "text", "value": { "it": "⚡", "en": "⚡" } },
-            { "name": "title", "type": "text", "value": { "it": "Sviluppo Rapido", "en": "Fast integration" } },
-            { "name": "description", "type": "text", "value": { "it": "Avvia il tuo sito statico in pochi minuti...", "en": "Get your static site up and running in minutes..." } },
-            { "name": "link", "type": "text", "value": { "it": "/index.php?page=detail&key=feature&id=0&ln=it", "en": "/index.php?page=detail&key=feature&id=0&ln=en" } },
-            { "name": "tags", "type": "plain", "value": "veloce, tech" }
-        ]
-    },
-    {
-        "id": 1,
-        "name": "feature",
-        "data": [
-            { "name": "category", "type": "plain", "value": "feature_b" },
-            { "name": "icon", "type": "text", "value": { "it": "🎨", "en": "🎨" } },
-            { "name": "title", "type": "text", "value": { "it": "Completamente Personalizzabile", "en": "Fully Customizable" } },
-            { "name": "description", "type": "text", "value": { "it": "Usa i tuoi template HTML esistenti...", "en": "Use your existing HTML templates..." } },
-            { "name": "link", "type": "text", "value": { "it": "/index.php?page=detail&key=feature&id=1&ln=it", "en": "/index.php?page=detail&key=feature&id=1&ln=en" } },
-            { "name": "tags", "type": "plain", "value": "ui, css" }
-        ]
-    },
-    {
-        "id": 2,
-        "name": "feature",
-        "data": [
-            { "name": "category", "type": "plain", "value": "feature_c" },
-            { "name": "icon", "type": "text", "value": { "it": "🗄️", "en": "🗄️" } },
-            { "name": "title", "type": "text", "value": { "it": "No Database", "en": "No Database" } },
-            { "name": "description", "type": "text", "value": { "it": "Tutti i contenuti in un singolo file JSON...", "en": "All your content lives in a single JSON file..." } },
-            { "name": "link", "type": "text", "value": { "it": "/index.php?page=detail&key=feature&id=2&ln=it", "en": "/index.php?page=detail&key=feature&id=2&ln=en" } },
-            { "name": "tags", "type": "plain", "value": "tech, flat" }
         ]
     }
 ]

@@ -79,6 +79,46 @@ To create a list of items (like Features, Blog Posts, or Team Members), you don'
 
 ---
 
+## 4b. Nested Lists (k-array dentro k-array)
+
+Le liste `k-array` possono essere **innestate**: un campo di un'entità può contenere a sua volta una lista di sotto-entità. Utile quando l'appartenenza è gerarchica (es. categorie → prodotti) e vuoi gestire i figli direttamente nel contesto del padre, senza filtri globali.
+
+**Schema (`k_model.json`):** dichiara un campo di tipo `array` con `of` (schema dei figli).
+
+```json
+"product_category": [
+  { "name": "title", "type": "text" },
+  { "name": "products", "type": "array", "of": [
+      { "name": "name", "type": "text" },
+      { "name": "price", "type": "plain" }
+  ]}
+]
+```
+
+**Dati (`k_data.json`):** i figli vivono nel valore del campo `array`.
+
+```json
+{
+  "name": "products", "type": "array", "value": [
+    { "id": 0, "data": [ { "name": "name", "type": "text", "value": {"it":"T-shirt","en":"T-shirt"} }, ... ] }
+  ]
+}
+```
+
+**Template:** dentro il template del padre usa un altro `k-array` che punta al nome del campo locale. Il motore lo risolve **prima localmente** (nel contesto dell'entità corrente) e, se non trova nulla, fa fallback alla lookup globale — quindi i template esistenti continuano a funzionare.
+
+```html
+<!-- category-card.html -->
+<div class="category">
+    <h3>{{title}}</h3>
+    <div k-array="products" k-template="product-card"></div>
+</div>
+```
+
+Nell'Admin: aprendo una categoria trovi i prodotti come sotto-lista, con pulsanti Edit / ✕ / + Nuovo. La navigazione a più livelli è supportata tramite il parametro `path` (es. `?action=edit&group=product_category&id=0&path=products/1`). La modifica dello schema `of` al momento va fatta a mano su `k_model.json`.
+
+---
+
 ## 5. Smart Logic (If/Else/Has)
 
 You can change the design based on the data. Kris 2 supports standard operators and the `has` operator for comma-separated tags.
