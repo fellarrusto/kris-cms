@@ -1158,6 +1158,31 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
         .dnd-table tr[draggable="true"].dnd-dragging { opacity: 0.4; }
         .dnd-table tr[draggable="true"].dnd-over-top  { box-shadow: inset 0 2px 0 0 var(--primary, #3b82f6); }
         .dnd-table tr[draggable="true"].dnd-over-bottom { box-shadow: inset 0 -2px 0 0 var(--primary, #3b82f6); }
+
+        /* Upload feedback */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .upload-spinner {
+            width: 28px; height: 28px;
+            border: 3px solid #e5e7eb;
+            border-top-color: var(--primary, #3b82f6);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        #mediaGrid.is-uploading { pointer-events: none; }
+        #mediaGrid.is-uploading > div:not(.upload-busy) { opacity: 0.5; transition: opacity 0.2s; }
+        .upload-busy {
+            background: white;
+            border-radius: 6px;
+            border: 2px dashed var(--primary, #3b82f6);
+            aspect-ratio: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--primary, #3b82f6);
+            font-size: 0.75rem;
+        }
     </style>
     <script>
         let tgt = null;
@@ -1226,8 +1251,27 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
 
         function uploadFromOverlay(input) {
             if (!input.files[0]) return;
+            const file = input.files[0];
             const form = new FormData();
-            form.append('file', input.files[0]);
+            form.append('file', file);
+
+            const grid = document.getElementById('mediaGrid');
+            const closeBtn = document.querySelector('#mediaOverlay .modal-header button');
+
+            // Mostra busy state: spinner card + dimming del resto + disabilita chiusura
+            grid.classList.add('is-uploading');
+            const busy = document.createElement('div');
+            busy.className = 'upload-busy';
+            busy.innerHTML = '<div class="upload-spinner"></div><span>Caricamento…</span><span style="color:#9ca3af; max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + file.name + '</span>';
+            grid.insertBefore(busy, grid.children[1]); // dopo la card "Carica"
+            if (closeBtn) closeBtn.disabled = true;
+
+            const cleanup = () => {
+                busy.remove();
+                grid.classList.remove('is-uploading');
+                if (closeBtn) closeBtn.disabled = false;
+                input.value = '';
+            };
 
             fetch('./upload.php', {
                     method: 'POST',
@@ -1235,14 +1279,22 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                     credentials: 'same-origin',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
                 .then(data => {
+                    if (!data || !data.url) throw new Error('Risposta non valida');
                     const card = document.createElement('div');
                     card.onclick = () => selectMedia(data.url);
                     card.style.cssText = 'background:white;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;box-shadow:0 1px 2px rgba(0,0,0,0.1)';
                     card.innerHTML = '<img src="../' + data.url + '" style="width:100%;aspect-ratio:1;object-fit:cover"><div style="padding:5px;font-size:0.7rem;text-align:center;overflow:hidden;white-space:nowrap">' + data.url.split('/').pop() + '</div>';
-                    document.getElementById('mediaGrid').children[1].after(card);
-                    input.value = '';
+                    grid.children[1].after(card);
+                    cleanup();
+                })
+                .catch(err => {
+                    cleanup();
+                    alert('Errore durante il caricamento: ' + err.message);
                 });
         }
 
