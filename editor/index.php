@@ -266,6 +266,10 @@ $action = $_GET['action'] ?? 'dashboard';
 $group = $_GET['group'] ?? null;
 $msg = '';
 
+// Path assoluto a questo file (es. "/editor/index.php"), per redirect e form action
+// indipendenti dall'URL corrente (con o senza trailing slash, con o senza index.php).
+$BASE = $_SERVER['SCRIPT_NAME'];
+
 // --- LOGICA POST ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 1. Crea Collezione
@@ -391,6 +395,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: index.php?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
             exit;
         }
+    }
+    // 6c. Riordina entità root (drag-and-drop)
+    if (isset($_POST['reorder_root'])) {
+        $g = $_POST['group'];
+        $order = array_map('intval', explode(',', $_POST['order'] ?? ''));
+        if (!empty($order)) {
+            // Estrae le entità del group nell'ordine richiesto, mantiene le altre nella loro posizione relativa
+            $byId = [];
+            foreach ($data as $d) {
+                if ($d['name'] === $g) $byId[(int)$d['id']] = $d;
+            }
+            $reordered = [];
+            $usedIds = [];
+            foreach ($order as $oid) {
+                if (isset($byId[$oid])) {
+                    $reordered[] = $byId[$oid];
+                    $usedIds[$oid] = true;
+                }
+            }
+            // Aggiunge in coda eventuali entità del group non incluse nell'ordine (safety)
+            foreach ($byId as $oid => $d) {
+                if (!isset($usedIds[$oid])) $reordered[] = $d;
+            }
+            // Ricostruisce $data: per ogni entità non-group mantiene posizione, sostituisce le entità del group in ordine
+            $newData = [];
+            $reIdx = 0;
+            foreach ($data as $d) {
+                if ($d['name'] === $g) {
+                    if (isset($reordered[$reIdx])) $newData[] = $reordered[$reIdx++];
+                } else {
+                    $newData[] = $d;
+                }
+            }
+            // Aggiunge in coda eventuali rimanenti
+            while ($reIdx < count($reordered)) $newData[] = $reordered[$reIdx++];
+            $data = $newData;
+            saveJson($dataFile, $data);
+        }
+        header("Location: $BASE?action=list&group=$g");
+        exit;
+    }
+    // 6d. Riordina sub-entità nested (drag-and-drop)
+    if (isset($_POST['reorder_nested'])) {
+        $g = $_POST['group'];
+        $id = (int) $_POST['id'];
+        $path = parsePath($_POST['path'] ?? '');
+        $order = array_map('intval', explode(',', $_POST['order'] ?? ''));
+        $rootIdx = findRootIndex($data, $g, $id);
+        if ($rootIdx >= 0 && !empty($order) && count($path) % 2 === 1) {
+            $field = &walkEntityPath($data[$rootIdx], $path);
+            if ($field !== null && ($field['type'] ?? null) === 'array') {
+                $bySubId = [];
+                foreach ($field['value'] as $s) $bySubId[(int)($s['id'] ?? -1)] = $s;
+                $reordered = [];
+                $usedIds = [];
+                foreach ($order as $oid) {
+                    if (isset($bySubId[$oid])) {
+                        $reordered[] = $bySubId[$oid];
+                        $usedIds[$oid] = true;
+                    }
+                }
+                foreach ($bySubId as $oid => $s) {
+                    if (!isset($usedIds[$oid])) $reordered[] = $s;
+                }
+                $field['value'] = $reordered;
+                saveJson($dataFile, $data);
+            }
+            unset($field);
+        }
+        $parentPath = array_slice($path, 0, -1);
+        $back = pathToString($parentPath);
+        header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
+        exit;
     }
     // 7. Upload & Settings
     if (isset($_FILES['file'])) {
@@ -572,9 +649,10 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                             <a href="?action=structure&group=<?= $group ?>" class="btn btn-primary">Definisci Struttura</a>
                         </div>
                     <?php else: ?>
-                        <table>
+                        <table class="dnd-table" data-dnd-scope="root" data-dnd-group="<?= $group ?>">
                             <thead>
                                 <tr>
+                                    <th width="30"></th>
                                     <th width="60">ID</th>
                                     <th>Anteprima Contenuto</th>
                                     <th width="140" style="text-align:right">Azioni</th>
@@ -585,7 +663,7 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                                 $list = array_filter($data, fn($i) => $i['name'] === $group);
                                 if (empty($list)): ?>
                                     <tr>
-                                        <td colspan="3" style="text-align:center; padding:30px; color:#9ca3af;">Nessun elemento
+                                        <td colspan="4" style="text-align:center; padding:30px; color:#9ca3af;">Nessun elemento
                                             presente.</td>
                                     </tr>
                                 <?php else:
@@ -601,7 +679,8 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                                             }
                                         }
                                         ?>
-                                        <tr>
+                                        <tr draggable="true" data-id="<?= $item['id'] ?>">
+                                            <td class="dnd-handle" title="Trascina per riordinare">⋮⋮</td>
                                             <td><span class="badge">#<?= $item['id'] ?></span></td>
                                             <td><?= $prev ?></td>
                                             <td style="text-align:right;">
@@ -619,6 +698,11 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                                     <?php endforeach; endif; ?>
                             </tbody>
                         </table>
+                        <form method="POST" action="<?= htmlspecialchars($BASE) ?>" id="reorder_root_form" style="display:none;">
+                            <input type="hidden" name="reorder_root" value="1">
+                            <input type="hidden" name="group" value="<?= $group ?>">
+                            <input type="hidden" name="order" value="">
+                        </form>
                     <?php endif; ?>
                 </div>
             </div>
@@ -830,9 +914,9 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                                         <?php if (empty($children)): ?>
                                             <p style="color:#9ca3af; margin:0; font-size:0.9rem;">Nessun elemento. Aggiungi il primo.</p>
                                         <?php else: ?>
-                                            <table>
+                                            <table class="dnd-table" data-dnd-scope="nested" data-dnd-field="<?= $n ?>">
                                                 <thead>
-                                                    <tr><th width="60">ID</th><th>Anteprima</th><th width="140" style="text-align:right">Azioni</th></tr>
+                                                    <tr><th width="30"></th><th width="60">ID</th><th>Anteprima</th><th width="140" style="text-align:right">Azioni</th></tr>
                                                 </thead>
                                                 <tbody>
                                                     <?php foreach ($children as $ch):
@@ -846,7 +930,8 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                                                         }
                                                         $childPath = $childPathPrefix . '/' . $chId;
                                                         ?>
-                                                        <tr>
+                                                        <tr draggable="true" data-id="<?= $chId ?>">
+                                                            <td class="dnd-handle" title="Trascina per riordinare">⋮⋮</td>
                                                             <td><span class="badge">#<?= $chId ?></span></td>
                                                             <td><?= $prev ?></td>
                                                             <td style="text-align:right;">
@@ -860,6 +945,14 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                                                     <?php endforeach; ?>
                                                 </tbody>
                                             </table>
+                                            <form method="POST" action="<?= htmlspecialchars($BASE) ?>" id="reorder_nested_<?= $n ?>" class="reorder-nested-form" style="display:none;"
+                                                data-field="<?= $n ?>">
+                                                <input type="hidden" name="reorder_nested" value="1">
+                                                <input type="hidden" name="group" value="<?= $group ?>">
+                                                <input type="hidden" name="id" value="<?= $id ?>">
+                                                <input type="hidden" name="path" value="<?= htmlspecialchars($childPathPrefix) ?>">
+                                                <input type="hidden" name="order" value="">
+                                            </form>
                                         <?php endif; ?>
                                     </div>
 
@@ -1052,6 +1145,20 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
         </div>
     </div>
 
+    <style>
+        .dnd-table td.dnd-handle {
+            cursor: grab;
+            color: #9ca3af;
+            font-weight: bold;
+            user-select: none;
+            text-align: center;
+            letter-spacing: -2px;
+        }
+        .dnd-table td.dnd-handle:hover { color: #374151; }
+        .dnd-table tr[draggable="true"].dnd-dragging { opacity: 0.4; }
+        .dnd-table tr[draggable="true"].dnd-over-top  { box-shadow: inset 0 2px 0 0 var(--primary, #3b82f6); }
+        .dnd-table tr[draggable="true"].dnd-over-bottom { box-shadow: inset 0 -2px 0 0 var(--primary, #3b82f6); }
+    </style>
     <script>
         let tgt = null;
         let tinymceCallback = null;
@@ -1139,8 +1246,68 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                 });
         }
 
+        // --- DRAG & DROP RIORDINO ---
+        function initDnd() {
+            document.querySelectorAll('table.dnd-table').forEach(table => {
+                const tbody = table.tBodies[0];
+                if (!tbody) return;
+                let dragRow = null;
+
+                tbody.querySelectorAll('tr[draggable="true"]').forEach(row => {
+                    row.addEventListener('dragstart', e => {
+                        dragRow = row;
+                        row.classList.add('dnd-dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        try { e.dataTransfer.setData('text/plain', row.dataset.id); } catch(_) {}
+                    });
+                    row.addEventListener('dragend', () => {
+                        row.classList.remove('dnd-dragging');
+                        tbody.querySelectorAll('tr').forEach(r => r.classList.remove('dnd-over-top','dnd-over-bottom'));
+                        dragRow = null;
+                    });
+                    row.addEventListener('dragover', e => {
+                        if (!dragRow || dragRow === row) return;
+                        e.preventDefault();
+                        const rect = row.getBoundingClientRect();
+                        const before = (e.clientY - rect.top) < rect.height / 2;
+                        row.classList.toggle('dnd-over-top', before);
+                        row.classList.toggle('dnd-over-bottom', !before);
+                    });
+                    row.addEventListener('dragleave', () => {
+                        row.classList.remove('dnd-over-top','dnd-over-bottom');
+                    });
+                    row.addEventListener('drop', e => {
+                        if (!dragRow || dragRow === row) return;
+                        e.preventDefault();
+                        const rect = row.getBoundingClientRect();
+                        const before = (e.clientY - rect.top) < rect.height / 2;
+                        if (before) tbody.insertBefore(dragRow, row);
+                        else tbody.insertBefore(dragRow, row.nextSibling);
+                        row.classList.remove('dnd-over-top','dnd-over-bottom');
+
+                        // Submit del form con il nuovo ordine
+                        const ids = [...tbody.querySelectorAll('tr[draggable="true"]')]
+                            .map(r => r.dataset.id).join(',');
+                        const scope = table.dataset.dndScope;
+                        let form;
+                        if (scope === 'root') {
+                            form = document.getElementById('reorder_root_form');
+                        } else if (scope === 'nested') {
+                            form = document.getElementById('reorder_nested_' + table.dataset.dndField);
+                        }
+                        if (form) {
+                            form.querySelector('input[name="order"]').value = ids;
+                            hasUnsavedChanges = false; // bypass beforeunload
+                            form.submit();
+                        }
+                    });
+                });
+            });
+        }
+
         // --- INIZIALIZZAZIONE ---
         document.addEventListener("DOMContentLoaded", function() {
+            initDnd();
 
             // 1. Rileva modifiche su input normali (text, textarea)
             document.querySelectorAll('form.card input, form.card textarea, form.card select').forEach(el => {
