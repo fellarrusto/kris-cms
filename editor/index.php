@@ -808,8 +808,12 @@ $images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
                             $t = $f['type'];
                             $saved = $getVal($n); ?>
                             <div style="margin-bottom:30px;">
-                                <label><?= $n ?> <span
-                                        style="font-weight:normal; color:#9ca3af; font-size:0.8em; margin-left:5px;"><?= strtoupper($t) ?></span></label>
+                                <?php if (!empty($f['description'])): ?>
+                                    <label style="font-size:1rem; font-weight:600; color:#111827;"><?= htmlspecialchars($f['description']) ?></label>
+                                    <div style="margin:2px 0 8px; font-size:0.78rem; color:#9ca3af; font-family:monospace;"><?= $n ?> <span style="margin-left:6px;"><?= strtoupper($t) ?></span></div>
+                                <?php else: ?>
+                                    <label><?= $n ?> <span style="font-weight:normal; color:#9ca3af; font-size:0.8em; margin-left:5px;"><?= strtoupper($t) ?></span></label>
+                                <?php endif; ?>
 
                                 <?php if ($t === 'array'):
                                     $children = is_array($saved) ? $saved : [];

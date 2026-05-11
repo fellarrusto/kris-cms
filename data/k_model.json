@@ -1,44 +1,44 @@
 {
     "homepage": [
-        { "name": "meta_title", "type": "text" },
-        { "name": "page_title", "type": "text" },
-        { "name": "page_subtitle", "type": "text" },
-        { "name": "hero_description", "type": "richtext" },
-        { "name": "logo", "type": "image" },
-        { "name": "btn_get_started", "type": "text" },
-        { "name": "btn_why_kris", "type": "text" },
-        { "name": "code_title", "type": "text" },
-        { "name": "code_example", "type": "plain" },
-        { "name": "features_title", "type": "text" },
-        { "name": "cta_title", "type": "text" },
-        { "name": "cta_subtitle", "type": "text" },
-        { "name": "footer_copyright", "type": "text" },
-        { "name": "how_it_works_title", "type": "text" },
-        { "name": "btn_download", "type": "text" },
-        { "name": "btn_docs", "type": "text" },
-        { "name": "footer_logo_text", "type": "text" },
-        { "name": "footer_tagline", "type": "text" },
-        { "name": "footer_resources_title", "type": "text" },
-        { "name": "footer_docs", "type": "text" },
-        { "name": "footer_community_title", "type": "text" },
-        { "name": "footer_github", "type": "text" },
-        { "name": "features", "type": "array", "of": [
-            { "name": "category", "type": "plain" },
-            { "name": "icon", "type": "text" },
-            { "name": "title", "type": "text" },
-            { "name": "description", "type": "text" },
-            { "name": "tags", "type": "plain" },
-            { "name": "highlights", "type": "array", "of": [
-                { "name": "title", "type": "text" },
-                { "name": "description", "type": "text" }
+        { "name": "meta_title", "type": "text", "description": "Titolo della pagina per i motori di ricerca" },
+        { "name": "page_title", "type": "text", "description": "Titolo principale visibile nell'hero" },
+        { "name": "page_subtitle", "type": "text", "description": "Sottotitolo dell'hero" },
+        { "name": "hero_description", "type": "richtext", "description": "Testo descrittivo nella sezione hero" },
+        { "name": "logo", "type": "image", "description": "Logo principale del sito" },
+        { "name": "btn_get_started", "type": "text", "description": "Testo del pulsante di avvio rapido" },
+        { "name": "btn_why_kris", "type": "text", "description": "Testo del pulsante 'Perché Kris'" },
+        { "name": "code_title", "type": "text", "description": "Titolo della sezione con esempio di codice" },
+        { "name": "code_example", "type": "plain", "description": "Snippet di codice mostrato nella homepage" },
+        { "name": "features_title", "type": "text", "description": "Titolo della sezione funzionalità" },
+        { "name": "cta_title", "type": "text", "description": "Titolo della call to action" },
+        { "name": "cta_subtitle", "type": "text", "description": "Sottotitolo della call to action" },
+        { "name": "footer_copyright", "type": "text", "description": "Testo di copyright nel footer" },
+        { "name": "how_it_works_title", "type": "text", "description": "Titolo della sezione 'Come funziona'" },
+        { "name": "btn_download", "type": "text", "description": "Testo del pulsante di download" },
+        { "name": "btn_docs", "type": "text", "description": "Testo del pulsante per la documentazione" },
+        { "name": "footer_logo_text", "type": "text", "description": "Nome/testo del logo nel footer" },
+        { "name": "footer_tagline", "type": "text", "description": "Tagline breve nel footer" },
+        { "name": "footer_resources_title", "type": "text", "description": "Titolo della colonna risorse nel footer" },
+        { "name": "footer_docs", "type": "text", "description": "Link alla documentazione nel footer" },
+        { "name": "footer_community_title", "type": "text", "description": "Titolo della colonna community nel footer" },
+        { "name": "footer_github", "type": "text", "description": "Link GitHub nel footer" },
+        { "name": "features", "type": "array", "description": "Lista delle funzionalità principali", "of": [
+            { "name": "category", "type": "plain", "description": "Categoria di appartenenza della funzionalità" },
+            { "name": "icon", "type": "text", "description": "Icona rappresentativa della funzionalità" },
+            { "name": "title", "type": "text", "description": "Nome della funzionalità" },
+            { "name": "description", "type": "text", "description": "Breve descrizione della funzionalità" },
+            { "name": "tags", "type": "plain", "description": "Tag associati alla funzionalità" },
+            { "name": "highlights", "type": "array", "description": "Punti salienti della funzionalità", "of": [
+                { "name": "title", "type": "text", "description": "Titolo del punto saliente" },
+                { "name": "description", "type": "text", "description": "Dettaglio del punto saliente" }
             ]}
         ]}
     ],
     "navbar": [
-        { "name": "logo", "type": "image" },
-        { "name": "page_title", "type": "text" },
-        { "name": "nav_features", "type": "text" },
-        { "name": "nav_docs", "type": "text" },
-        { "name": "nav_github", "type": "text" }
+        { "name": "logo", "type": "image", "description": "Logo nella barra di navigazione" },
+        { "name": "page_title", "type": "text", "description": "Nome del sito nella navbar" },
+        { "name": "nav_features", "type": "text", "description": "Voce di menu per le funzionalità" },
+        { "name": "nav_docs", "type": "text", "description": "Voce di menu per la documentazione" },
+        { "name": "nav_github", "type": "text", "description": "Voce di menu per GitHub" }
     ]
 }
