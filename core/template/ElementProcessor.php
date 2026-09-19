@@ -38,9 +38,12 @@ class ElementProcessor
             $tag = trim(substr($html, $pos + 2, $end - $pos - 2));
             $offset = $end + 2;
 
-            if (preg_match('/^#if\s+(\w+)\s*(==|!=|>|<|>=|<=|has)\s*(.+)$/', $tag, $m)) {
+            // Gli operatori a due caratteri vanno prima di quelli a uno:
+            // altrimenti '>' matcherebbe la prima meta di '>=' e il resto
+            // finirebbe nel valore da confrontare.
+            if (preg_match('/^#if\s+(\w+)\s*(==|!=|>=|<=|>|<|has)\s*(.+)$/', $tag, $m)) {
                 $tokens[] = ['type' => 'if', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
-            } elseif (preg_match('/^#elif\s+(\w+)\s*(==|!=|>|<|>=|<=|has)\s*(.+)$/', $tag, $m)) {
+            } elseif (preg_match('/^#elif\s+(\w+)\s*(==|!=|>=|<=|>|<|has)\s*(.+)$/', $tag, $m)) {
                 $tokens[] = ['type' => 'elif', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
             } elseif ($tag === '#else') {
                 $tokens[] = ['type' => 'else'];
@@ -75,7 +78,20 @@ class ElementProcessor
                         ],
                         'else' => null
                     ];
-                    $current['children'][] = &$node;
+                    // Se siamo dentro un altro if, il nuovo nodo appartiene al ramo
+                    // attivo: appenderlo a $current['children'] lo renderebbe
+                    // irraggiungibile, perche evaluate() legge solo i rami.
+                    if ($current['type'] === 'conditional') {
+                        if ($current['else'] !== null) {
+                            $current['else'][] = &$node;
+                        } else {
+                            $branch = &$current['branches'][count($current['branches']) - 1];
+                            $branch['children'][] = &$node;
+                            unset($branch);
+                        }
+                    } else {
+                        $current['children'][] = &$node;
+                    }
                     $stack[] = &$node;
                     unset($node);
                     break;
@@ -126,8 +142,7 @@ class ElementProcessor
                     break;
 
                 case 'variable':
-                    $name = $child['name'];
-                    $out .= ($name === 'language') ? $this->lang : ($entity->getData($name, $this->lang) ?? '');
+                    $out .= $this->renderValue($child['name'], $entity);
                     break;
 
                 case 'conditional':
@@ -139,10 +154,39 @@ class ElementProcessor
         return $out;
     }
 
+    /**
+     * Rende il valore di {{campo}}.
+     *
+     * L'HTML e ammesso solo dove e voluto, cioe nei campi 'richtext'. Tutto
+     * il resto viene escapato: cosi un testo con < o " non puo alterare il
+     * markup ne uscire da un attributo, e i tipi dello schema hanno finalmente
+     * un effetto concreto sul rendering.
+     */
+    private function renderValue(string $name, Entity $entity): string
+    {
+        if ($name === 'language') {
+            return htmlspecialchars($this->lang, ENT_QUOTES, 'UTF-8');
+        }
+
+        $value = $entity->getData($name, $this->lang);
+        if ($value === null || \is_array($value)) {
+            return '';
+        }
+
+        return $entity->getType($name) === 'richtext'
+            ? (string) $value
+            : htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    }
+
     private function evaluateConditional(array $node, Entity $entity): string
     {
         foreach ($node['branches'] as $branch) {
-            $fieldValue = ($branch['field'] === 'language') ? $this->lang : $entity->getData($branch['field']);
+            // Stessa risoluzione linguistica dell'interpolazione: senza lingua
+            // un campo multilingua tornerebbe come array e il confronto con una
+            // stringa sarebbe sempre falso.
+            $fieldValue = ($branch['field'] === 'language')
+                ? $this->lang
+                : $entity->getData($branch['field'], $this->lang);
 
             if ($fieldValue !== null && $this->compare($fieldValue, $branch['op'], $branch['value'])) {
                 return $this->evaluate(['children' => $branch['children']], $entity);

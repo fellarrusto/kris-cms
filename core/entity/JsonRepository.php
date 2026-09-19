@@ -29,18 +29,18 @@ class JsonRepository {
     public function save(string $file, int $index, array $entity): void {
         $data = $this->load($file);
         $data[$index] = $entity;
-        file_put_contents($this->dataPath . $file . '.json',
-            json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        $this->store($file)->write($data);
         self::$cache[$file] = $data;
     }
 
     private function load(string $file): array {
         if (!isset(self::$cache[$file])) {
-            self::$cache[$file] = json_decode(
-                file_get_contents($this->dataPath . $file . '.json'),
-                true
-            );
+            self::$cache[$file] = $this->store($file)->read();
         }
         return self::$cache[$file];
+    }
+
+    private function store(string $file): JsonStore {
+        return new JsonStore($this->dataPath . $file . '.json');
     }
 }
