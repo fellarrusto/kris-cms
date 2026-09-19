@@ -1,0 +1,8 @@
+# Gli snapshot sono confrontati byte per byte: niente conversione dei fine riga.
+tests/snapshots/*.html -text
+
+# Binari
+*.png binary
+*.jpg binary
+*.gif binary
+*.webp binary

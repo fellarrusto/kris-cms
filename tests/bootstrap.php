@@ -122,7 +122,13 @@ function assertMatchesSnapshot(string $name, string $actual): void
         return;
     }
 
-    $expected = file_get_contents($file);
+    // I fine riga vengono normalizzati: su Windows git converte i file in
+    // CRLF al checkout, e senza questo ogni snapshot fallirebbe per un
+    // motivo che non ha niente a che vedere con la pagina.
+    $normalize = fn(string $s): string => str_replace("\r\n", "\n", $s);
+
+    $expected = $normalize(file_get_contents($file));
+    $actual   = $normalize($actual);
     if ($expected === $actual) return;
 
     // Prima riga che differisce, per un messaggio leggibile.
