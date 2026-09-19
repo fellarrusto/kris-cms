@@ -1,0 +1,90 @@
+{
+  "browser": "Chrome headless",
+  "results": [
+    {
+      "name": "Initial edit rendered",
+      "ok": true
+    },
+    {
+      "name": "Dirty state and live preview",
+      "ok": true
+    },
+    {
+      "name": "Unsaved navigation guard",
+      "ok": true
+    },
+    {
+      "name": "Error preserves draft",
+      "ok": true
+    },
+    {
+      "name": "Retry succeeds",
+      "ok": true
+    },
+    {
+      "name": "Nested unsaved guard",
+      "ok": true
+    },
+    {
+      "name": "Child changes staged until parent save",
+      "ok": true
+    },
+    {
+      "name": "Reorder is staged",
+      "ok": true
+    },
+    {
+      "name": "Cancel media selection preserves cover",
+      "ok": true
+    },
+    {
+      "name": "Confirm cover stages change",
+      "ok": true
+    },
+    {
+      "name": "Conflict preserves draft and shows comparison",
+      "ok": true
+    },
+    {
+      "name": "Session expiry preserves draft",
+      "ok": true
+    },
+    {
+      "name": "Reconnect and save complete",
+      "ok": true
+    },
+    {
+      "name": "Disabling a language preserves translations",
+      "ok": true
+    },
+    {
+      "name": "Schema label changes without renaming key",
+      "ok": true
+    },
+    {
+      "name": "Empty search gives recovery action",
+      "ok": true
+    },
+    {
+      "name": "Create only staged before save",
+      "ok": true
+    },
+    {
+      "name": "Validation keeps other values and focuses title",
+      "ok": true
+    },
+    {
+      "name": "Mobile has no horizontal overflow",
+      "ok": true
+    },
+    {
+      "name": "Mobile dialog stays within viewport",
+      "ok": true
+    },
+    {
+      "name": "No browser runtime exceptions",
+      "ok": true
+    }
+  ],
+  "exceptions": []
+}
