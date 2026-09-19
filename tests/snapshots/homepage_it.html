@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kris 2 - CMS leggero per HTML statico</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <script src="core/scripts/script.js"></script>
+</head>
+
+<body>
+  <header class="header">
+    <div class="container">
+        <div class="nav">
+            <div class="logo-container">
+                <img src="assets/uploads/logo.svg" alt="Logo" class="logo-img">
+                <span class="logo-text">Kris 2</span>
+            </div>
+            <nav class="nav-links">
+                <a href="#features">Funzionalit&agrave;</a>
+                <a href="#docs">Documentazione</a>
+            </nav>
+            <div class="language-switch">
+                <a href="#" onclick="setLanguage('en'); return false" class="lang-btn">EN</a>
+                <span class="divider">|</span>
+                <a href="#" onclick="setLanguage('it'); return false" class="lang-btn active">IT</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="hero-title">Kris 2</h1>
+        <p class="hero-tagline">CMS leggero per template HTML statici</p>
+        <p class="hero-description"></p><p>Modifica testi, immagini e video direttamente sulla pagina. Salva tutto in un unico file JSON.</p>
+        <div class="hero-actions">
+          <a href="#get-started" class="btn btn-primary">Inizia Ora</a>
+          <a href="#why-kris" class="btn btn-secondary">Perch&eacute; Kris?</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="code-preview">
+          <div class="code-header">
+            <div class="code-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <span class="code-title">content.json</span>
+          </div>
+          <div class="code-content">
+            <pre>{
+    "id": 0,
+    "name": "homepage",
+    "data": [
+        {
+            "name": "page_title",
+            "type": "text",
+            "value": {
+                "it": "Kris 2 CMS",
+                "en": "Kris 2 CMS"
+            }
+        }
+}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="container">
+      <h2 class="section-title">Funzionalit&agrave; Potenti, Configurazione Semplice</h2>
+
+      <div class="filters" style="text-align: center; margin-bottom: 3rem;">
+        <button class="btn btn-primary" onclick="filterItems(this, '', '.feature-item', 'btn-primary', 'btn-secondary')" style="margin-right: 10px;">Tutti</button>
+        <button class="btn btn-secondary" onclick="filterItems(this, 'tech', '.feature-item', 'btn-primary', 'btn-secondary')" style="margin-right: 10px;">Tech</button>
+        <button class="btn btn-secondary" onclick="filterItems(this, 'ui', '.feature-item', 'btn-primary', 'btn-secondary')" style="margin-right: 10px;">UI</button>
+        <button class="btn btn-secondary" onclick="filterItems(this, 'flat', '.feature-item', 'btn-primary', 'btn-secondary')">Flat</button>
+      </div>
+      <div class="grid"><div class="feature-item" data-tags="veloce, tech">
+    <a class="card-link" href="?page=detail&amp;key=homepage&amp;id=0&amp;path=features/0&amp;ln=it">
+        <div class="card">
+            <div class="card-icon">&#9889;</div>
+            <h3 class="card-title">Sviluppo Rapido</h3>
+
+            
+                <p class="card-description" style="font-style: italic;">Avvia il tuo sito statico in pochi minuti, senza configurazioni complesse.</p>
+            
+
+            <span class="badge bg-primary">Tech</span>
+        </div>
+    </a>
+</div><div class="feature-item" data-tags="ui, css">
+    <a class="card-link" href="?page=detail&amp;key=homepage&amp;id=0&amp;path=features/1&amp;ln=it">
+        <div class="card">
+            <div class="card-icon">&#127912;</div>
+            <h3 class="card-title">Completamente Personalizzabile</h3>
+
+            
+                <p class="card-description" style="text-decoration: overline;">Usa i tuoi template HTML e il tuo CSS: nessun framework imposto.</p>
+            
+
+            
+        </div>
+    </a>
+</div><div class="feature-item" data-tags="tech, flat">
+    <a class="card-link" href="?page=detail&amp;key=homepage&amp;id=0&amp;path=features/2&amp;ln=it">
+        <div class="card">
+            <div class="card-icon">&#128452;&#65039;</div>
+            <h3 class="card-title">No Database</h3>
+
+            
+                <p class="card-description" style="text-decoration: underline;">Tutti i contenuti vivono in un singolo file JSON, versionabile e portabile.</p>
+            
+
+            <span class="badge bg-primary">Tech</span>
+        </div>
+    </a>
+</div></div>
+    </div>
+  </section>
+
+  <section class="how-it-works">
+    <div class="container">
+      <h2 class="section-title">Come funziona</h2>
+      <div class="steps">
+        <!-- TODO ADD COMPONENTS -->
+      </div>
+    </div>
+  </section>
+
+  <section id="get-started" class="cta">
+    <div class="container">
+      <h2>Pronto per Iniziare?</h2>
+      <p>Aggiungi Kris 2 al tuo progetto in pochi minuti</p>
+      <div class="cta-actions">
+        <a href="#" class="btn btn-primary">Scarica</a>
+        <a href="#" class="btn btn-secondary">Documentazione</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="logo-container">
+            <img src="assets/uploads/logo.svg" alt="Kris 2 Logo" class="logo-img">
+            <span class="logo-text">Kris 2</span>
+          </div>
+          <p>Il CMS statico semplice e veloce.</p>
+        </div>
+        <div class="footer-links">
+          <div class="footer-column">
+            <h4>Risorse</h4>
+            <a href="#">Manuale Utente</a>
+          </div>
+          <div class="footer-column">
+            <h4>Community</h4>
+            <a href="https://github.com/fellarrusto/kris-cms">Repository GitHub</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2025 Kris 2. Tutti i diritti riservati.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>
