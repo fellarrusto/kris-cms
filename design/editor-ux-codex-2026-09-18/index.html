@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Kris — Proposta editor</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">Vai al contenuto</a>
+  <div class="app">
+    <aside class="sidebar" aria-label="Navigazione principale">
+      <a class="brand" href="#contenuti" data-action="navigate" data-view="contents"><span class="brand-mark">k<span>·</span></span><span>kris<span class="brand-caption">CONTENT STUDIO</span></span></a>
+      <div class="workspace"><span class="workspace-icon">F</span><div><strong>Studio Forma</strong><span>Sito dimostrativo</span></div><span class="online" title="Prototipo locale"></span></div>
+      <p class="nav-label">IL TUO SPAZIO</p>
+      <nav id="navigation"></nav>
+      <div class="sidebar-bottom">
+        <div class="help-card"><span class="eyebrow">UN PASSO ALLA VOLTA</span><p>I contenuti al centro.<br>Il resto, quando serve.</p><button class="text-button" data-action="guide">Come funziona <span aria-hidden="true">↗</span></button></div>
+        <details class="demo-controls"><summary>Prova gli stati dell’interfaccia</summary><label for="scenario">Al prossimo salvataggio</label><select id="scenario"><option value="ok">Operazione riuscita</option><option value="error">Errore di connessione</option><option value="conflict">Conflitto di versione</option><option value="session">Sessione scaduta</option></select><p>Simulazione in memoria. Nessun dato del CMS viene modificato.</p></details>
+        <button class="profile" data-action="account"><span class="avatar">AD</span><span><strong>Amministratore</strong><small>Il tuo account</small></span><span aria-hidden="true">···</span></button>
+      </div>
+    </aside>
+    <div class="workspace-main">
+      <header class="topbar"><div class="breadcrumbs" id="breadcrumbs"></div><div class="topbar-right"><span class="prototype-badge">PROTOTIPO INTERATTIVO</span><button class="button quiet" data-action="preview">Anteprima <span aria-hidden="true">↗</span></button></div></header>
+      <main id="main" tabindex="-1"></main>
+      <footer class="savebar" id="savebar"></footer>
+    </div>
+  </div>
+  <div class="toast-stack" id="toasts" aria-live="polite" aria-atomic="true"></div>
+  <dialog id="dialog" aria-labelledby="dialog-title"></dialog>
+  <input id="upload-input" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden>
+</body>
+</html>
