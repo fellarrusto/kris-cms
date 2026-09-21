@@ -9,7 +9,21 @@ use Kris\Template\TemplateEngine;
 $key = $_GET['key'] ?? 'homepage';
 $index = (int)($_GET['id'] ?? 0);
 $requestedPage = $_GET['page'] ?? 'homepage';
-$lang = $_GET['ln'] ?? 'it';
+
+// La lingua arriva dall'URL: va confrontata con quelle configurate, non
+// usata cosi com'e (finisce nei contenuti e negli attributi delle pagine).
+$settingsFile = __DIR__ . '/data/cms_settings.json';
+$allowedLangs = ['it', 'en'];
+if (is_file($settingsFile)) {
+    $settings = json_decode((string) file_get_contents($settingsFile), true);
+    if (!empty($settings['languages']) && is_array($settings['languages'])) {
+        $allowedLangs = array_values($settings['languages']);
+    }
+}
+$lang = $_GET['ln'] ?? $allowedLangs[0];
+if (!in_array($lang, $allowedLangs, true)) {
+    $lang = $allowedLangs[0];
+}
 $rawPath = $_GET['path'] ?? '';
 $path = $rawPath === '' ? [] : array_values(array_filter(explode('/', $rawPath), fn($s) => $s !== ''));
 

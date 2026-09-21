@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No Database - Kris 2</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="core/scripts/script.js"></script>
+</head>
+<body>
+    <header class="header">
+    <div class="container">
+        <div class="nav">
+            <div class="logo-container">
+                <img src="assets/uploads/logo.svg" alt="Logo" class="logo-img">
+                <span class="logo-text">Kris 2</span>
+            </div>
+            <nav class="nav-links">
+                <a href="#features">Funzionalit&agrave;</a>
+                <a href="#docs">Documentazione</a>
+            </nav>
+            <div class="language-switch">
+                <a href="#" onclick="setLanguage('en'); return false" class="lang-btn">EN</a>
+                <span class="divider">|</span>
+                <a href="#" onclick="setLanguage('it'); return false" class="lang-btn active">IT</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+    <section class="detail-hero">
+        <div class="container">
+            <a href="/index.php?ln=it#features" class="back-link">&larr; Torna alle features</a>
+            <div class="detail-content">
+                <div class="detail-icon">&#128452;&#65039;</div>
+                <h1 class="detail-title">No Database</h1>
+                <p class="detail-description">Tutti i contenuti vivono in un singolo file JSON, versionabile e portabile.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="detail-highlights">
+        <div class="container">
+            <h2 class="section-title">Punti chiave</h2>
+            <div class="highlights"><div class="highlight-item">
+    <h4 class="highlight-title">Un solo file</h4>
+    <p class="highlight-description">Tutti i testi, le immagini referenziate e le liste stanno in k_data.json.</p>
+</div><div class="highlight-item">
+    <h4 class="highlight-title">Versionabile in git</h4>
+    <p class="highlight-description">Diff leggibili, review dei contenuti come fossero codice, rollback semplice.</p>
+</div><div class="highlight-item">
+    <h4 class="highlight-title">Hosting ovunque</h4>
+    <p class="highlight-description">Basta un qualsiasi shared hosting con PHP: niente database, niente costi extra.</p>
+</div></div>
+        </div>
+    </section>
+</body>
+</html>

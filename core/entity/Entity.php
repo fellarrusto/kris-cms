@@ -24,10 +24,15 @@ class Entity
             $this->index = -1;
         } else {
             $this->repo = new JsonRepository();
-            [$this->data, $this->index] = $this->repo->find($filename, $name, $id);
-            if (!$this->data) {
+            // L'esito va controllato PRIMA di assegnarlo: assegnare null a una
+            // proprieta tipizzata array solleva un TypeError, che il chiamante
+            // non cattura, e produce un 500 al posto del 404.
+            [$found, $index] = $this->repo->find($filename, $name, $id);
+            if (!$found) {
                 throw new Exception("Entity {$name} with id {$id} not found");
             }
+            $this->data = $found;
+            $this->index = $index;
         }
 
         // Aggiungi id ai data per renderlo accessibile via getData()
@@ -102,16 +107,30 @@ class Entity
         foreach ($this->data['data'] as $item) {
             if ($item['name'] === $name) {
                 if ($lang && \is_array($item['value']) && ($item['type'] ?? null) !== 'array') {
-                    if (!empty($item['value'][$lang])) {
+                    // Attenzione a empty(): la stringa "0" e un contenuto
+                    // legittimo (un prezzo, una quantita) e non va trattata
+                    // come traduzione mancante.
+                    if (isset($item['value'][$lang]) && $item['value'][$lang] !== '') {
                         return $item['value'][$lang];
                     }
                     foreach ($item['value'] as $v) {
-                        if (!empty($v))
+                        if ($v !== null && $v !== '')
                             return $v;
                     }
                     return null;
                 }
                 return $item['value'];
+            }
+        }
+        return null;
+    }
+
+    /** Tipo dichiarato di un campo ('text', 'richtext', 'plain', 'image', 'array'). */
+    public function getType(string $name): ?string
+    {
+        foreach ($this->data['data'] as $item) {
+            if ($item['name'] === $name) {
+                return $item['type'] ?? null;
             }
         }
         return null;

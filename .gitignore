@@ -1,1 +1,4 @@
-/vendor
+/vendor/*
+!/vendor/.htaccess
+/config/auth.php
+/data/backups/
