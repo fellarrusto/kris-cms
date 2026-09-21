@@ -16,16 +16,16 @@ Esecuzione completa: circa 2 secondi.
 |---|---|---|
 | `ok` | comportamento corretto, verificato | niente |
 | `FAIL` | **regressione**: qualcosa che funzionava si è rotto | correggere prima di proseguire |
-| `xfail` | bug noto e documentato nel piano: il test è rosso di proposito | niente, finché non si affronta quell'intervento |
+| `xfail` | bug noto identificato nel test: il test è rosso di proposito | correggere quando si affronta quel difetto |
 | `XPASS` | un bug noto risulta risolto | sostituire `xfail()` con `test()`: da quel momento è protetto da regressioni |
 
 Il comando esce con codice 1 solo per `FAIL` e `XPASS`. Gli `xfail` non fanno fallire la build: sono la fotografia dei difetti già censiti.
 
 ## Il ciclo di lavoro
 
-Ogni `xfail` porta il riferimento dell'intervento nel piano (es. `[A3.3]`).
+Ogni `xfail` deve identificare il difetto che documenta, con una descrizione o un riferimento a un issue.
 
-1. Si affronta l'intervento, ad esempio A3.3 (operatori `>=` e `<=`).
+1. Si corregge il difetto descritto dal test.
 2. Si rilancia la suite: quei test diventano `XPASS`.
 3. Si promuovono da `xfail()` a `test()`.
 4. Da lì in poi quel bug non può tornare senza far fallire la suite.
@@ -48,4 +48,4 @@ Quando un intervento cambia l'output pubblico **di proposito**, si rigenerano gl
 
 ## Perché non PHPUnit
 
-`vendor/` è dentro il document root e il README indica di caricarla via FTP: una dipendenza di sviluppo finirebbe pubblicata sul server insieme al resto. Finché quel punto non è risolto (decisione D2 del piano architettura), la suite resta a dipendenze zero.
+La suite usa PHP senza dipendenze di sviluppo aggiuntive. Per struttura del framework, conversione dei siti e separazione degli artefatti di deploy, consulta [AGENTS.md](../AGENTS.md).

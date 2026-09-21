@@ -6,7 +6,7 @@ declare(strict_types=1);
  * contro le fixture congelate (mai contro data/).
  *
  * Gli snapshot fotografano l'HTML di OGGI, artefatti inclusi: servono a
- * far emergere ogni cambiamento non voluto. Quando un intervento del piano
+ * far emergere ogni cambiamento non voluto. Quando una modifica intenzionale
  * modifica l'output di proposito, si rigenerano con --update-snapshots.
  */
 
@@ -113,7 +113,7 @@ test('la lingua del documento segue quella richiesta', function () {
 
 // Non e un bug: con una lingua sconosciuta getData() ricade sulla prima
 // traduzione compilata, quindi la pagina resta leggibile. Il test blocca
-// questo comportamento, perche A3.2 (validazione di ln) non deve toglierlo.
+// questo comportamento, perche la validazione di ln non deve toglierlo.
 test('una lingua sconosciuta ricade sui contenuti disponibili', function () {
     $out = renderPage(['ln' => 'zz'])['output'];
     assertSame(3, substr_count($out, 'class="feature-item"'), 'la pagina ha perso i contenuti');

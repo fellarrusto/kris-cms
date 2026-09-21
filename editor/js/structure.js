@@ -1,61 +1,34 @@
-// Costruttore dello schema: usato solo dalla schermata Struttura.
-
-const SF_TYPES = [
-    ['text',     'Testo Multilingua'],
-    ['richtext', 'Richtext'],
-    ['image',    'Media / File'],
-    ['plain',    'Testo Semplice'],
-    ['array',    'Array (lista innestata)'],
-];
-
+// Schema changes remain a normal POST: destructive changes go through the server impact view.
+'use strict';
+const SF_TYPES = [['text','Testo multilingua'],['richtext','Testo formattato'],['image','Media / file'],['plain','Testo condiviso'],['array','Elenco annidato']];
 function sfTypeChange(select) {
-    const nested = select.closest('.sf-row').querySelector('.sf-nested');
-    nested.style.display = select.value === 'array' ? 'flex' : 'none';
+    const nested=select.closest('.sf-row').querySelector('.sf-nested');
+    nested.style.display=select.value==='array'?'flex':'none';
+    nested.querySelectorAll('.sf-name').forEach(input=>input.required=select.value==='array');
+    markAsDirty();
 }
-
 function sfAddField(container) {
-    const typeOptions = SF_TYPES.map(([v, l]) =>
-        `<option value="${v}">${l}</option>`).join('');
-    const row = document.createElement('div');
-    row.className = 'sf-row';
-    row.innerHTML = `
-        <div class="sf-header">
-            <input type="text" class="sf-name" placeholder="Nome campo (es. title)">
-            <select class="sf-type" onchange="sfTypeChange(this)">${typeOptions}</select>
-            <button type="button" class="btn btn-white sf-remove" style="color:var(--danger);">✕</button>
-        </div>
-        <div class="sf-nested" style="display:none">
-            <button type="button" class="btn btn-white sf-add-child"
-                onclick="sfAddField(this.closest('.sf-nested'))">+ Sotto-campo</button>
-        </div>`;
-    row.querySelector('.sf-remove').addEventListener('click', () => row.remove());
-    const addBtn = [...container.children].find(c => c.tagName === 'BUTTON' && c.classList.contains('sf-add-child'));
-    container.insertBefore(row, addBtn ?? null);
+    const row=document.createElement('div');row.className='sf-row';
+    row.innerHTML=`<div class="sf-header"><input type="text" class="sf-name" placeholder="Nome tecnico" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+"><select class="sf-type" aria-label="Tipo del campo">${SF_TYPES.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select><button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo">&times;</button></div><label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" placeholder="Aiuta chi modifica il contenuto"></label><div class="sf-nested" style="display:none"><button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button></div>`;
+    const add=[...container.children].find(child=>child.classList.contains('sf-add-child'));
+    container.insertBefore(row,add||null);q('.sf-name',row).focus();markAsDirty();
 }
-
 function sfSerialize(container) {
-    return [...container.children]
-        .filter(c => c.classList.contains('sf-row'))
-        .map(row => {
-            const name = row.querySelector('.sf-name').value
-                .trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-            const type = row.querySelector('.sf-type').value;
-            if (!name) return null;
-            const entry = { name, type };
-            if (type === 'array') {
-                entry.of = sfSerialize(row.querySelector('.sf-nested'));
-            }
-            return entry;
-        })
-        .filter(Boolean);
+    return [...container.children].filter(c=>c.classList.contains('sf-row')).map(row=>{
+        const entry={name:q('.sf-name',row).value.trim(),type:q('.sf-type',row).value,description:q('.sf-description',row).value};
+        if(entry.type==='array')entry.of=sfSerialize(q('.sf-nested',row));
+        return entry;
+    });
 }
-
-// Wire remove buttons on server-rendered rows
-document.querySelectorAll('.sf-remove').forEach(btn => {
-    btn.addEventListener('click', () => btn.closest('.sf-row').remove());
+document.addEventListener('click',async event=>{
+    const button=event.target.closest('button');if(!button)return;
+    if(button.hasAttribute('data-add-root'))sfAddField(q('#root-schema'));
+    if(button.classList.contains('sf-add-child'))sfAddField(button.closest('.sf-nested'));
+    if(button.classList.contains('sf-remove')){
+        const row=button.closest('.sf-row');const name=q('.sf-name',row).value;
+        const yes=await choose('Rimuovere questo campo dal modello?',`Il campo ${name||'senza nome'} sarà rimosso dalla struttura proposta. Prima del salvataggio verrà verificato l’impatto sui contenuti esistenti.`,[{label:'Mantieni campo',value:false},{label:'Rimuovi campo',value:true,kind:'btn-danger'}]);
+        if(yes){row.remove();markAsDirty();q('[data-add-root]').focus();}
+    }
 });
-
-document.getElementById('structureForm').addEventListener('submit', function() {
-    document.getElementById('schema_json').value =
-        JSON.stringify(sfSerialize(document.getElementById('root-schema')));
-});
+document.addEventListener('change',event=>{if(event.target.matches('.sf-type'))sfTypeChange(event.target);});
+q('#structureForm').addEventListener('submit',()=>{q('#schema_json').value=JSON.stringify(sfSerialize(q('#root-schema')));});

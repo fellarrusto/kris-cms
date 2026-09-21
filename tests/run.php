@@ -12,7 +12,7 @@ declare(strict_types=1);
  * Esiti:
  *   PASS   comportamento corretto e verificato
  *   FAIL   regressione: qualcosa che funzionava non funziona più
- *   XFAIL  bug noto, gia documentato nel piano: il test e rosso di proposito
+ *   XFAIL  bug noto identificato nel test: il test e rosso di proposito
  *   XPASS  un bug noto risulta risolto -> togli xfail() e trasformalo in test()
  */
 
@@ -29,7 +29,7 @@ function test(string $name, callable $fn): void
 
 /**
  * Test di un comportamento corretto che oggi NON funziona (bug noto).
- * $ref e l'identificativo dell'intervento nel piano (es. "A3.3").
+ * $ref identifica il difetto documentato (descrizione breve o issue).
  */
 function xfail(string $ref, string $name, callable $fn): void
 {

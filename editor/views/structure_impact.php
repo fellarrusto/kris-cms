@@ -1,7 +1,7 @@
 <?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno ?>
     <div class="container">
         <h1>
-            <span>Controlla cosa perdi</span>
+            <span>Controlla le modifiche alla struttura</span>
             <a href="?action=structure&group=<?= urlencode((string) $group) ?>" class="btn btn-white">← Torna alla struttura</a>
         </h1>
 
@@ -57,12 +57,12 @@
             <div class="modal-footer" style="background:#f9fafb; border-top:1px solid var(--border);">
                 <a href="?action=structure&group=<?= urlencode((string) $group) ?>" class="btn btn-white">Annulla</a>
                 <form method="POST" style="margin:0;"
-                    onsubmit="return confirm('Confermi? I contenuti elencati verranno eliminati.');">
+                    data-confirm-title="Applicare le modifiche?" data-confirm="I dati elencati verranno rimossi al prossimo salvataggio dei contenuti. Controlla il riepilogo prima di continuare." data-confirm-label="Applica modifiche">
                     <input type="hidden" name="save_structure" value="1">
                     <input type="hidden" name="confirm_impact" value="1">
                     <input type="hidden" name="group_name" value="<?= htmlspecialchars((string) $group) ?>">
                     <input type="hidden" name="schema_json" value="<?= htmlspecialchars($pendingSchema) ?>">
-                    <button class="btn btn-primary" style="background:var(--danger);">Applica comunque</button>
+                    <button class="btn btn-primary" style="background:var(--danger);">Applica modifiche</button>
                 </form>
             </div>
         </div>

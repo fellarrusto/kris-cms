@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Motore dei template: interpolazione e condizioni.
- * Riferimenti agli interventi: PIANO_architettura_claude.md §6.
+ * Verifica escaping, contesto linguistico e condizioni annidate.
  */
 
 $entity = fn() => makeEntity([

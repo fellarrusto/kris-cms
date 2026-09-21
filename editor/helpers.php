@@ -21,6 +21,71 @@ function saveJson(string $path, array $data): void
     (new JsonStore($path))->write($data);
 }
 
+function h(mixed $value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function editorLabel(string $name): string
+{
+    return ucfirst(str_replace('_', ' ', $name));
+}
+
+function editorTitle(array $entity): string
+{
+    foreach (['title', 'page_title', 'name', 'meta_title', null] as $preferred) {
+        foreach ($entity['data'] ?? [] as $field) {
+            if ($preferred !== null && $field['name'] !== $preferred) continue;
+            if (!in_array($field['type'] ?? '', ['text', 'plain', 'richtext'], true)) continue;
+            $value = $field['value'] ?? '';
+            foreach (is_array($value) ? $value : [$value] as $text) {
+                if (is_scalar($text) && trim(strip_tags((string) $text)) !== '') {
+                    return mb_substr(trim(strip_tags((string) $text)), 0, 85);
+                }
+            }
+        }
+    }
+    return 'Contenuto #' . ($entity['id'] ?? '');
+}
+
+function editorMediaFiles(string $directory): array
+{
+    $extensions = [...\Kris\Entity\MediaStore::allowedExtensions(), 'svg'];
+    $files = array_values(array_filter(glob($directory . '*') ?: [],
+        fn($file) => is_file($file) && in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $extensions, true)));
+    usort($files, fn($a, $b) => filemtime($b) <=> filemtime($a));
+    return $files;
+}
+
+function editorMediaSource(string $url): string
+{
+    if ($url === '' || preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $url)) {
+        return preg_match('~^https?://~i', $url) ? $url : '';
+    }
+    return str_starts_with($url, '/') || str_starts_with($url, '../') ? $url : '../' . $url;
+}
+
+function uiIcon(string $name): string
+{
+    $paths = [
+        'content' => '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+        'media' => '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 6"/>',
+        'settings' => '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/>',
+        'plus' => '<path d="M12 5v14M5 12h14"/>',
+        'arrow' => '<path d="M5 12h14m-6-6 6 6-6 6"/>',
+        'back' => '<path d="M19 12H5m6-6-6 6 6 6"/>',
+        'check' => '<path d="m5 12 4 4L19 6"/>',
+        'close' => '<path d="m6 6 12 12M6 18 18 6"/>',
+        'search' => '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
+        'upload' => '<path d="M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6"/>',
+        'up' => '<path d="m6 14 6-6 6 6"/>',
+        'down' => '<path d="m6 10 6 6 6-6"/>',
+        'trash' => '<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
+        'structure' => '<rect x="8" y="3" width="8" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/>',
+    ];
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? $paths['content']) . '</svg>';
+}
+
 /** Pagina di errore bloccante: mostrata quando i dati non sono leggibili. */
 function renderStorageError(string $detail): never
 {
@@ -396,17 +461,18 @@ function renderSchemaFields(array $schema, int $depth = 0): void
         $isArray = ($f['type'] ?? '') === 'array'; ?>
         <div class="sf-row" data-depth="<?= $depth ?>">
             <div class="sf-header">
-                <input type="text" class="sf-name" value="<?= htmlspecialchars($f['name'] ?? '') ?>" placeholder="Nome campo (es. title)">
-                <select class="sf-type" onchange="sfTypeChange(this)">
+                <input type="text" class="sf-name" value="<?= htmlspecialchars($f['name'] ?? '') ?>" placeholder="Nome campo (es. title)" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+">
+                <select class="sf-type" aria-label="Tipo del campo">
                     <?php foreach ($typeLabels as $val => $label): ?>
                         <option value="<?= $val ?>" <?= ($f['type'] ?? '') === $val ? 'selected' : '' ?>><?= $label ?></option>
                     <?php endforeach; ?>
                 </select>
-                <button type="button" class="btn btn-white sf-remove" style="color:var(--danger);">✕</button>
+                <button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo"><?= uiIcon('trash') ?></button>
             </div>
+            <label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" value="<?= h($f['description'] ?? '') ?>" placeholder="Aiuta chi modifica il contenuto"></label>
             <div class="sf-nested" <?= $isArray ? '' : 'style="display:none"' ?>>
                 <?php if ($isArray): renderSchemaFields($f['of'] ?? [], $depth + 1); endif; ?>
-                <button type="button" class="btn btn-white sf-add-child" onclick="sfAddField(this.closest('.sf-nested'))">+ Sotto-campo</button>
+                <button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button>
             </div>
         </div>
     <?php endforeach;

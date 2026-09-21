@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 /**
  * Contratti di Kris\Entity\Entity e composizione DOM.
- * Riferimenti: PIANO_architettura_claude.md §6 (A3.6, A3.8).
+ * Verifica lettura dei valori e importazione completa dei frammenti HTML.
  */
 
 use Kris\Template\DomHelper;
