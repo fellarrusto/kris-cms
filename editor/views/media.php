@@ -1,45 +1,10 @@
-<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno ?>
-    <div class="container">
-        <h1>Media Library</h1>
-        
-        <div class="card" style="margin-bottom:20px;">
-            <div class="card-body" style="background:#f9fafb;">
-                <form method="POST" enctype="multipart/form-data" action="./upload.php"
-                    style="display:flex; gap:10px; align-items:center;">
-                    <input type="file" name="file" style="background:white;" required>
-                    <button class="btn btn-primary">Carica File</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));">
-            <?php foreach ($images as $img):
-                $fileName = basename($img);
-                $publicUrl = $uploadUrl . $fileName; 
-            ?>
-                <div class="card" style="transition:transform 0.1s; position: relative;">
-                    
-                    <form method="POST" onsubmit="return confirm('Sei sicuro di voler eliminare definitivamente <?= htmlspecialchars($fileName) ?>?')" 
-                          style="position: absolute; top: 5px; right: 5px; z-index: 10;">
-                        <input type="hidden" name="delete_media" value="1">
-                        <input type="hidden" name="file_name" value="<?= htmlspecialchars($fileName) ?>">
-                        <button type="submit" 
-                                onclick="event.stopPropagation();" 
-                                style="background:#ef4444; color:white; border:none; border-radius:50%; width:24px; height:24px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                            ✕
-                        </button>
-                    </form>
-
-                    <div onclick="prompt('URL da copiare:', '<?= htmlspecialchars($publicUrl, ENT_QUOTES) ?>')" style="cursor:pointer;">
-                        <div style="aspect-ratio:1; overflow:hidden; border-bottom:1px solid var(--border); background:#eee; display:flex; align-items:center; justify-content:center;">
-                            <img src="../<?= htmlspecialchars($publicUrl) ?>" style="width:100%; height:100%; object-fit:cover;">
-                        </div>
-                        <div style="padding:10px; font-size:0.8rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#374151;">
-                            <?= htmlspecialchars($fileName) ?>
-                        </div>
-                    </div>
-
-                </div>
-            <?php endforeach; ?>
-        </div>
-    </div>
+<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; }
+$accept = implode(',', array_map(fn($ext) => '.' . $ext, \Kris\Entity\MediaStore::allowedExtensions())); ?>
+<div class="container"><header class="page-heading"><div><p class="eyebrow">IMMAGINI E DOCUMENTI</p><h1>Libreria media</h1><p>Trova, carica e riutilizza i file del tuo sito.</p></div><button type="button" class="btn btn-primary" data-upload-trigger="libraryUpload"><?= uiIcon('upload') ?>Carica file</button></header>
+<form class="upload-zone" method="POST" enctype="multipart/form-data" action="./upload.php" data-upload-form><span class="collection-icon"><?= uiIcon('upload') ?></span><div><strong>Un’immagine nuova, una storia in più.</strong><p><?= h(strtoupper(implode(', ', \Kris\Entity\MediaStore::allowedExtensions()))) ?> &middot; fino a <?= (int) (\Kris\Entity\MediaStore::maxBytes()/1024/1024) ?> MB per file</p><input id="libraryUpload" type="file" name="file" accept="<?= h($accept) ?>" data-upload-input required></div><button class="btn btn-white" type="submit">Carica selezionato</button></form>
+<div class="upload-results" data-upload-results aria-live="polite"></div>
+<div class="toolbar"><label class="search-box"><?= uiIcon('search') ?><input type="search" data-filter="library" placeholder="Cerca per nome file..." aria-label="Cerca un file"></label><span class="badge" data-media-count><?= count($images) ?> file</span></div>
+<div class="media-grid" id="libraryGrid" data-filter-list="library">
+<?php foreach ($images as $img): $name=basename($img);$url=$uploadUrl.rawurlencode($name);$pdf=strtolower(pathinfo($name,PATHINFO_EXTENSION))==='pdf'; ?>
+<article class="media-card" data-search="<?= h($name) ?>"><a class="media-art" href="../<?= h($url) ?>" target="_blank" rel="noopener" aria-label="Apri <?= h($name) ?>"><?php if ($pdf): ?><span class="file-placeholder">PDF</span><?php else: ?><img src="../<?= h($url) ?>" alt="<?= h($name) ?>" loading="lazy"><?php endif; ?></a><div class="media-caption"><strong title="<?= h($name) ?>"><?= h($name) ?></strong><small><?= number_format(filesize($img)/1024,0,',','.') ?> KB &middot; <?= h(strtoupper(pathinfo($name,PATHINFO_EXTENSION))) ?></small><div class="media-actions"><button class="text-link" type="button" data-copy-url="<?= h($url) ?>">Copia URL</button><form method="POST" data-confirm-title="Eliminare questo file?" data-confirm="&ldquo;<?= h($name) ?>&rdquo; verrà eliminato definitivamente. Verifica che non sia utilizzato nei contenuti: i collegamenti esistenti smetteranno di funzionare." data-confirm-label="Elimina file"><input type="hidden" name="delete_media" value="1"><input type="hidden" name="file_name" value="<?= h($name) ?>"><button class="icon-button danger" aria-label="Elimina <?= h($name) ?>"><?= uiIcon('trash') ?></button></form></div></div></article>
+<?php endforeach; ?></div><div class="empty-state" data-filter-empty="library" <?= $images ? 'hidden' : '' ?>><h2>Nessun file da mostrare.</h2><p>Carica il tuo primo file oppure modifica la ricerca.</p></div></div>

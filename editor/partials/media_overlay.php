@@ -1,32 +1,3 @@
-<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno ?>
-    <div id="mediaOverlay" class="modal-backdrop">
-        <div class="modal" style="max-width:800px; height:80vh; display:flex; flex-direction:column;">
-            <div class="modal-header">
-                <h3>Seleziona File</h3>
-                <button onclick="document.getElementById('mediaOverlay').style.display='none'" class="btn-white"
-                    style="border:none;">✕</button>
-            </div>
-            <div class="modal-body" style="background:#f3f4f6;">
-                <div id="mediaGrid" class="grid" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap:15px;">
-                    <div onclick="document.getElementById('overlayUpload').click()"
-                        style="background:white; border-radius:6px; cursor:pointer; border:2px dashed #d1d5db; box-shadow:0 1px 2px rgba(0,0,0,0.1); display:flex; flex-direction:column; align-items:center; justify-content:center; aspect-ratio:1; color:#6b7280;"
-                        onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'"
-                        onmouseout="this.style.borderColor='#d1d5db';this.style.color='#6b7280'">
-                        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        <span style="font-size:0.7rem; margin-top:5px;">Carica</span>
-                    </div>
-                    <input type="file" id="overlayUpload" style="display:none" accept="image/*" onchange="uploadFromOverlay(this)">
-                    <?php foreach ($images as $img):
-                        $url = $uploadUrl . basename($img); ?>
-                        <div onclick="selectMedia('<?= htmlspecialchars($url, ENT_QUOTES) ?>')"
-                            style="background:white; border-radius:6px; overflow:hidden; cursor:pointer; border:2px solid transparent; box-shadow:0 1px 2px rgba(0,0,0,0.1);">
-                            <img src="../<?= htmlspecialchars($url) ?>" style="width:100%; aspect-ratio:1; object-fit:cover;">
-                            <div
-                                style="padding:5px; font-size:0.7rem; text-align:center; overflow:hidden; white-space:nowrap;">
-                                <?= htmlspecialchars(basename($img)) ?></div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        </div>
-    </div>
+<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } ?>
+<dialog id="mediaOverlay" class="media-dialog" aria-labelledby="mediaTitle"><div class="modal-header"><div><h2 id="mediaTitle">Scegli dalla libreria</h2><p>Seleziona un file e conferma per usarlo nel contenuto.</p></div><button type="button" class="icon-button" data-close-dialog aria-label="Chiudi libreria"><?= uiIcon('close') ?></button></div><div class="modal-body"><div class="toolbar"><label class="search-box"><?= uiIcon('search') ?><input type="search" data-filter="picker" placeholder="Cerca un file..." aria-label="Cerca nella libreria"></label><button type="button" class="btn btn-white" data-upload-trigger="overlayUpload"><?= uiIcon('upload') ?>Carica file</button><input type="file" id="overlayUpload" data-upload-input accept="<?= h(implode(',',array_map(fn($ext)=>'.'.$ext,\Kris\Entity\MediaStore::allowedExtensions()))) ?>" hidden></div><p class="hint">Fino a <?= (int) (\Kris\Entity\MediaStore::maxBytes()/1024/1024) ?> MB. Il file caricato resta nella libreria anche se non lo selezioni.</p><div class="upload-results" data-upload-results aria-live="polite"></div><div id="mediaGrid" class="media-grid" data-filter-list="picker">
+<?php foreach ($images as $img): $name=basename($img);$url=$uploadUrl.rawurlencode($name);$pdf=strtolower(pathinfo($name,PATHINFO_EXTENSION))==='pdf'; ?><button type="button" class="media-choice" data-media-url="<?= h($url) ?>" data-search="<?= h($name) ?>" aria-pressed="false"><span class="media-art"><?php if ($pdf): ?><span class="file-placeholder">PDF</span><?php else: ?><img src="../<?= h($url) ?>" alt="" loading="lazy"><?php endif; ?></span><span class="media-caption"><?= h($name) ?></span></button><?php endforeach; ?></div><div class="empty-state" data-filter-empty="picker" <?= $images ? 'hidden' : '' ?>><h3>Nessun file trovato.</h3><p>Carica un file o modifica la ricerca.</p></div></div><div class="modal-footer"><span id="mediaSelectionLabel" class="selection-label">Nessun file selezionato</span><button type="button" class="btn btn-white" data-close-dialog>Annulla</button><button type="button" class="btn btn-primary" id="applyMedia" disabled>Usa questo file</button></div></dialog>

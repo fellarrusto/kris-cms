@@ -25,6 +25,24 @@ session_set_cookie_params([
 ]);
 session_start();
 
+// Use the script path even when the editor is opened without a trailing slash.
+$BASE = $_SERVER['SCRIPT_NAME'];
+if ($_SERVER['REQUEST_METHOD'] === 'GET'
+    && parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) !== $BASE) {
+    header('Location: ' . $BASE . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : ''));
+    exit;
+}
+
+// Used by an open editor after a re-login: refresh the token without
+// reloading (and losing) its unsaved fields.
+if (isset($_GET['editor_session']) && ($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'session') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    http_response_code(kris_is_logged_in() ? 200 : 403);
+    echo json_encode(kris_is_logged_in() ? ['csrf' => kris_csrf_token()] : ['error' => 'Sessione scaduta.']);
+    exit;
+}
+
 // Il token CSRF viene inserito automaticamente in ogni form POST della pagina.
 ob_start('kris_inject_csrf');
 
@@ -33,7 +51,7 @@ ob_start('kris_inject_csrf');
 // Logout
 if (isset($_GET['logout'])) {
     kris_logout();
-    header("Location: index.php");
+    header("Location: $BASE");
     exit;
 }
 
@@ -54,7 +72,7 @@ if (kris_auth_config() === null) {
         } elseif (!kris_save_credentials($user, $pass)) {
             kris_render_setup('Non riesco a scrivere config/auth.php: controlla i permessi della cartella.');
         } else {
-            header("Location: index.php");
+            header("Location: $BASE");
             exit;
         }
     }
@@ -66,7 +84,7 @@ if ($isPost && isset($_POST['do_login'])) {
     if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
         $login_error = "Sessione scaduta: riprova.";
     } elseif (kris_login((string) ($_POST['user'] ?? ''), (string) ($_POST['pass'] ?? ''))) {
-        header("Location: index.php");
+        header("Location: $BASE");
         exit;
     } else {
         $login_error = "Credenziali non valide.";
@@ -134,7 +152,16 @@ foreach ($data as $d) {
     if (isset($counts[$d['name']]))
         $counts[$d['name']]++;
 }
-$images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
+$images = editorMediaFiles($uploadDir);
+if (isset($_GET['upload_error']) && is_string($_GET['upload_error'])) $error = $_GET['upload_error'];
+if (in_array($action, ['edit', 'list', 'structure'], true) && (!is_string($group) || !isset($models[$group]))) {
+    $action = 'dashboard';
+    $error = 'La raccolta non è disponibile. Scegli uno dei contenuti qui sotto.';
+}
+$sectionLabel = match ($action) {
+    'media' => 'Libreria media', 'settings' => 'Impostazioni',
+    'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
+};
 
 // Percorso della cartella dell'editor, per i file statici.
 $assetBase = htmlspecialchars(rtrim(dirname($_SERVER['PHP_SELF']), '/'));
@@ -146,18 +173,25 @@ $assetBase = htmlspecialchars(rtrim(dirname($_SERVER['PHP_SELF']), '/'));
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="kris-csrf" content="<?= htmlspecialchars(kris_csrf_token()) ?>">
-    <title>Kris 2 CMS</title>
+    <title><?= h($sectionLabel) ?> · Kris CMS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
     <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css">
 </head>
 
-<body>
+<body data-editor-action="<?= h($action) ?>">
+    <a class="skip-link" href="#main">Vai al contenuto</a>
 
     <?php require __DIR__ . '/partials/sidebar.php'; ?>
 
-    <main>
+    <div class="editor-workspace">
+    <header class="topbar">
+        <nav class="breadcrumbs" aria-label="Percorso"><a href="?action=dashboard">Il tuo sito</a><span aria-hidden="true">/</span><span><?= h($sectionLabel) ?></span><?php if ($group): ?><span aria-hidden="true">/</span><strong><?= h(editorLabel($group)) ?></strong><?php endif; ?></nav>
+        <a href="../" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
+    </header>
+    <main id="main" tabindex="-1">
+        <div id="request-feedback" class="alert alert-error" role="alert" hidden></div>
         <?php if ($error): ?>
-            <div class="alert alert-error">
+            <div class="alert alert-error" role="alert">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="12" cy="12" r="10"></circle>
                     <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -167,7 +201,7 @@ $assetBase = htmlspecialchars(rtrim(dirname($_SERVER['PHP_SELF']), '/'));
             </div>
         <?php endif; ?>
         <?php if ($msg): ?>
-            <div class="alert">
+            <div class="alert" role="status">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
                     <polyline points="22 4 12 14.01 9 11.01"></polyline>
@@ -192,8 +226,14 @@ $assetBase = htmlspecialchars(rtrim(dirname($_SERVER['PHP_SELF']), '/'));
         require __DIR__ . '/views/' . ($views[$action] ?? $views['dashboard']);
         ?>
     </main>
+    </div>
 
     <?php require __DIR__ . '/partials/media_overlay.php'; ?>
+    <dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmTitle">
+        <div class="modal-header"><h2 id="confirmTitle"></h2><button type="button" class="icon-button" data-close-dialog aria-label="Chiudi"><?= uiIcon('close') ?></button></div>
+        <div class="modal-body"><p id="confirmText"></p></div><div class="modal-footer" id="confirmActions"></div>
+    </dialog>
+    <div id="toast" class="toast" role="status" hidden></div>
 
     <script src="<?= $assetBase ?>/js/scripts.js"></script>
     <?php if ($action === 'structure'): ?>

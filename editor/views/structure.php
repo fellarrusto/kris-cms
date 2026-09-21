@@ -1,30 +1,10 @@
-<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno ?>
-    <div class="container">
-        <h1>
-            <span>Struttura: <?= htmlspecialchars(ucfirst((string)$group)) ?></span>
-            <a href="?action=list&group=<?= urlencode((string)$group) ?>" class="btn btn-white">← Torna ai Dati</a>
-        </h1>
-
-        <div class="card">
-            <div class="card-body">
-                <form method="POST" id="structureForm">
-                    <input type="hidden" name="save_structure" value="1">
-                    <input type="hidden" name="group_name" value="<?= htmlspecialchars((string)$group) ?>">
-                    <input type="hidden" name="schema_json" id="schema_json">
-
-                    <div id="root-schema" class="sf-container">
-                        <?php renderSchemaFields($models[$group] ?? []); ?>
-                    </div>
-                    <button type="button" class="btn btn-white" style="margin-top:8px;"
-                        onclick="sfAddField(document.getElementById('root-schema'))">+ Campo</button>
-
-                    <div style="display:flex; justify-content:space-between; border-top:1px solid var(--border); padding-top:20px; margin-top:20px;">
-                        <button type="submit" name="delete_collection" class="btn btn-white"
-                            style="color:var(--danger);"
-                            onclick="return confirm('ATTENZIONE: Stai per eliminare l\'intera collezione e la sua struttura. Continuare?')">Elimina Collezione</button>
-                        <button type="submit" class="btn btn-primary">Salva Struttura</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; }
+$displaySchema = $models[$group] ?? [];
+if ($error && isset($_POST['schema_json'])) {
+    $attempted = json_decode((string) $_POST['schema_json'],true);
+    if (is_array($attempted) && array_is_list($attempted) && count(array_filter($attempted, 'is_array')) === count($attempted)) $displaySchema = $attempted;
+}
+?>
+<div class="container"><header class="page-heading"><div><p class="eyebrow">CONFIGURAZIONE DEL MODELLO</p><h1><?= h(editorLabel($group)) ?></h1><p>I campi che danno forma a questa raccolta.</p></div><a class="btn btn-white" href="?action=list&amp;group=<?= urlencode($group) ?>"><?= uiIcon('back') ?>Torna ai contenuti</a></header><div class="notice"><strong>Qui configuri la struttura, non i testi del sito.</strong><p>Rinominare, cambiare tipo o rimuovere un campo può coinvolgere contenuti esistenti. Prima di applicare modifiche distruttive vedrai un riepilogo.</p></div>
+<form method="POST" id="structureForm" data-dirty-form><input type="hidden" name="save_structure" value="1"><input type="hidden" name="group_name" value="<?= h($group) ?>"><input type="hidden" name="schema_json" id="schema_json"><section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><h2>Campi della raccolta</h2><p>Nome tecnico, tipo e descrizione vengono mantenuti insieme.</p></div></header><div class="card-body"><div id="root-schema" class="sf-container"><?php renderSchemaFields($displaySchema); ?></div><button type="button" class="btn btn-white add-field" data-add-root><?= uiIcon('plus') ?>Aggiungi campo</button></div></section><?php require __DIR__ . '/../partials/save_bar.php'; ?></form>
+<div class="danger-zone"><div><h2>Elimina raccolta</h2><p>Rimuove il modello e tutti i <?= (int) ($counts[$group] ?? 0) ?> contenuti della raccolta.</p></div><form method="POST" data-confirm-title="Eliminare la raccolta <?= h(editorLabel($group)) ?>?" data-confirm="Verranno eliminati il modello e <?= (int) ($counts[$group] ?? 0) ?> contenuti, inclusi gli elementi annidati. Questa operazione non è annullabile dall’editor." data-confirm-label="Elimina raccolta"><input type="hidden" name="delete_collection" value="1"><input type="hidden" name="group_name" value="<?= h($group) ?>"><button class="btn btn-danger">Elimina raccolta</button></form></div></div>

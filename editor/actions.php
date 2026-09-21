@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         if ($name && !isset($models[$name])) {
             $models[$name] = [];
             saveJson($modelFile, $models);
-            header("Location: index.php?action=structure&group=$name");
+            header("Location: $BASE?action=structure&group=$name");
             exit;
         }
     }
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
 
         unset($models[$g]);
         saveJson($modelFile, $models);
-        header("Location: index.php");
+        header("Location: $BASE");
         exit;
     }
     // 4. Salva Entità (root o nested via path)
@@ -127,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         $newId = $maxId + 1;
         $data[] = ['id' => $newId, 'name' => $g, 'data' => $skeleton];
         saveJson($dataFile, $data);
-        header("Location: index.php?action=edit&group=$g&id=$newId");
+        header("Location: $BASE?action=edit&group=$g&id=$newId");
         exit;
     }
     // 5b. Crea sub-istanza nested (path deve terminare su un field array)
@@ -147,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
                 $field['value'][] = ['id' => $newSubId, 'data' => buildSkeleton($schema, $activeLangs)];
                 saveJson($dataFile, $data);
                 $childPath = pathToString([...$path, (string) $newSubId]);
-                header("Location: index.php?action=edit&group=$g&id=$id&path=" . urlencode($childPath));
+                header("Location: $BASE?action=edit&group=$g&id=$id&path=" . urlencode($childPath));
                 exit;
             }
             unset($field);
@@ -157,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
     if (isset($_POST['delete_instance'])) {
         $data = array_filter($data, fn($d) => !($d['name'] == $_POST['group'] && $d['id'] == $_POST['id']));
         saveJson($dataFile, array_values($data));
-        header("Location: index.php?action=list&group=" . $_POST['group']);
+        header("Location: $BASE?action=list&group=" . $_POST['group']);
         exit;
     }
     // 6b. Elimina sub-istanza nested (path deve terminare su un sub-id)
@@ -186,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             unset($parent);
             saveJson($dataFile, $data);
             $back = pathToString($parentPath);
-            header("Location: index.php?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
+            header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
             exit;
         }
     }
@@ -229,11 +229,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             $data = $newData;
             saveJson($dataFile, $data);
         }
-        header("Location: $BASE?action=list&group=$g");
-        exit;
+        $msg = 'Ordine salvato.';
+        if (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') !== 'reorder') {
+            header("Location: $BASE?action=list&group=$g");
+            exit;
+        }
     }
     // 6d. Riordina sub-entità nested (drag-and-drop)
     if (isset($_POST['reorder_nested'])) {
+        $error = 'Elenco non disponibile. Ricarica il contenuto prima di riprovare.';
         $g = $_POST['group'];
         $id = (int) $_POST['id'];
         $path = parsePath($_POST['path'] ?? '');
@@ -258,13 +262,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
                 }
                 $field['value'] = $reordered;
                 saveJson($dataFile, $data);
+                $error = '';
+                $msg = 'Ordine salvato.';
             }
             unset($field);
         }
         $parentPath = array_slice($path, 0, -1);
         $back = pathToString($parentPath);
-        header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
-        exit;
+        if (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') !== 'reorder') {
+            header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
+            exit;
+        }
     }
     // 7. Upload & Settings
     if (isset($_FILES['file'])) {
@@ -278,9 +286,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         }
     }
     if (isset($_POST['save_settings'])) {
-        saveJson($settingsFile, ['languages' => $_POST['langs'] ?? ['it']]);
-        header("Location: index.php?action=settings");
-        exit;
+        $languages = is_array($_POST['langs'] ?? null)
+            ? array_values(array_intersect(array_keys($DEFAULT_LANGS), $_POST['langs'])) : [];
+        if ($languages === []) {
+            $error = 'Seleziona almeno una lingua. Le impostazioni non sono state modificate.';
+        } else {
+            saveJson($settingsFile, ['languages' => $languages]);
+            $activeLangs = $languages;
+            $msg = 'Impostazioni salvate. Le traduzioni delle lingue disattivate sono conservate.';
+        }
     }
     // 8. Elimina Media
     if (isset($_POST['delete_media'])) {
@@ -289,10 +303,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         $targetFile = $uploadDir . $filename;
         
         if (file_exists($targetFile)) {
-            unlink($targetFile); // Cancella fisicamente il file
-            $msg = "File eliminato con successo.";
+            if (@unlink($targetFile)) $msg = "File eliminato con successo.";
+            else $error = 'Non è stato possibile eliminare il file. Riprova.';
         } else {
-            $msg = "Errore: File non trovato.";
+            $error = "Il file non è più disponibile. La libreria potrebbe essere stata aggiornata.";
         }
     }
   } catch (StorageException $e) {
@@ -304,6 +318,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
   }
 }
 
+// Il browser conserva il modulo fino alla conferma. Le normali POST
+// continuano a funzionare senza JavaScript.
+if ((($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'save'
+        && (isset($_POST['save_entity']) || isset($_POST['save_settings'])))
+    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'reorder'
+        && (isset($_POST['reorder_root']) || isset($_POST['reorder_nested'])))) {
+    http_response_code($error !== '' ? 422 : 200);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok' => $error === '' && $msg !== '', 'message' => $error ?: $msg,
+        'csrf' => kris_csrf_token()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 // View Data
 $counts = [];
 foreach ($models as $k => $v)
@@ -312,4 +339,4 @@ foreach ($data as $d) {
     if (isset($counts[$d['name']]))
         $counts[$d['name']]++;
 }
-$images = glob($uploadDir . '*.{jpg,png,svg,webp,jpeg,gif}', GLOB_BRACE);
+$images = editorMediaFiles($uploadDir);

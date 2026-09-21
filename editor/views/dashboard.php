@@ -1,46 +1,13 @@
-<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno ?>
-    <div class="container">
-        <h1>Dashboard</h1>
-        <div class="grid">
-            <?php foreach ($models as $name => $fields): ?>
-                <a href="?action=list&group=<?= urlencode((string)$name) ?>" class="dash-card">
-                    <div>
-                        <h3><?= htmlspecialchars(ucfirst((string)$name)) ?></h3>
-                        <p><?= count($fields) ?> campi configurati</p>
-                    </div>
-                    <div class="count"><?= $counts[$name] ?></div>
-                </a>
-            <?php endforeach; ?>
-
-            <button class="dash-card dash-add"
-                onclick="document.getElementById('createModal').style.display='flex'">
-                <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                <span style="margin-top:10px; font-weight:500;">Nuova Raccolta</span>
-            </button>
-        </div>
+<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } ?>
+<div class="container">
+    <header class="page-heading"><div><p class="eyebrow">IL TUO SPAZIO EDITORIALE</p><h1>I tuoi contenuti</h1><p>Tutto quello che racconta il tuo sito, una raccolta alla volta.</p></div><button class="btn btn-white" data-open-dialog="createModal"><?= uiIcon('plus') ?>Nuova raccolta</button></header>
+    <div class="toolbar"><label class="search-box"><?= uiIcon('search') ?><input type="search" data-filter="collections" placeholder="Cerca una raccolta..." aria-label="Cerca una raccolta"></label><span class="badge"><?= count($models) ?> raccolte</span></div>
+    <div class="collection-grid" data-filter-list="collections">
+    <?php foreach ($models as $name => $fields): ?>
+        <article class="collection-card" data-search="<?= h(editorLabel($name)) ?>"><div class="collection-card-top"><span class="collection-icon"><?= uiIcon('content') ?></span><span class="badge"><?= $counts[$name] ?> <?= $counts[$name] === 1 ? 'contenuto' : 'contenuti' ?></span></div><h2><a href="?action=list&amp;group=<?= urlencode($name) ?>"><?= h(editorLabel($name)) ?></a></h2><p><?= count($fields) ?> campi configurati</p><div class="collection-card-bottom"><a class="text-link" href="?action=list&amp;group=<?= urlencode($name) ?>">Apri raccolta <?= uiIcon('arrow') ?></a><a class="icon-button" href="?action=structure&amp;group=<?= urlencode($name) ?>" aria-label="Configura <?= h(editorLabel($name)) ?>"><?= uiIcon('structure') ?></a></div></article>
+    <?php endforeach; ?>
     </div>
-
-    <div id="createModal" class="modal-backdrop">
-        <form method="POST" class="modal">
-            <div class="modal-header">
-                <h3>Crea Nuova Collezione</h3>
-                <button type="button" class="btn-white"
-                    onclick="document.getElementById('createModal').style.display='none'"
-                    style="border:none; padding:5px;">✕</button>
-            </div>
-            <div class="modal-body">
-                <label>Nome della collezione (es. articoli, team, servizi)</label>
-                <input type="text" name="collection_name" required placeholder="nome_collezione" autofocus>
-                <p style="font-size:0.85rem; color:#6b7280; margin-top:10px;">Verrà creato un nuovo modello vuoto
-                    che potrai configurare.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-white"
-                    onclick="document.getElementById('createModal').style.display='none'">Back</button>
-                <button name="create_collection" class="btn btn-primary">Crea Collezione</button>
-            </div>
-        </form>
-    </div>
+    <div class="empty-state" data-filter-empty="collections" <?= $models ? 'hidden' : '' ?>><h2><?= $models ? 'Nessuna raccolta trovata.' : 'Il primo contenuto inizia da qui.' ?></h2><p><?= $models ? 'Prova un altro nome o svuota la ricerca.' : 'Crea una raccolta e scegli i campi che vuoi gestire.' ?></p></div>
+    <div class="editor-tip"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><strong>Scrivere e configurare, ognuno al suo posto.</strong><p>Apri una raccolta per aggiornare i contenuti. Usa Struttura per configurare i campi del sito.</p></div></div>
+</div>
+<dialog id="createModal" aria-labelledby="createTitle"><form method="POST"><div class="modal-header"><h2 id="createTitle">Nuova raccolta</h2><button type="button" class="icon-button" data-close-dialog aria-label="Chiudi"><?= uiIcon('close') ?></button></div><div class="modal-body"><label for="collection-name">Nome della raccolta</label><input id="collection-name" type="text" name="collection_name" pattern="[a-z0-9_]+" placeholder="es. servizi" required autofocus><p class="hint">Lettere minuscole, numeri e underscore. Nel prossimo passaggio potrai configurare i campi.</p></div><div class="modal-footer"><button type="button" class="btn btn-white" data-close-dialog>Annulla</button><button class="btn btn-primary" name="create_collection">Crea raccolta</button></div></form></dialog>

@@ -1,5 +1,7 @@
 # 🚀 Kris 2 CMS - Builder's Guide
 
+**Guida per agenti e conversioni Figma/HTML:** [AGENTS.md](AGENTS.md).
+
 **Philosophy:** You write standard HTML for your design, and use the Admin Panel to manage the text and images. No database installation required.
 
 -----
@@ -18,7 +20,7 @@ composer install
 
 **Requirements:**
 
-* PHP >= 8.0
+* PHP >= 8.1 with DOM/libxml (the current editor requires PHP 8.1; composer.json still declares 8.0).
 * Composer
 
 ---
@@ -115,7 +117,7 @@ Le liste `k-array` possono essere **innestate**: un campo di un'entità può con
 </div>
 ```
 
-Nell'Admin: aprendo una categoria trovi i prodotti come sotto-lista, con pulsanti Edit / ✕ / + Nuovo. La navigazione a più livelli è supportata tramite il parametro `path` (es. `?action=edit&group=product_category&id=0&path=products/1`). La modifica dello schema `of` al momento va fatta a mano su `k_model.json`.
+Nell'Admin: aprendo una categoria trovi i prodotti come sotto-lista, con pulsanti Edit / ✕ / + Nuovo. La navigazione a più livelli è supportata tramite il parametro `path` (es. `?action=edit&group=product_category&id=0&path=products/1`). Lo schema `of` si modifica dalla vista Struttura dell’editor; le modifiche distruttive richiedono la verifica del loro impatto.
 
 ---
 
@@ -150,7 +152,7 @@ To link to a specific detail page, use this URL structure:
 `index.php?page=[TEMPLATE_NAME]&key=[DATA_GROUP]&id=[ID]`
 
 **Important: Page Whitelist**
-Every new HTML template must be authorized in `config/allowed_pages.json`, otherwise the system will return a 404 error.
+Every navigable page template must be authorized in `config/allowed_pages.json`, otherwise the system will return a 404 error. Array and component fragments do not belong in this whitelist.
 
 ```json
 {
