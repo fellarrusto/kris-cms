@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.0.2",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Funziona anche su hosting con PHP 8.0.",
+            "date": "2026-09-30",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.0.2/kris-1.0.2.zip",
+            "sha256": "4ce47c404cd8f9e8522f63b2d116051f376eb55519cabc06c889c0acbc080b86",
+            "size": 101557
+        },
+        {
             "version": "1.0.1",
             "min_from": "1.0.0",
             "breaking": false,
