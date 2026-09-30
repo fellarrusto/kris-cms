@@ -315,11 +315,15 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 3rem;
     margin-top: 3rem;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
 }
 
 .step {
     text-align: center;
     position: relative;
+    counter-increment: step;
 }
 
 .step-number {
@@ -334,6 +338,10 @@ body {
     font-size: 1.5rem;
     font-weight: 700;
     margin: 0 auto 1.5rem;
+}
+
+.step-number::before {
+    content: counter(step);
 }
 
 .step h3 {
@@ -511,6 +519,96 @@ body {
 }
 
 
+/* Blog */
+.blog {
+    padding: 100px 0;
+    background: var(--white);
+}
+
+.post-card .card-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.post-card .card-link:hover,
+.post-card .card-link:focus-visible {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.post-card .card-link:focus-visible {
+    outline: 3px solid var(--primary);
+    outline-offset: 3px;
+}
+
+.post-cover {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    background: var(--gray-100);
+}
+
+.post-body {
+    padding: 2rem;
+    overflow-wrap: anywhere;
+}
+
+.post-date {
+    display: block;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.post-page {
+    padding: 140px 0 100px;
+}
+
+.post-article {
+    max-width: 760px;
+    overflow-wrap: anywhere;
+}
+
+.post-article .post-cover {
+    border-radius: var(--radius);
+    margin: 2.5rem 0;
+}
+
+.post-content {
+    margin-top: 2.5rem;
+    font-size: 1.125rem;
+    color: var(--gray-700);
+}
+
+.post-content > * + * {
+    margin-top: 1.25rem;
+}
+
+.post-content ul,
+.post-content ol {
+    padding-left: 1.5rem;
+}
+
+.post-content a {
+    color: var(--primary-dark);
+}
+
+.post-content code {
+    background: var(--gray-100);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .hero .container {
@@ -548,6 +646,10 @@ body {
 
     .steps {
         grid-template-columns: 1fr;
+    }
+
+    .post-article .detail-title {
+        font-size: 2.25rem;
     }
 
     .language-switch {

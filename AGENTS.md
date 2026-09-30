@@ -65,6 +65,8 @@ Il rendering esegue prima variabili e condizioni, poi gli array, poi i component
 
 Gli unici tipi implementati sono `plain`, `text`, `richtext`, `image`, `array`. Non inventare tipi come `boolean`, `select`, `date` o relazioni senza implementarne anche editor e rendering. Usa nomi tecnici stabili in `snake_case` con lettere minuscole, numeri e underscore. Non usare `id` e `language` come nomi di campi: sono esposti dal motore.
 
+Un campo `array` di primo livello può avere `"posts": true` (in Struttura: “Mostra in Posts”). Rendering e dati non cambiano: l'elenco compare nella sezione **Posts** dell'editor, con un accesso rapido per ogni entità della raccolta, e i nuovi elementi vengono inseriti in cima. Usalo per blog, news o eventi aggiornati spesso; negli elenchi annidati il flag viene rimosso al salvataggio. Il sito demo lo mostra con `homepage.posts`, `template/post-card.html` e la pagina `post`.
+
 ## Esempio completo: pagina con servizi
 
 In un sito nuovo, questo è un esempio minimo di `data/k_model.json`. Su un sito esistente integra le raccolte senza sostituire l'intero archivio.

@@ -1,6 +1,7 @@
 {
   "allowed_pages": [
     "homepage",
-    "detail"
+    "detail",
+    "post"
   ]
 }

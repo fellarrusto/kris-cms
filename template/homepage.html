@@ -63,9 +63,14 @@
   <section class="how-it-works">
     <div class="container">
       <h2 class="section-title">{{how_it_works_title}}</h2>
-      <div class="steps">
-        <!-- TODO ADD COMPONENTS -->
-      </div>
+      <ol class="steps" k-array="steps" k-template="step-item"></ol>
+    </div>
+  </section>
+
+  <section id="blog" class="blog">
+    <div class="container">
+      <h2 class="section-title">{{blog_title}}</h2>
+      <div k-array="posts" k-template="post-card" class="grid"></div>
     </div>
   </section>
 

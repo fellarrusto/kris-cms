@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             if ($problems) {
                 $error = "Struttura non salvata: " . implode(' ', $problems);
             } else {
-                $merged = mergeSchemaMetadata($decoded, $models[$g] ?? []);
+                $merged = normalizePostsFlag(mergeSchemaMetadata($decoded, $models[$g] ?? []));
 
                 // Prima di applicare: quali contenuti gia scritti sparirebbero?
                 $impact = isset($_POST['confirm_impact'])
@@ -144,7 +144,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
                 foreach ($field['value'] as $s)
                     $maxSubId = max($maxSubId, (int) ($s['id'] ?? -1));
                 $newSubId = $maxSubId + 1;
-                $field['value'][] = ['id' => $newSubId, 'data' => buildSkeleton($schema, $activeLangs)];
+                $child = ['id' => $newSubId, 'data' => buildSkeleton($schema, $activeLangs)];
+                // Negli elenchi posts il contenuto piu recente va in cima.
+                if (count($path) === 1 && postsFieldDef($models, $g, $path[0]) !== null) {
+                    array_unshift($field['value'], $child);
+                } else {
+                    $field['value'][] = $child;
+                }
                 saveJson($dataFile, $data);
                 $childPath = pathToString([...$path, (string) $newSubId]);
                 header("Location: $BASE?action=edit&group=$g&id=$id&path=" . urlencode($childPath));
@@ -186,6 +192,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             unset($parent);
             saveJson($dataFile, $data);
             $back = pathToString($parentPath);
+            if (isset($_POST['return_posts'])) {
+                header("Location: $BASE?action=posts&group=" . urlencode($g) . "&id=$id&field=" . urlencode($fieldName));
+                exit;
+            }
             header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
             exit;
         }
@@ -270,6 +280,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         $parentPath = array_slice($path, 0, -1);
         $back = pathToString($parentPath);
         if (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') !== 'reorder') {
+            if (isset($_POST['return_posts']) && count($path) === 1) {
+                header("Location: $BASE?action=posts&group=" . urlencode($g) . "&id=$id&field=" . urlencode($path[0]));
+                exit;
+            }
             header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
             exit;
         }

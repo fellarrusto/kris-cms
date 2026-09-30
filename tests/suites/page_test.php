@@ -63,6 +63,25 @@ test('la lingua richiesta cambia i contenuti', function () {
     assertTrue($it !== $en, 'la pagina in inglese e identica a quella in italiano');
 });
 
+// --- blog (elenco marcato "posts" nello schema) --------------------------
+
+test("la homepage elenca i post nell'ordine dei dati", function () {
+    $out = renderPage([])['output'];
+    assertSame(3, substr_count($out, 'class="post-card"'));
+    assertTrue(strpos($out, 'path=posts/2') < strpos($out, 'path=posts/0'), 'il post piu recente non e in cima');
+});
+
+test('un post risponde 200 e mostra il testo formattato', function () {
+    $r = renderPage(['page' => 'post', 'key' => 'homepage', 'id' => '0', 'path' => 'posts/1']);
+    assertSame(200, $r['status']);
+    assertContains('<li>Schema e dati insieme</li>', $r['output']);
+});
+
+test("un post senza copertina non produce un'immagine vuota", function () {
+    $out = renderPage(['page' => 'post', 'key' => 'homepage', 'id' => '0', 'path' => 'posts/0'])['output'];
+    assertNotContains('class="post-cover"', $out);
+});
+
 // --- snapshot ------------------------------------------------------------
 
 test('snapshot: homepage (it)', function () {
@@ -71,6 +90,12 @@ test('snapshot: homepage (it)', function () {
 
 test('snapshot: homepage (en)', function () {
     assertMatchesSnapshot('homepage_en', renderPage(['ln' => 'en'])['output']);
+});
+
+test('snapshot: post posts/2', function () {
+    assertMatchesSnapshot('post_posts_2', renderPage([
+        'page' => 'post', 'key' => 'homepage', 'id' => '0', 'path' => 'posts/2',
+    ])['output']);
 });
 
 test('snapshot: dettaglio features/0', function () {

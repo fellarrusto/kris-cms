@@ -1,0 +1,10 @@
+<article class="post-card">
+    <a class="card-link" href="?page=post&amp;key=homepage&amp;id=0&amp;path=posts/{{id}}&amp;ln={{language}}">
+        {{#if cover != ""}}<img class="post-cover" src="{{cover}}" alt="{{cover_alt}}" loading="lazy">{{/if}}
+        <div class="post-body">
+            <time class="post-date" datetime="{{date}}">{{date}}</time>
+            <h3 class="card-title">{{title}}</h3>
+            <p class="card-description">{{excerpt}}</p>
+        </div>
+    </a>
+</article>

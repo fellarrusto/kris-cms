@@ -211,6 +211,11 @@ dialog::backdrop { background:#122a2255; backdrop-filter:blur(3px); }
 .sf-header .sf-type { width:190px; }
 .sf-description-label { font-size:11px; color:var(--muted); margin:12px 0 0; }
 .sf-description { margin-top:5px; font-size:12px; font-weight:400; }
+.sf-posts-label { display:flex; align-items:flex-start; gap:10px; margin:12px 0 0; font-size:12px; cursor:pointer; }
+.sf-posts-label[hidden] { display:none; }
+.sf-posts-label input { accent-color:var(--primary); width:16px; height:16px; margin-top:1px; flex:none; }
+.sf-posts-label strong { display:block; }
+.sf-posts-label small { display:block; color:var(--muted); font-size:11px; font-weight:400; }
 .sf-nested { margin-top:15px; padding:16px 0 0 14px; border-left:2px solid #b5ceb3; }
 .sf-add-child { align-self:flex-start; }
 .add-field { margin-top:18px; }

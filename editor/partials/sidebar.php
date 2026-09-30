@@ -4,7 +4,9 @@
     <div class="workspace-label"><span class="site-mark">K</span><div><strong>Il tuo sito</strong><small>Spazio di lavoro</small></div><span class="status-dot" aria-hidden="true"></span></div>
     <p class="nav-label">IL TUO SPAZIO</p>
     <nav>
-        <a href="?action=dashboard" class="nav-item <?= in_array($action, ['dashboard','list','edit']) ? 'active' : '' ?>" <?= in_array($action, ['dashboard','list','edit']) ? 'aria-current="page"' : '' ?>><?= uiIcon('content') ?>Contenuti <span class="nav-count"><?= count($models) ?></span></a>
+        <?php $inContents = in_array($action, ['dashboard','list','edit']) && !$inPosts; ?>
+        <a href="?action=dashboard" class="nav-item <?= $inContents ? 'active' : '' ?>" <?= $inContents ? 'aria-current="page"' : '' ?>><?= uiIcon('content') ?>Contenuti <span class="nav-count"><?= count($models) ?></span></a>
+        <?php if ($postSources): ?><a href="?action=posts" class="nav-item <?= $inPosts ? 'active' : '' ?>" <?= $inPosts ? 'aria-current="page"' : '' ?>><?= uiIcon('posts') ?>Posts <span class="nav-count"><?= count($postSources) ?></span></a><?php endif; ?>
         <a href="?action=media" class="nav-item <?= $action === 'media' ? 'active' : '' ?>" <?= $action === 'media' ? 'aria-current="page"' : '' ?>><?= uiIcon('media') ?>Libreria media</a>
         <a href="?action=settings" class="nav-item <?= $action === 'settings' ? 'active' : '' ?>" <?= $action === 'settings' ? 'aria-current="page"' : '' ?>><?= uiIcon('settings') ?>Impostazioni</a>
     </nav>

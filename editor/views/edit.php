@@ -16,11 +16,16 @@ $values = $entity ? array_column($entity['data'], 'value', 'name') : [];
 $editUrl = '?action=edit&group=' . urlencode($group) . '&id=' . $id;
 $backPath = array_slice($path, 0, -2);
 $backHref = $path ? $editUrl . ($backPath ? '&path=' . urlencode(pathToString($backPath)) : '') : '?action=list&group=' . urlencode($group);
+$backLabel = $path ? 'Torna al contenuto' : 'Torna alla raccolta';
+if ($inPosts) {
+    $backHref = '?action=posts&group=' . urlencode($group) . '&id=' . $id . '&field=' . urlencode($path[0]);
+    $backLabel = 'Torna ai post';
+}
 $title = $entity ? editorTitle($entity) : 'Contenuto non disponibile';
 $firstLang = $activeLangs[0] ?? 'it';
 ?>
 <div class="container">
-    <header class="page-heading"><div><p class="eyebrow"><?= h(editorLabel($group)) ?><?= $path ? ' / ' . h(editorLabel($path[count($path)-2])) : '' ?></p><h1><?= h($title) ?></h1><p><?= $path ? 'Modifica questo elemento, poi torna al contenuto principale.' : 'Dai voce al tuo sito, un dettaglio alla volta.' ?></p></div><a class="btn btn-white" href="<?= h($backHref) ?>"><?= uiIcon('back') ?><?= $path ? 'Torna al contenuto' : 'Torna alla raccolta' ?></a></header>
+    <header class="page-heading"><div><p class="eyebrow"><?= h(editorLabel($group)) ?><?= $path ? ' / ' . h(editorLabel($path[count($path)-2])) : '' ?></p><h1><?= h($title) ?></h1><p><?= $path ? 'Modifica questo elemento, poi torna al contenuto principale.' : 'Dai voce al tuo sito, un dettaglio alla volta.' ?></p></div><a class="btn btn-white" href="<?= h($backHref) ?>"><?= uiIcon('back') ?><?= h($backLabel) ?></a></header>
     <?php if ($path): ?><nav class="nested-breadcrumb" aria-label="Contenuto annidato"><a href="<?= h($editUrl) ?>"><?= h(editorTitle($rootEntity)) ?></a><?php for ($i=0; $i<count($path); $i+=2): ?><span aria-hidden="true">/</span><a href="<?= h($editUrl . '&path=' . urlencode(pathToString(array_slice($path,0,$i+2)))) ?>"><?= h(editorLabel($path[$i])) ?> #<?= (int) $path[$i+1] ?></a><?php endfor; ?></nav><?php endif; ?>
     <?php if ($entity === null): ?><div class="empty-state"><h2>Questo contenuto non è più disponibile.</h2><p>Potrebbe essere stato rimosso. Torna alla raccolta e scegli un altro elemento.</p><a class="btn btn-primary" href="?action=list&amp;group=<?= urlencode($group) ?>">Apri raccolta</a></div><?php else: ?>
     <div class="edit-layout"><div class="edit-content">

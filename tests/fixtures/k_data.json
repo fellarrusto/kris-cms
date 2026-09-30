@@ -113,6 +113,75 @@
                 }
             },
             {
+                "name": "steps",
+                "type": "array",
+                "value": [
+                    {
+                        "id": 0,
+                        "data": [
+                            {
+                                "name": "title",
+                                "type": "text",
+                                "value": {
+                                    "it": "Scrivi il tuo HTML",
+                                    "en": "Write your HTML"
+                                }
+                            },
+                            {
+                                "name": "description",
+                                "type": "text",
+                                "value": {
+                                    "it": "Parti da un design o da un sito statico e marca i contenuti con {{campo}}.",
+                                    "en": "Start from a design or a static site and mark content with {{field}}."
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "id": 1,
+                        "data": [
+                            {
+                                "name": "title",
+                                "type": "text",
+                                "value": {
+                                    "it": "Definisci i campi",
+                                    "en": "Define the fields"
+                                }
+                            },
+                            {
+                                "name": "description",
+                                "type": "text",
+                                "value": {
+                                    "it": "Descrivi in Struttura cosa si può modificare: testi, immagini, elenchi.",
+                                    "en": "Describe in Structure what can be edited: text, images, lists."
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "id": 2,
+                        "data": [
+                            {
+                                "name": "title",
+                                "type": "text",
+                                "value": {
+                                    "it": "Aggiorna dall'editor",
+                                    "en": "Update from the editor"
+                                }
+                            },
+                            {
+                                "name": "description",
+                                "type": "text",
+                                "value": {
+                                    "it": "Il cliente modifica i contenuti e il sito si aggiorna al salvataggio.",
+                                    "en": "Your client edits the content and the site updates on save."
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
                 "name": "btn_download",
                 "type": "text",
                 "value": {
@@ -501,6 +570,170 @@
                                         ]
                                     }
                                 ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "blog_title",
+                "type": "text",
+                "value": {
+                    "it": "Dal blog",
+                    "en": "From the blog"
+                }
+            },
+            {
+                "name": "posts",
+                "type": "array",
+                "value": [
+                    {
+                        "id": 2,
+                        "data": [
+                            {
+                                "name": "title",
+                                "type": "text",
+                                "value": {
+                                    "it": "Arriva la sezione Posts",
+                                    "en": "Introducing the Posts section"
+                                }
+                            },
+                            {
+                                "name": "date",
+                                "type": "plain",
+                                "value": "2026-09-22"
+                            },
+                            {
+                                "name": "excerpt",
+                                "type": "text",
+                                "value": {
+                                    "it": "Gli elenchi che aggiorni più spesso ora hanno un accesso rapido nell'editor.",
+                                    "en": "The lists you update most often now have a shortcut in the editor."
+                                }
+                            },
+                            {
+                                "name": "cover",
+                                "type": "image",
+                                "value": {
+                                    "it": "",
+                                    "en": ""
+                                }
+                            },
+                            {
+                                "name": "cover_alt",
+                                "type": "text",
+                                "value": {
+                                    "it": "",
+                                    "en": ""
+                                }
+                            },
+                            {
+                                "name": "body",
+                                "type": "richtext",
+                                "value": {
+                                    "it": "<p>Basta attivare <strong>Mostra in Posts<\/strong> su un elenco nella schermata Struttura: l'elenco compare nella barra laterale e i nuovi elementi vengono aggiunti in cima.<\/p><p>Il sito non cambia: template e dati restano gli stessi.<\/p>",
+                                    "en": "<p>Turn on <strong>Show in Posts<\/strong> for a list in the Structure screen: the list appears in the sidebar and new items are added at the top.<\/p><p>The site does not change: templates and data stay the same.<\/p>"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "id": 1,
+                        "data": [
+                            {
+                                "name": "title",
+                                "type": "text",
+                                "value": {
+                                    "it": "Da Figma a Kris in otto passi",
+                                    "en": "From Figma to Kris in eight steps"
+                                }
+                            },
+                            {
+                                "name": "date",
+                                "type": "plain",
+                                "value": "2026-09-08"
+                            },
+                            {
+                                "name": "excerpt",
+                                "type": "text",
+                                "value": {
+                                    "it": "Come trasformare un design in un sito che il cliente può aggiornare da solo.",
+                                    "en": "How to turn a design into a site your client can update on their own."
+                                }
+                            },
+                            {
+                                "name": "cover",
+                                "type": "image",
+                                "value": {
+                                    "it": "",
+                                    "en": ""
+                                }
+                            },
+                            {
+                                "name": "cover_alt",
+                                "type": "text",
+                                "value": {
+                                    "it": "",
+                                    "en": ""
+                                }
+                            },
+                            {
+                                "name": "body",
+                                "type": "richtext",
+                                "value": {
+                                    "it": "<p>Si parte dal design, si mappano pagine e contenuti, poi si collegano i campi ai template con <code>{{campo}}<\/code> e <code>k-array<\/code>.<\/p><ul><li>Tema reale in HTML e CSS<\/li><li>Schema e dati insieme<\/li><li>Verifica di sito ed editor<\/li><\/ul>",
+                                    "en": "<p>Start from the design, map pages and content, then bind fields to templates with <code>{{field}}<\/code> and <code>k-array<\/code>.<\/p><ul><li>A real HTML and CSS theme<\/li><li>Schema and data together<\/li><li>Check both site and editor<\/li><\/ul>"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "id": 0,
+                        "data": [
+                            {
+                                "name": "title",
+                                "type": "text",
+                                "value": {
+                                    "it": "Perché un CMS senza database",
+                                    "en": "Why a CMS without a database"
+                                }
+                            },
+                            {
+                                "name": "date",
+                                "type": "plain",
+                                "value": "2026-08-25"
+                            },
+                            {
+                                "name": "excerpt",
+                                "type": "text",
+                                "value": {
+                                    "it": "File JSON, hosting PHP qualsiasi e nessuna migrazione da gestire.",
+                                    "en": "JSON files, any PHP hosting and no migrations to manage."
+                                }
+                            },
+                            {
+                                "name": "cover",
+                                "type": "image",
+                                "value": {
+                                    "it": "",
+                                    "en": ""
+                                }
+                            },
+                            {
+                                "name": "cover_alt",
+                                "type": "text",
+                                "value": {
+                                    "it": "",
+                                    "en": ""
+                                }
+                            },
+                            {
+                                "name": "body",
+                                "type": "richtext",
+                                "value": {
+                                    "it": "<p>Kris salva tutto in file JSON: si copia, si versiona e si ripristina come qualsiasi altro file del progetto.<\/p>",
+                                    "en": "<p>Kris stores everything in JSON files: you copy, version and restore them like any other project file.<\/p>"
+                                }
                             }
                         ]
                     }

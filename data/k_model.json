@@ -14,6 +14,10 @@
         { "name": "cta_subtitle", "type": "text", "description": "Sottotitolo della call to action" },
         { "name": "footer_copyright", "type": "text", "description": "Testo di copyright nel footer" },
         { "name": "how_it_works_title", "type": "text", "description": "Titolo della sezione 'Come funziona'" },
+        { "name": "steps", "type": "array", "description": "Passaggi della sezione 'Come funziona'", "of": [
+            { "name": "title", "type": "text", "description": "Titolo del passaggio" },
+            { "name": "description", "type": "text", "description": "Descrizione del passaggio" }
+        ]},
         { "name": "btn_download", "type": "text", "description": "Testo del pulsante di download" },
         { "name": "btn_docs", "type": "text", "description": "Testo del pulsante per la documentazione" },
         { "name": "footer_logo_text", "type": "text", "description": "Nome/testo del logo nel footer" },
@@ -32,6 +36,15 @@
                 { "name": "title", "type": "text", "description": "Titolo del punto saliente" },
                 { "name": "description", "type": "text", "description": "Dettaglio del punto saliente" }
             ]}
+        ]},
+        { "name": "blog_title", "type": "text", "description": "Titolo della sezione blog" },
+        { "name": "posts", "type": "array", "posts": true, "description": "Articoli del blog", "of": [
+            { "name": "title", "type": "text", "description": "Titolo dell'articolo" },
+            { "name": "date", "type": "plain", "description": "Data di pubblicazione (AAAA-MM-GG)" },
+            { "name": "excerpt", "type": "text", "description": "Anteprima mostrata nell'elenco e nei motori di ricerca" },
+            { "name": "cover", "type": "image", "description": "Immagine di copertina (opzionale)" },
+            { "name": "cover_alt", "type": "text", "description": "Testo alternativo della copertina" },
+            { "name": "body", "type": "richtext", "description": "Testo dell'articolo" }
         ]}
     ],
     "navbar": [

@@ -81,6 +81,7 @@ function uiIcon(string $name): string
         'up' => '<path d="m6 14 6-6 6 6"/>',
         'down' => '<path d="m6 10 6 6 6-6"/>',
         'trash' => '<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
+        'posts' => '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13 7 4 4M13 20h7"/>',
         'structure' => '<rect x="8" y="3" width="8" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/>',
     ];
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? $paths['content']) . '</svg>';
@@ -188,6 +189,58 @@ function resolveSchemaAtPath(array $models, string $rootGroup, array $path): arr
     return $schema;
 }
 
+// --- POSTS (accesso rapido) ---
+// Un elenco di primo livello con "posts": true nello schema compare nella
+// sezione Posts: stessi dati e stesso rendering, cambia solo l'accesso.
+
+/** Definizione del campo se $field e un elenco posts di $group, altrimenti null. */
+function postsFieldDef(array $models, string $group, string $field): ?array
+{
+    foreach ($models[$group] ?? [] as $f) {
+        if (($f['name'] ?? null) === $field) {
+            return ($f['type'] ?? '') === 'array' && ($f['posts'] ?? false) === true ? $f : null;
+        }
+    }
+    return null;
+}
+
+/** Un elenco per ogni contenuto root che ha un campo posts, nell'ordine dei dati. */
+function editorPostSources(array $models, array $data): array
+{
+    $sources = [];
+    foreach ($data as $entity) {
+        $group = (string) ($entity['name'] ?? '');
+        foreach ($models[$group] ?? [] as $f) {
+            if (postsFieldDef($models, $group, (string) ($f['name'] ?? '')) === null) continue;
+            $items = [];
+            foreach ($entity['data'] ?? [] as $d) {
+                if ($d['name'] === $f['name'] && is_array($d['value'] ?? null)) $items = $d['value'];
+            }
+            $sources[] = [
+                'group' => $group, 'id' => (int) $entity['id'], 'field' => $f['name'],
+                'label' => $f['description'] ?? editorLabel($f['name']),
+                'owner' => editorTitle($entity), 'items' => $items,
+            ];
+        }
+    }
+    return $sources;
+}
+
+/** Il flag posts vale solo sugli elenchi di primo livello: altrove si rimuove. */
+function normalizePostsFlag(array $schema, bool $root = true): array
+{
+    foreach ($schema as &$f) {
+        if ($root && ($f['type'] ?? '') === 'array' && ($f['posts'] ?? false) === true) {
+            $f['posts'] = true;
+        } else {
+            unset($f['posts']);
+        }
+        if (($f['type'] ?? '') === 'array') $f['of'] = normalizePostsFlag($f['of'] ?? [], false);
+    }
+    unset($f);
+    return $schema;
+}
+
 function findRootIndex(array $data, string $group, int $id): int
 {
     foreach ($data as $i => $d) {
@@ -219,7 +272,7 @@ function buildSkeleton(array $schema, array $activeLangs): array
 const RESERVED_FIELD_NAMES = ['id', 'group', 'path', 'save_entity', 'create_instance',
     'create_nested', 'delete_nested', 'delete_instance', 'reorder_root', 'reorder_nested',
     'save_structure', 'delete_collection', 'save_settings', 'delete_media', 'file_name',
-    'order', 'group_name', 'schema_json', 'collection_name', 'langs', 'f'];
+    'order', 'group_name', 'schema_json', 'collection_name', 'langs', 'f', 'return_posts'];
 
 /**
  * Controlla uno schema prima di salvarlo: tipi ammessi, nomi validi, nomi
@@ -470,6 +523,7 @@ function renderSchemaFields(array $schema, int $depth = 0): void
                 <button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo"><?= uiIcon('trash') ?></button>
             </div>
             <label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" value="<?= h($f['description'] ?? '') ?>" placeholder="Aiuta chi modifica il contenuto"></label>
+            <?php if ($depth === 0): ?><label class="sf-posts-label" <?= $isArray ? '' : 'hidden' ?>><input type="checkbox" class="sf-posts" <?= ($f['posts'] ?? false) === true ? 'checked' : '' ?>><span><strong>Mostra in Posts</strong><small>Accesso rapido dalla barra laterale; i nuovi elementi vengono aggiunti in cima.</small></span></label><?php endif; ?>
             <div class="sf-nested" <?= $isArray ? '' : 'style="display:none"' ?>>
                 <?php if ($isArray): renderSchemaFields($f['of'] ?? [], $depth + 1); endif; ?>
                 <button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button>

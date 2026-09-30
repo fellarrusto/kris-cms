@@ -153,13 +153,18 @@ foreach ($data as $d) {
         $counts[$d['name']]++;
 }
 $images = editorMediaFiles($uploadDir);
+$postSources = editorPostSources($models, $data);
+// Un elemento di un elenco posts si apre dalla sezione Posts e vi ritorna.
+$editPath = parsePath(is_string($_GET['path'] ?? null) ? $_GET['path'] : '');
+$inPosts = $action === 'posts' || ($action === 'edit' && is_string($group) && count($editPath) === 2
+    && postsFieldDef($models, $group, $editPath[0]) !== null);
 if (isset($_GET['upload_error']) && is_string($_GET['upload_error'])) $error = $_GET['upload_error'];
 if (in_array($action, ['edit', 'list', 'structure'], true) && (!is_string($group) || !isset($models[$group]))) {
     $action = 'dashboard';
     $error = 'La raccolta non è disponibile. Scegli uno dei contenuti qui sotto.';
 }
 $sectionLabel = match ($action) {
-    'media' => 'Libreria media', 'settings' => 'Impostazioni',
+    'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts',
     'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
 };
 
@@ -217,6 +222,7 @@ $assetBase = htmlspecialchars(rtrim(dirname($_SERVER['PHP_SELF']), '/'));
         $views = [
             'dashboard'        => 'dashboard.php',
             'list'             => 'list.php',
+            'posts'            => 'posts.php',
             'structure'        => 'structure.php',
             'structure_impact' => 'structure_impact.php',
             'edit'             => 'edit.php',

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="{{language}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}} - Kris 2</title>
+    <meta name="description" content="{{excerpt}}">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="core/scripts/script.js"></script>
+</head>
+<body>
+    <header k-component="navbar" k-template="navbar" k-index="0"></header>
+
+    <main class="post-page">
+        <article class="container post-article">
+            <a href="index.php?ln={{language}}#blog" class="back-link">← Blog</a>
+            <time class="post-date" datetime="{{date}}">{{date}}</time>
+            <h1 class="detail-title">{{title}}</h1>
+            <p class="detail-description">{{excerpt}}</p>
+            {{#if cover != ""}}<img class="post-cover" src="{{cover}}" alt="{{cover_alt}}">{{/if}}
+            <div class="post-content">{{body}}</div>
+        </article>
+    </main>
+</body>
+</html>
