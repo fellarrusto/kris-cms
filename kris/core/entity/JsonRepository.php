@@ -8,7 +8,7 @@ class JsonRepository {
     private string $dataPath;
 
     public function __construct() {
-        $this->dataPath = __DIR__ . '/../../data/';
+        $this->dataPath = KRIS_ROOT . '/data/';
     }
 
     public function find(string $file, string $name, int $id = 0): array {

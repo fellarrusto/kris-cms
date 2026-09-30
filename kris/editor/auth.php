@@ -10,7 +10,7 @@ declare(strict_types=1);
  * di crearle.
  */
 
-const KRIS_AUTH_FILE = __DIR__ . '/../config/auth.php';
+const KRIS_AUTH_FILE = KRIS_ROOT . '/config/auth.php';
 
 function kris_auth_config(): ?array
 {

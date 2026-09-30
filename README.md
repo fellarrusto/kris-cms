@@ -9,19 +9,12 @@
 ## Installation
 
 1. Clone the repository.
-2. Install dependencies:
-```bash
-composer install
-```
-
-*Note for shared hosting:* If you can't run Composer on your server, run it locally and upload the `vendor/` folder via FTP.
-3. Configure your web server to point to the project root.
-4. Visit `/editor/` to manage content.
+2. Configure your web server to point to the project root. No build step and no Composer: upload the files via FTP and you are done.
+3. Visit `/editor/` to manage content.
 
 **Requirements:**
 
-* PHP >= 8.1 with DOM/libxml (the current editor requires PHP 8.1; composer.json still declares 8.0).
-* Composer
+* PHP >= 8.1 with DOM/libxml.
 
 ---
 
@@ -202,16 +195,21 @@ You don't need to touch code to change text.
 
 ```
 kris2/
-├── core/
-│   ├── entity/          # Data management classes
-│   ├── template/        # Template engine
-│   └── scripts/         # Core JS utilities (script.js)
-├── data/
+├── index.php            # One-line stub, loads kris/public.php
+├── editor/              # One-line stubs, the admin panel lives in kris/editor/
+├── kris/                # The framework: replaced as a whole on update
+│   ├── bootstrap.php    # Paths (KRIS_ROOT, KRIS_DIR) and autoload
+│   ├── public.php       # Public entry point
+│   ├── core/
+│   │   ├── entity/      # Data management classes
+│   │   ├── template/    # Template engine
+│   │   └── scripts/     # Core JS utilities (script.js)
+│   └── editor/          # Admin panel
+├── data/                # YOUR SITE from here down: never touched by updates
 │   ├── k_data.json      # Content storage
 │   └── k_model.json     # Content structure definitions
 ├── template/            # HTML templates
-├── editor/              # Admin panel
-├── config/              # Whitelists (allowed_pages.json)
-└── vendor/              # Composer dependencies
+├── assets/              # CSS, images, uploads
+└── config/              # Whitelists (allowed_pages.json), credentials
 
 ```

@@ -1,0 +1,41 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Punto d'ingresso comune del framework: percorsi e autoload.
+ *
+ * Tutto il framework vive in kris/ e viene sostituito in blocco da un
+ * aggiornamento; il sito (template/, assets/, data/, config/) sta nella
+ * cartella superiore e non viene mai toccato. Per questo nessun file del
+ * framework deve risalire con percorsi relativi: usa KRIS_ROOT per il sito
+ * e KRIS_DIR per il framework.
+ *
+ * Ogni punto d'ingresso lo carica con require_once, cosi funziona sia
+ * dagli stub nella root sia se aperto direttamente.
+ */
+
+if (!defined('KRIS_DIR')) {
+    define('KRIS_DIR', __DIR__);
+}
+if (!defined('KRIS_ROOT')) {
+    define('KRIS_ROOT', dirname(__DIR__));
+}
+
+// Il framework non ha dipendenze esterne: un autoload PSR-4 basta e toglie
+// Composer dall'installazione su hosting raggiungibili solo via FTP.
+spl_autoload_register(static function (string $class): void {
+    static $namespaces = [
+        'Kris\\Entity\\'   => KRIS_DIR . '/core/entity/',
+        'Kris\\Template\\' => KRIS_DIR . '/core/template/',
+    ];
+    foreach ($namespaces as $prefix => $dir) {
+        if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
+            continue;
+        }
+        $file = $dir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+        if (is_file($file)) {
+            require $file;
+        }
+        return;
+    }
+});

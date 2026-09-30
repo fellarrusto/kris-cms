@@ -38,6 +38,8 @@ Lo stadio 1 deve restare il più piccolo possibile. Tutto ciò che può migliora
 | C8 | URL dell'editor | Resta `/editor/`, con uno stub. I clienti hanno già il link salvato. |
 | C9 | Finestra di rollback | Lo snapshot dell'ultimo update resta disponibile **14 giorni**, con un pulsante "Torna alla versione precedente". |
 | C10 | Versione visibile | Sempre in fondo alla sidebar (`Kris 1.0.2`) e in dettaglio in Impostazioni: versione framework, versione dati, ultimo controllo, ultimo aggiornamento, esito. |
+| C11 | Composer | Tolto: il framework non ha dipendenze, l'autoload PSR-4 sta in `kris/bootstrap.php`. Il pacchetto di update non ha `vendor/` da rigenerare. |
+| C12 | `404.php` | Default in `kris/404.php`; un `404.php` nella root del sito, se presente, lo sostituisce e l'update non lo tocca. |
 
 ---
 
@@ -46,7 +48,7 @@ Lo stadio 1 deve restare il più piccolo possibile. Tutto ciò che può migliora
 ```text
 /                          document root
 ├── index.php              stub → kris/bootstrap.php
-├── 404.php                stub, sovrascrivibile dal sito
+├── 404.php                opzionale: se c'è, sostituisce kris/404.php
 ├── editor/index.php       stub → kris/editor/index.php
 ├── template/              SITO — mai toccato dall'update
 ├── assets/                SITO — mai toccato (css, img, uploads)
@@ -59,14 +61,15 @@ Lo stadio 1 deve restare il più piccolo possibile. Tutto ciò che può migliora
 │   └── snapshots/         snapshot pre-update per il rollback
 └── kris/                  FRAMEWORK — sostituito in blocco
     ├── VERSION
-    ├── bootstrap.php
+    ├── bootstrap.php      KRIS_ROOT, KRIS_DIR e autoload (Composer tolto)
+    ├── public.php         entry point pubblico
+    ├── 404.php
     ├── core/              core/entity, core/template, core/scripts
     ├── editor/
     ├── migrations/        0001_*.php, 0002_*.php, …
     ├── update/
     │   ├── stage1.php     congelato nella 1.0.0
     │   └── installer.php  stadio 2
-    └── autoload.php       (vedi C-aperta 1)
 ```
 
 **Perché una cartella sola:** l'update diventa `kris` → `kris.old` e `kris.new` → `kris`. Due rename. Risolve insieme atomicità (il sito non è mai a metà tra due versioni), rollback (si rinomina all'indietro), file rimossi tra due versioni (spariscono, invece di restare come view orfane) e modifiche locali al core (si vedono, invece di mescolarsi).
@@ -197,6 +200,4 @@ L'ordine conta: C0 ha valore da solo, perché rende sicuri anche gli aggiornamen
 
 | # | Decisione | Raccomandazione |
 |---|---|---|
-| CA1 | **Composer o un autoloader nostro?** Composer non porta nessuna dipendenza a runtime (`composer.json` non ne dichiara, i test sono uno script nostro): `vendor/` serve solo all'autoload. Un `kris/autoload.php` PSR-4 di trenta righe lo sostituisce. | **Sì, togliere Composer.** Un pacchetto senza `vendor/` da rigenerare è più semplice da distribuire su FTP. Va aggiornata la documentazione di installazione. |
-| CA2 | **Su quale hosting facciamo la prova end-to-end (C3.2)?** Serve uno hosting reale tra quelli che usate, non XAMPP: il preflight esiste proprio per le differenze tra hosting. | Da indicare. |
-| CA3 | **`404.php` è del framework o del sito?** Oggi è nella root e un sito potrebbe volerlo personalizzato. | Default nel framework, sovrascrivibile dal sito; l'update non tocca la copia del sito. |
+| CA1 | **Su quale hosting facciamo la prova end-to-end (C3.2)?** Serve uno hosting reale tra quelli che usate, non XAMPP: il preflight esiste proprio per le differenze tra hosting. | Da indicare. |

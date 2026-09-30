@@ -13,7 +13,7 @@ declare(strict_types=1);
 define('KRIS_ROOT', dirname(__DIR__));
 define('KRIS_TESTS', __DIR__);
 
-require_once KRIS_ROOT . '/vendor/autoload.php';
+require_once KRIS_ROOT . '/kris/bootstrap.php';
 
 use Kris\Entity\Entity;
 use Kris\Template\TemplateEngine;
@@ -53,10 +53,8 @@ function projectSandbox(): string
     if (is_dir($dir)) rrmdir($dir);
     mkdir($dir, 0777, true);
 
-    foreach (['index.php', '404.php'] as $file) {
-        copy(KRIS_ROOT . '/' . $file, $dir . '/' . $file);
-    }
-    foreach (['core', 'template', 'config', 'vendor'] as $folder) {
+    copy(KRIS_ROOT . '/index.php', $dir . '/index.php');
+    foreach (['kris', 'template', 'config'] as $folder) {
         rcopy(KRIS_ROOT . '/' . $folder, $dir . '/' . $folder);
     }
     rcopy(KRIS_TESTS . '/fixtures', $dir . '/data');

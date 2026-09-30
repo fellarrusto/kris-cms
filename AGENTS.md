@@ -7,7 +7,7 @@ Queste istruzioni valgono per tutta la repository e per gli agenti che la modifi
 - Leggi il codice coinvolto prima di modificarlo. Le funzionalità descritte qui sono quelle implementate, non una roadmap.
 - Controlla `git status` e preserva le modifiche già presenti, specialmente in `data/` e negli upload. Non ripristinare i dati del cliente con quelli dimostrativi.
 - Implementa il sito nei file effettivamente serviti. Non creare cartelle di prototipi, report o piani se non richiesti.
-- Per una conversione grafica lavora principalmente su `template/`, `assets/`, schema, dati iniziali e whitelist. Cambia `core/` o `editor/` solo se serve una funzionalità non supportata e il compito lo richiede.
+- Per una conversione grafica lavora principalmente su `template/`, `assets/`, schema, dati iniziali e whitelist. Cambia `kris/` (framework ed editor) solo se serve una funzionalità non supportata e il compito lo richiede.
 - Conserva nomi dei campi e ID esistenti. Una rinomina è una migrazione dei dati e dei template, non una semplice modifica di etichetta.
 - Non introdurre framework frontend o dipendenze di build senza una necessità concreta. Il risultato deve funzionare con il rendering PHP di Kris.
 - Alla consegna indica cosa è stato implementato, quali verifiche sono passate e quali integrazioni restano effettivamente mancanti.
@@ -18,7 +18,11 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 
 | Percorso | Responsabilità |
 | --- | --- |
-| `index.php` | Entry point pubblico: valida pagina e lingua, carica l'entità, renderizza il template. |
+| `index.php`, `editor/index.php`, `editor/upload.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. |
+| `kris/` | Framework ed editor. Viene sostituito in blocco dagli aggiornamenti: niente personalizzazioni del sito qui dentro. |
+| `kris/bootstrap.php` | Definisce `KRIS_ROOT` (root del sito) e `KRIS_DIR` (cartella del framework) e registra l'autoload. Il framework accede ai file del sito solo tramite `KRIS_ROOT`, mai con percorsi relativi. |
+| `kris/public.php` | Entry point pubblico: valida pagina e lingua, carica l'entità, renderizza il template. |
+| `kris/404.php`, `404.php` | Pagina 404 del framework; un `404.php` nella root del sito, se presente, la sostituisce. |
 | `template/*.html` | Pagine complete e frammenti HTML di liste e componenti. |
 | `assets/css/`, `assets/js/`, `assets/images/`, `assets/fonts/` | Stili, interazioni e risorse del tema. Crea le sottocartelle solo quando servono. |
 | `assets/uploads/` | File editoriali caricati dal CMS, da preservare nei deploy successivi. |
@@ -28,12 +32,11 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `data/backups/` | Copie precedenti prodotte dalle scritture tramite `JsonStore`. |
 | `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
 | `config/auth.php` | Credenziali locali con password sotto forma di hash; generato dal setup, escluso da Git. |
-| `core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
-| `core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
-| `core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. |
-| `editor/` | Autenticazione, azioni, viste, partial, CSS e JS del pannello. |
+| `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
+| `kris/core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
+| `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
+| `kris/editor/` | Autenticazione, azioni, viste, partial, CSS e JS del pannello. È servito all'indirizzo `/editor/` tramite lo stub. |
 | `tests/` | Test PHP e snapshot pubblici con dati isolati in fixture. |
-| `vendor/` | Autoloader Composer generato; necessario all'esecuzione. |
 
 `Entity` legge i valori e risolve le traduzioni. `JsonRepository` recupera le entità per nome e ID. `JsonStore` verifica il JSON, scrive tramite file temporaneo e conserva copie precedenti; non garantisce il rilevamento di conflitti tra editor concorrenti. Per scritture applicative usa questo servizio, senza introdurre un secondo sistema di persistenza.
 
@@ -175,7 +178,7 @@ Esporta immagini e icone necessarie dal design, preserva le proporzioni, ottimiz
 
 ## Editor e persistenza
 
-`editor/index.php` gestisce sessione, autenticazione e dispatch; `actions.php` le mutazioni; `helpers.php` schema e percorsi; `views/` le pagine; `partials/` gli elementi condivisi. `scripts.js` gestisce i flussi UI e `structure.js` la modifica dello schema.
+`kris/editor/index.php` gestisce sessione, autenticazione e dispatch; `actions.php` le mutazioni; `helpers.php` schema e percorsi; `views/` le pagine; `partials/` gli elementi condivisi. `scripts.js` gestisce i flussi UI e `structure.js` la modifica dello schema.
 
 Mantieni autenticazione e CSRF per ogni mutazione. I salvataggi asincroni confermano il risultato del server prima di mostrare successo; gli errori devono conservare i campi compilati. Il riordino salva senza ricarica e senza spostare lo scroll, anche con testi non ancora salvati. Non annidare form HTML: i controlli delle liste usano form separati associati tramite l'attributo `form`.
 
@@ -186,7 +189,6 @@ L'editor permette di configurare anche gli schemi `of` e presenta l'impatto dell
 Esegui i comandi dalla radice del progetto:
 
 ```sh
-composer install
 php -S 127.0.0.1:8000 -t .
 # In un altro terminale:
 php tests/run.php
@@ -194,7 +196,7 @@ php tests/run.php
 
 Apri `http://127.0.0.1:8000/` e `/editor/`. Il setup crea l'account se manca `config/auth.php`. Il server PHP integrato serve solo allo sviluppo locale.
 
-Il manifest dichiara PHP >= 8.0, ma il codice dell'editor usa il tipo di ritorno `never`, che richiede almeno PHP 8.1. È stato verificato con PHP 8.3. Servono DOM/libxml e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`. Non promettere compatibilità PHP 8.0 sulla sola base di `composer.json`.
+Serve almeno PHP 8.1: il codice dell'editor usa il tipo di ritorno `never`. È stato verificato con PHP 8.3. Servono DOM/libxml e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`.
 
 Prima di consegnare una conversione:
 
@@ -206,9 +208,9 @@ Prima di consegnare una conversione:
 
 Per pubblicare:
 
-- L'hosting deve eseguire PHP e puntare alla root del progetto. Genera `vendor/` con Composer e includilo nell'artefatto se il server non dispone di Composer. Non servono processi Node in produzione per il tema HTML/CSS/JS.
+- L'hosting deve eseguire PHP e puntare alla root del progetto. Non serve Composer: l'autoload è in `kris/bootstrap.php`. Non servono processi Node in produzione per il tema HTML/CSS/JS.
 - Al primo rilascio includi template, asset, configurazione delle pagine, schema e contenuti iniziali. Nei rilasci successivi preserva `config/auth.php`, `data/k_data.json`, `data/cms_settings.json`, backup e upload; applica modifiche allo schema con una migrazione coerente e copia di sicurezza.
 - PHP deve poter scrivere in `data/`, nella directory dei backup e in `assets/uploads/`; per il setup iniziale deve poter creare `config/auth.php`. Usa permessi appropriati all'hosting, non `777` come soluzione generica.
-- Verifica sul server che `config/`, `data/` e `vendor/` non siano scaricabili e che gli upload non eseguano codice. Gli `.htaccess` presenti sono specifici di Apache; Nginx e altri server richiedono regole equivalenti. Verifica la compatibilità delle direttive upload con l'hosting effettivo.
+- Verifica sul server che `config/` e `data/` non siano scaricabili e che gli upload non eseguano codice. Gli `.htaccess` presenti sono specifici di Apache; Nginx e altri server richiedono regole equivalenti. Verifica la compatibilità delle direttive upload con l'hosting effettivo.
 - Escludi dall'artefatto pubblico `.git/`, configurazioni locali degli agenti, test e documenti di sviluppo. Configura HTTPS e verifica login, persistenza e asset sul percorso finale, anche se il sito vive in sottocartella.
 - Dopo il rilascio controlla homepage, una pagina di dettaglio, lingua alternativa, 404 e accesso all'editor. Non sovrascrivere le credenziali e non lasciare un setup pubblico non configurato.

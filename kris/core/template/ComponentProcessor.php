@@ -26,7 +26,7 @@ class ComponentProcessor {
             $index = (int)($component->getAttribute('k-index') ?: 0);
 
             $entity = new Entity('k_data', $entityName, $index);
-            $template = file_get_contents("template/{$templateName}.html");
+            $template = file_get_contents(KRIS_ROOT . "/template/{$templateName}.html");
 
             $engine = new TemplateEngine($this->lang);
             $rendered = $engine->render($template, $entity);

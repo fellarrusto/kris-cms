@@ -24,7 +24,7 @@ class ArrayProcessor {
         foreach ($arrays as $array) {
             $entityName = $array->getAttribute('k-array');
             $templateName = $array->getAttribute('k-template');
-            $template = file_get_contents("template/{$templateName}.html");
+            $template = file_get_contents(KRIS_ROOT . "/template/{$templateName}.html");
 
             $entities = $this->resolveEntities($entityName, $parent);
 
