@@ -2,3 +2,4 @@
 !/vendor/.htaccess
 /config/auth.php
 /data/backups/
+/.claude/
