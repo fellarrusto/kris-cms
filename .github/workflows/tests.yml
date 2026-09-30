@@ -1,0 +1,34 @@
+# Suite dei test a ogni push e pull request.
+# Controlla la versione minima dichiarata (8.1) e quella di riferimento (8.3),
+# con le estensioni che servono all'updater: senza sodium e zip le suite
+# dei pacchetti verrebbero saltate.
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, mbstring, json, sodium, zip, curl
+          coverage: none
+
+      - name: Sintassi PHP
+        run: find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n1 php -l > /dev/null
+
+      - name: Test
+        run: php tests/run.php
+
+      - name: Nessuna suite saltata
+        run: "! php tests/run.php | grep -q '^SALTATA'"

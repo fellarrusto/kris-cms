@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Rende una pagina pubblica simulando una richiesta, in un processo isolato.
  * Va eseguito con la working directory impostata sulla copia del progetto:
- * index.php e ArrayProcessor risolvono 'vendor/' e 'template/' relativamente a essa.
+ * index.php la include come root del sito, e da li kris/bootstrap.php ricava KRIS_ROOT.
  *
  * Stampa:  KRIS-STATUS: <codice>\n<html>
  */
