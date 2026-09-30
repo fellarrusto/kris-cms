@@ -131,7 +131,7 @@ $release = [
     'version' => $version,
     'min_from' => (string) ($opts['min-from'] ?? '1.0.0'),
     'breaking' => isset($opts['breaking']),
-    'requires' => ['php' => '8.1', 'ext' => KRIS_RELEASE_EXTENSIONS],
+    'requires' => ['php' => '8.0', 'ext' => KRIS_RELEASE_EXTENSIONS],
     'changelog_it' => $changelog,
     'date' => date('Y-m-d'),
 ];
@@ -263,7 +263,7 @@ function step(string $title): void
     echo "\n{$title}\n";
 }
 
-function stop(string $message): never
+function stop(string $message): void // termina sempre con exit
 {
     fwrite(STDERR, "\n✗ {$message}\n");
     exit(1);

@@ -136,7 +136,7 @@ final class Updater
     /** Motivo per cui l'hosting non soddisfa i requisiti della release, o null. */
     public static function requirementsError(array $release): ?string
     {
-        $php = (string) ($release['requires']['php'] ?? '8.1');
+        $php = (string) ($release['requires']['php'] ?? '8.0');
         if (version_compare(PHP_VERSION, $php, '<')) {
             return "Kris {$release['version']} richiede PHP {$php}, l'hosting ha " . PHP_VERSION . '.';
         }

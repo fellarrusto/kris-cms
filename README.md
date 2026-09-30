@@ -14,7 +14,7 @@
 
 **Requirements:**
 
-* PHP >= 8.1 with DOM/libxml and mbstring.
+* PHP >= 8.0 with DOM/libxml and mbstring.
 * To update from the editor: the `sodium` and `zip` extensions (cURL recommended).
 
 ## Updating

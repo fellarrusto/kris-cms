@@ -1,5 +1,6 @@
 # Suite dei test a ogni push e pull request.
-# Controlla la versione minima dichiarata (8.1) e quella di riferimento (8.3),
+# Controlla la versione minima dichiarata (8.0: ancora diffusa sugli hosting
+# condivisi) e quelle correnti,
 # con le estensioni che servono all'updater: senza sodium e zip le suite
 # dei pacchetti verrebbero saltate.
 name: Test
@@ -14,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.1', '8.3']
+        php: ['8.0', '8.1', '8.3']
     steps:
       - uses: actions/checkout@v4
 

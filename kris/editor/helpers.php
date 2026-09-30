@@ -104,7 +104,7 @@ function uiIcon(string $name): string
 }
 
 /** Pagina di errore bloccante: mostrata quando i dati non sono leggibili. */
-function renderStorageError(string $detail): never
+function renderStorageError(string $detail): void // termina sempre con exit
 {
     http_response_code(500);
     $detail = htmlspecialchars($detail, ENT_QUOTES, 'UTF-8');

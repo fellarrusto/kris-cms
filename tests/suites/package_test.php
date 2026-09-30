@@ -54,7 +54,7 @@ function builtPackage(string $version = '1.0.1'): array
     $zip = tempPath('kris-pkg') . '.zip';
     kris_build_package(KRIS_ROOT . '/kris', $zip, [
         'version' => $version, 'min_from' => '1.0.0', 'breaking' => false,
-        'requires' => ['php' => '8.1', 'ext' => []], 'changelog_it' => 'prova',
+        'requires' => ['php' => '8.0', 'ext' => []], 'changelog_it' => 'prova',
     ], $keys['secret']);
     register_shutdown_function(fn() => @unlink($zip));
     $dir = tempPath('kris-ext');
@@ -131,7 +131,7 @@ test('un file aggiunto o tolto dopo la firma viene rifiutato', function () {
 
 test('lo stesso sorgente produce lo stesso zip', function () {
     $keys = Signature::generateKeyPair();
-    $release = ['version' => '1.0.1', 'requires' => ['php' => '8.1', 'ext' => []]];
+    $release = ['version' => '1.0.1', 'requires' => ['php' => '8.0', 'ext' => []]];
     $a = tempPath('kris-a') . '.zip';
     $b = tempPath('kris-b') . '.zip';
     $shaA = kris_build_package(KRIS_ROOT . '/kris', $a, $release, $keys['secret']);

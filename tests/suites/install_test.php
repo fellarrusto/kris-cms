@@ -59,7 +59,7 @@ function updatePackage(string $site, string $version, ?callable $change = null, 
     $zip = $src . '.zip';
     kris_build_package($src, $zip, $release + [
         'version' => $version, 'min_from' => '1.0.0', 'breaking' => false,
-        'requires' => ['php' => '8.1', 'ext' => ['dom', 'json']], 'changelog_it' => "Prova {$version}",
+        'requires' => ['php' => '8.0', 'ext' => ['dom', 'json']], 'changelog_it' => "Prova {$version}",
     ], $secret ?? testKeys()['secret']);
     rrmdir($src);
     register_shutdown_function(fn() => @unlink($zip));

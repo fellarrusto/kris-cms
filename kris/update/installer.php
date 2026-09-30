@@ -252,7 +252,7 @@ namespace Kris\Install {
 
     function preflight(string $root, string $package, array $release): ?string
     {
-        $php = (string) ($release['requires']['php'] ?? '8.1');
+        $php = (string) ($release['requires']['php'] ?? '8.0');
         if (version_compare(PHP_VERSION, $php, '<')) {
             return "Serve PHP {$php} o superiore, l'hosting ha " . PHP_VERSION . '.';
         }
