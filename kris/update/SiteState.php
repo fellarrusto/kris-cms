@@ -52,6 +52,21 @@ final class SiteState
         return array_replace(self::DEFAULTS, $state);
     }
 
+    /** @throws StorageException se non riesce a scrivere */
+    public static function save(array $state, ?string $file = null): void
+    {
+        (new JsonStore($file ?? KRIS_ROOT . self::FILE))->write($state);
+    }
+
+    /** Aggiunge una voce al registro degli aggiornamenti (restano le ultime 50). */
+    public static function addHistory(array $state, array $entry): array
+    {
+        $history = is_array($state['history'] ?? null) ? $state['history'] : [];
+        $history[] = $entry + ['at' => date('c')];
+        $state['history'] = array_slice($history, -50);
+        return $state;
+    }
+
     /** Ultima voce del registro degli aggiornamenti, o null se non ce ne sono. */
     public static function lastUpdate(array $state): ?array
     {

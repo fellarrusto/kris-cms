@@ -22,6 +22,13 @@ if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
     exit;
 }
 
+if (kris_maintenance() !== null) {
+    http_response_code(423);
+    $message = 'È in corso un aggiornamento di Kris: riprova tra qualche minuto.';
+    echo $isAjax ? json_encode(['error' => $message]) : $message;
+    exit;
+}
+
 $store = new MediaStore(KRIS_ROOT . '/assets/uploads/', 'assets/uploads/');
 
 try {

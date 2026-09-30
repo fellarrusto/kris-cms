@@ -13,6 +13,14 @@ function kris_not_found_page(): string
     return is_file($site) ? $site : KRIS_DIR . '/404.php';
 }
 
+// Durante un aggiornamento il sito risponde 503. Se l'aggiornamento si e
+// interrotto (manutenzione scaduta) il sito torna visibile comunque.
+$maintenance = kris_maintenance();
+if ($maintenance !== null && !$maintenance['stale']) {
+    require KRIS_DIR . '/maintenance.php';
+    exit;
+}
+
 $key = $_GET['key'] ?? 'homepage';
 $index = (int)($_GET['id'] ?? 0);
 $requestedPage = $_GET['page'] ?? 'homepage';

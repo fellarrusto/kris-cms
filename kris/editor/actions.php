@@ -20,6 +20,9 @@ if (!kris_is_logged_in()) { http_response_code(403); exit; }
 // eseguire modifiche al browser di chi e autenticato.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? null)) {
     $error = "Sessione scaduta o richiesta non valida: ricarica la pagina e riprova. Nulla e stato modificato.";
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $editorLock !== '') {
+    // Aggiornamento in corso o dati di una versione piu recente: niente scritture.
+    $error = $editorLock . ' Nulla è stato modificato.';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
     // 1. Crea Collezione

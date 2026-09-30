@@ -11,6 +11,26 @@ Obiettivo: da un sito già installato, un admin preme **un tasto** nell'editor e
 
 ---
 
+## 0. Stato (30 settembre 2026)
+
+**Implementato e verificato in locale:** C0.1–C0.4, C1.1–C1.5, C2.1, C3.3. Suite con 94 test, di cui 10 di installazione vera su un sito di prova (percorso felice, ritorno indietro, migrazione fallita, pagina che non si genera dopo una migrazione già scritta, processo ucciso a metà, errore di sintassi, manutenzione appesa, firma sconosciuta, major e breaking rifiutate). Flusso dell'editor provato in Chrome headless: verifica sul canale reale (404, il canale non esiste ancora), caricamento manuale di un pacchetto firmato con la chiave vera, installazione, ritorno alla versione precedente.
+
+**Resta, e richiede azioni esterne:** C2.2 (pubblicare canale e primo zip), C3.1 (tag `v1.0.0`), C3.2 (prova su un hosting FTP reale: preflight, permessi, rename di cartelle e certificati non si possono verificare in locale), CI al primo push.
+
+**Differenze rispetto a quanto scritto sotto**, decise durante l'implementazione:
+
+| Punto | Scritto | Fatto | Perché |
+|---|---|---|---|
+| Build del pacchetto | nella CI | in locale con `tools/release.php`, che costruisce, verifica con il codice dei siti e firma | la firma è comunque locale: costruire in CI avrebbe aggiunto un passaggio di download e riverifica senza guadagnare sicurezza. La CI esegue lint e test |
+| Flag di manutenzione | `data/kris_maintenance` | `data/kris_maintenance.json` con `started_at`, versioni e snapshot | serve sapere se è scaduto (15 minuti) e da quale snapshot ripristinare |
+| Senza `sodium` | upload manuale con solo sha256 | nessun aggiornamento dall'editor, messaggio chiaro; resta l'FTP | uno sha256 senza firma non dice chi ha fatto il pacchetto |
+| Fuso orario | `Europe/Rome` di default se l'hosting non ne ha | nessun cambio globale; le date si salvano con il loro fuso e l'editor le mostra sempre in ora italiana | molti hosting impostano UTC esplicitamente, e la regola non sarebbe scattata |
+| Migrazioni | proposte dall'editor | quelle con `'auto' => true` (che non cambiano i contenuti) si applicano da sole; le altre bloccano le modifiche e propongono un pulsante | un sito appena installato non deve chiedere una "migrazione" per registrare il proprio stato |
+| Registro | — | un ripristino riporta versione e contenuti, ma conserva registro e ultimo controllo | altrimenti l'aggiornamento annullato sparirebbe dalla storia |
+| Aggiornamenti via FTP | — | registrati nel registro come "file caricati a mano" | il cliente e lo sviluppatore vedono la stessa storia |
+
+---
+
 ## 1. Il vincolo che comanda tutto il piano
 
 L'updater contenuto nella 1.0.0 è **l'unico pezzo di codice che non potremo mai correggere da remoto**: un suo bug si ripara solo passando a mano via FTP su ogni sito. Quindi va diviso in due:
@@ -80,7 +100,7 @@ Lo stadio 1 deve restare il più piccolo possibile. Tutto ciò che può migliora
 
 Queste cose lo stadio 1 le conosce per sempre, quindi vanno decise una volta e non cambiate più:
 
-1. **Percorsi:** `kris/`, `data/kris_state.json`, `data/updates/`, `data/snapshots/`, il flag di manutenzione `data/kris_maintenance`.
+1. **Percorsi:** `kris/`, `data/kris_state.json`, `data/updates/`, `data/snapshots/`, il flag di manutenzione `data/kris_maintenance.json`.
 2. **Chiavi pubbliche:** due, scritte nel codice dello stadio 1.
 3. **Punto di ingresso dello stadio 2:** `kris/update/installer.php`, che definisce `kris_update_install(array $ctx): array`. `$ctx` contiene i percorsi assoluti, la versione di partenza, quella di arrivo e la cartella di staging. Il ritorno è `['ok' => bool, 'steps' => [...], 'error' => ?string]`.
 4. **Campi del manifest** (aggiungerne è lecito, rinominarli no):

@@ -19,6 +19,7 @@ declare(strict_types=1);
 const T_PASS = 'PASS', T_FAIL = 'FAIL', T_XFAIL = 'XFAIL', T_XPASS = 'XPASS';
 
 $GLOBALS['kris_tests'] = [];
+$GLOBALS['kris_skipped'] = [];
 $GLOBALS['kris_suite'] = '';
 
 /** Test di un comportamento che deve funzionare: se fallisce e una regressione. */
@@ -37,6 +38,16 @@ function xfail(string $ref, string $name, callable $fn): void
 }
 
 final class AssertionFailed extends Exception {}
+
+/**
+ * Salta la suite corrente perche manca qualcosa nell'ambiente (per esempio
+ * un'estensione PHP). Il riepilogo lo dice sempre: una suite saltata non e
+ * una suite passata. Da chiamare in testa al file della suite, seguita da return.
+ */
+function skipSuite(string $reason): void
+{
+    $GLOBALS['kris_skipped'][] = $GLOBALS['kris_suite'] . ': ' . $reason;
+}
 
 function fail(string $message): void
 {
@@ -135,6 +146,10 @@ printf(
     "%d ok, %d falliti, %d bug noti (xfail), %d risolti da promuovere (xpass)\n",
     $counts[T_PASS], $counts[T_FAIL], $counts[T_XFAIL], $counts[T_XPASS]
 );
+
+foreach ($GLOBALS['kris_skipped'] as $skipped) {
+    echo "SALTATA  {$skipped}\n";
+}
 
 if ($problems) {
     echo "\n" . implode("\n\n", $problems) . "\n";

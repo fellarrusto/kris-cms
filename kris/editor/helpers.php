@@ -28,14 +28,14 @@ function h(mixed $value): string
 
 /**
  * Data ISO 8601 in forma leggibile ("30/09/2026 alle 14:05"), o null se assente o illeggibile.
- * L'ora resta nel fuso con cui e stata scritta: il fuso predefinito di PHP
- * sull'hosting e spesso UTC e la sposterebbe di una o due ore.
+ * Sempre in ora italiana: le date si salvano con il loro fuso, ma molti
+ * hosting tengono PHP in UTC e mostrerebbero l'ora sbagliata di una o due ore.
  */
 function editorDateTime(mixed $iso): ?string
 {
     if (!is_string($iso) || $iso === '') return null;
     try {
-        $date = new DateTimeImmutable($iso);
+        $date = (new DateTimeImmutable($iso))->setTimezone(new DateTimeZone('Europe/Rome'));
     } catch (Exception) {
         return null;
     }

@@ -18,11 +18,13 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 
 | Percorso | Responsabilità |
 | --- | --- |
-| `index.php`, `editor/index.php`, `editor/upload.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. |
+| `index.php`, `editor/index.php`, `editor/upload.php`, `editor/update.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. |
 | `kris/` | Framework ed editor. Viene sostituito in blocco dagli aggiornamenti: niente personalizzazioni del sito qui dentro. |
 | `kris/bootstrap.php` | Definisce `KRIS_ROOT` (root del sito) e `KRIS_DIR` (cartella del framework) e registra l'autoload. Il framework accede ai file del sito solo tramite `KRIS_ROOT`, mai con percorsi relativi. |
 | `kris/VERSION` | Versione del framework (semver), mostrata nell'editor. Cambia solo con una release. |
-| `kris/update/` | Stato del sito rispetto agli aggiornamenti (`SiteState`) e, nelle fasi successive, updater e migrazioni. |
+| `kris/update/` | Aggiornamento del framework: stato del sito (`SiteState`), canale e pacchetti firmati (`Updater`, `Package`, `Signature`, `Http`), migrazioni (`Migrator`), installazione (`installer.php`) e chiavi pubbliche (`keys.php`). Vedi "Aggiornamenti del framework". |
+| `kris/migrations/` | Migrazioni del formato dei dati, `NNNN_nome.php`, applicate in ordine e una sola volta. |
+| `kris/maintenance.php` | Pagina 503 mostrata ai visitatori durante un aggiornamento. |
 | `kris/public.php` | Entry point pubblico: valida pagina e lingua, carica l'entità, renderizza il template. |
 | `kris/404.php`, `404.php` | Pagina 404 del framework; un `404.php` nella root del sito, se presente, la sostituisce. |
 | `template/*.html` | Pagine complete e frammenti HTML di liste e componenti. |
@@ -33,8 +35,10 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `data/cms_settings.json` | Lingue abilitate; opzionale, default `it` e `en`. |
 | `data/kris_state.json` | Stato del sito rispetto al framework: formato dei dati, migrazioni applicate, ultimo controllo e registro degli aggiornamenti. Appartiene al sito: non va copiato da un sito all'altro. |
 | `data/backups/` | Copie precedenti prodotte dalle scritture tramite `JsonStore`. |
+| `data/updates/`, `data/snapshots/`, `data/kris_maintenance.json` | Pacchetti in preparazione, copie di sicurezza degli aggiornamenti (14 giorni) e segnale di manutenzione. Gestiti dall'updater: non modificarli a mano, se non per ripristinare a mano uno snapshot. |
 | `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
 | `config/auth.php` | Credenziali locali con password sotto forma di hash; generato dal setup, escluso da Git. |
+| `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
 | `kris/core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
 | `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
@@ -187,6 +191,30 @@ Mantieni autenticazione e CSRF per ogni mutazione. I salvataggi asincroni confer
 
 L'editor permette di configurare anche gli schemi `of` e presenta l'impatto delle modifiche distruttive. I nomi dei campi devono continuare a corrispondere ai template. Non introdurre messaggi che promettono bozze, undo o gestione conflitti non implementati.
 
+## Aggiornamenti del framework
+
+Da un sito installato l'admin aggiorna Kris da Impostazioni › Versione di Kris: verifica, scaricamento o caricamento dello zip, installazione. Il flusso è in `kris/update/` e il piano con le motivazioni in `PIANO_update_claude.md`.
+
+- **Canale:** `releases.json` e `releases.json.sig` su `main`, letti da raw.githubusercontent.com. Mai l'API di GitHub. Solo `https` e host in `Http::ALLOWED_HOSTS`.
+- **Firme:** Ed25519. Le chiavi pubbliche stanno in `kris/update/keys.php`; le segrete fuori dalla repository. Un pacchetto è uno zip della sola `kris/` con `RELEASE.json`, `MANIFEST.json` (sha256 di ogni file) e `MANIFEST.sig`: si verifica da solo, anche caricato a mano.
+- **Policy:** dall'editor si installano solo versioni con la stessa major e non `breaking`. Le major le installa lo sviluppatore.
+- **Installazione:** preflight reale (scrittura e spostamento di cartelle), controllo di sintassi, snapshot di `data/*.json` e `config/`, manutenzione, scambio di `kris/`, migrazioni, verifica delle pagine con i contenuti veri. A ogni errore, anche fatale, il sito torna com'era da solo.
+- **Contratto con le versioni installate:** `installer.php` espone `kris_update_install(array $ctx): array` e arriva dentro il pacchetto nuovo; i campi di `releases.json` e `RELEASE.json`, i percorsi in `data/` e il formato di `kris_maintenance.json` si possono estendere, mai rinominare. Un sito vecchio legge il canale con il suo codice.
+- **`bootstrap.php`** viene incluso di nuovo dall'installer dopo lo scambio: niente dichiarazioni che non tollerino la ripetizione.
+
+**Cambiare il formato dei dati richiede una migrazione** in `kris/migrations/`: numerata, solo in avanti, funzione pura su `['k_data', 'k_model', 'cms_settings']`, senza usare classi del core, idempotente, con un test fixture prima → fixture dopo. `'auto' => true` solo se non cambia i contenuti. Non è una migrazione la rinomina di un campo di un sito cliente: quella è contenuto del sito.
+
+**Pubblicare una release** (solo lo sviluppatore, con la chiave privata):
+
+```sh
+# 1. aggiorna kris/VERSION, fai il commit, suite verde
+php -d extension=sodium -d extension=zip tools/release.php --key <percorso>/principale.key --changelog "Testo per i clienti"
+# 2. tag vX.Y.Z e release su GitHub con dist/kris-X.Y.Z.zip allegato
+# 3. solo dopo: commit e push di releases.json e releases.json.sig su main
+```
+
+Il changelog lo leggono i clienti nell'editor. `--breaking` per le release che richiedono lo sviluppatore, `--min-from` se serve un passaggio intermedio.
+
 ## Avvio, verifica e deploy
 
 Esegui i comandi dalla radice del progetto:
@@ -197,9 +225,11 @@ php -S 127.0.0.1:8000 -t .
 php tests/run.php
 ```
 
+Le suite dei pacchetti e dell'installazione richiedono le estensioni `sodium` e `zip`: se mancano vengono saltate e il riepilogo lo dice (`SALTATA`). Con un PHP che non le carica dal php.ini: `php -d extension=sodium -d extension=zip tests/run.php`. Una suite saltata non è una suite passata.
+
 Apri `http://127.0.0.1:8000/` e `/editor/`. Il setup crea l'account se manca `config/auth.php`. Il server PHP integrato serve solo allo sviluppo locale.
 
-Serve almeno PHP 8.1: il codice dell'editor usa il tipo di ritorno `never`. È stato verificato con PHP 8.3. Servono DOM/libxml e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`.
+Serve almeno PHP 8.1: il codice dell'editor usa il tipo di ritorno `never`. È stato verificato con PHP 8.3. Servono DOM/libxml, mbstring e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`. Per aggiornare dall'editor servono anche `sodium` e `zip`, e cURL (o `allow_url_fopen`) con i certificati configurati: senza, resta il caricamento manuale del pacchetto oppure l'aggiornamento via FTP.
 
 Prima di consegnare una conversione:
 
@@ -212,8 +242,8 @@ Prima di consegnare una conversione:
 Per pubblicare:
 
 - L'hosting deve eseguire PHP e puntare alla root del progetto. Non serve Composer: l'autoload è in `kris/bootstrap.php`. Non servono processi Node in produzione per il tema HTML/CSS/JS.
-- Al primo rilascio includi template, asset, configurazione delle pagine, schema e contenuti iniziali. Nei rilasci successivi preserva `config/auth.php`, `data/k_data.json`, `data/cms_settings.json`, backup e upload; applica modifiche allo schema con una migrazione coerente e copia di sicurezza.
-- PHP deve poter scrivere in `data/`, nella directory dei backup e in `assets/uploads/`; per il setup iniziale deve poter creare `config/auth.php`. Usa permessi appropriati all'hosting, non `777` come soluzione generica.
+- Al primo rilascio includi template, asset, configurazione delle pagine, schema e contenuti iniziali. Nei rilasci successivi preserva `config/`, tutto `data/` (compresi `kris_state.json`, backup e snapshot) e gli upload; applica modifiche allo schema con una migrazione coerente e copia di sicurezza. Aggiornando il framework via FTP sostituisci la cartella `kris/` intera, non file per file: l'editor registra il cambio di versione e applica o propone le migrazioni.
+- PHP deve poter scrivere in `data/`, nella directory dei backup e in `assets/uploads/`; per il setup iniziale deve poter creare `config/auth.php`; per aggiornare dall'editor deve poter spostare `kris/` nella root del sito. Usa permessi appropriati all'hosting, non `777` come soluzione generica.
 - Verifica sul server che `config/` e `data/` non siano scaricabili e che gli upload non eseguano codice. Gli `.htaccess` presenti sono specifici di Apache; Nginx e altri server richiedono regole equivalenti. Verifica la compatibilità delle direttive upload con l'hosting effettivo.
 - Escludi dall'artefatto pubblico `.git/`, configurazioni locali degli agenti, test e documenti di sviluppo. Configura HTTPS e verifica login, persistenza e asset sul percorso finale, anche se il sito vive in sottocartella.
 - Dopo il rilascio controlla homepage, una pagina di dettaglio, lingua alternativa, 404 e accesso all'editor. Non sovrascrivere le credenziali e non lasciare un setup pubblico non configurato.

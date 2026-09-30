@@ -14,7 +14,18 @@
 
 **Requirements:**
 
-* PHP >= 8.1 with DOM/libxml.
+* PHP >= 8.1 with DOM/libxml and mbstring.
+* To update from the editor: the `sodium` and `zip` extensions (cURL recommended).
+
+## Updating
+
+Everything that belongs to the framework lives in `kris/`; your site (`template/`, `assets/`, `data/`, `config/`) never gets touched by an update.
+
+* **From the editor:** *Impostazioni › Versione di Kris › Verifica aggiornamenti*. Kris downloads the signed package, makes a safety copy, swaps `kris/`, migrates the data if needed and checks your pages. If anything fails, the site goes back to how it was. For 14 days you can also go back to the previous version with one click.
+* **If the host blocks outgoing connections:** download `kris-X.Y.Z.zip` from the GitHub releases and upload it in the same screen (*Carica un pacchetto a mano*). The signature is checked before installing.
+* **Via FTP:** replace the whole `kris/` folder. The editor records the new version and applies (or asks to apply) any data migration.
+
+Major versions may require changes to your templates, so the editor won't install them: the developer does. To turn editor updates off on a site, create `config/update.php` with `<?php return ['enabled' => false];`.
 
 ---
 

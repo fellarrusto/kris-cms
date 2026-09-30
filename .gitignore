@@ -1,2 +1,7 @@
 /config/auth.php
 /data/backups/
+/data/updates/
+/data/snapshots/
+/data/kris_state.json
+/data/kris_maintenance.json
+/dist/

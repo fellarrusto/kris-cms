@@ -16,7 +16,9 @@ define('KRIS_EDITOR', true);
 require_once __DIR__ . '/helpers.php';
 
 use Kris\Entity\StorageException;
+use Kris\Update\Migrator;
 use Kris\Update\SiteState;
+use Kris\Update\UpdateException;
 
 // Cookie di sessione non leggibile da JavaScript e non inviato cross-site.
 session_set_cookie_params([
@@ -122,6 +124,62 @@ if (!file_exists($modelFile))
 if (!file_exists($dataFile))
     file_put_contents($dataFile, '[]');
 
+// --- STATO DEL FRAMEWORK ---
+// Prima di leggere i contenuti: una migrazione puo cambiarli. Se
+// $editorLock non e vuoto l'editor resta consultabile ma non salva nulla.
+$krisVersion = SiteState::frameworkVersion();
+$editorLock = '';
+$frameworkNotice = '';
+$migrationsPending = [];
+$maintenance = kris_maintenance();
+if ($maintenance !== null) {
+    $editorLock = $maintenance['stale']
+        ? 'Un aggiornamento di Kris si è interrotto. Apri Impostazioni › Versione di Kris per rimettere in ordine il sito.'
+        : 'È in corso un aggiornamento di Kris: le modifiche sono sospese per qualche minuto.';
+} else {
+    try {
+        $siteState = SiteState::load();
+        $migrator = new Migrator(KRIS_ROOT, KRIS_DIR . '/migrations');
+        if ($migrator->dataIsNewer($siteState)) {
+            $editorLock = "I contenuti sono stati salvati da una versione di Kris più recente di questa ({$krisVersion}). "
+                . 'Per non rovinarli l\'editor è in sola lettura: rimetti sul server la cartella kris/ della versione corretta.';
+        } else {
+            $pending = $migrator->pending($siteState);
+            $runNow = $pending && ($migrator->pendingAreAutomatic($siteState)
+                || ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migrations'])
+                    && kris_csrf_valid($_POST['csrf'] ?? null)));
+            if ($runNow) {
+                $siteState = $migrator->run($siteState);
+                $pending = [];
+            }
+            $recorded = $siteState['framework_version'] ?? null;
+            if ($pending) {
+                $migrationsPending = $pending;
+                $editorLock = 'Questa versione di Kris deve aggiornare il formato dei contenuti prima che tu possa modificarli.';
+            } elseif (is_string($recorded) && version_compare($krisVersion, $recorded, '<')) {
+                $frameworkNotice = "È installata Kris {$krisVersion}, più vecchia della {$recorded} registrata su questo sito: "
+                    . 'forse la cartella kris/ è stata sovrascritta con una copia datata.';
+            } elseif ($recorded !== $krisVersion || $runNow) {
+                // Prima registrazione, o file caricati a mano via FTP.
+                if (is_string($recorded) && $recorded !== $krisVersion) {
+                    $siteState = SiteState::addHistory($siteState, [
+                        'from' => $recorded, 'to' => $krisVersion, 'user' => (string) ($_SESSION['kris_user'] ?? ''),
+                        'outcome' => 'ftp', 'message' => 'Aggiornato caricando i file a mano.',
+                    ]);
+                }
+                $siteState['framework_version'] = $krisVersion;
+                SiteState::save($siteState);
+            }
+            if ($runNow && isset($_POST['run_migrations'])) {
+                header("Location: $BASE");
+                exit;
+            }
+        }
+    } catch (StorageException | UpdateException $e) {
+        $frameworkNotice = 'Non riesco a leggere lo stato degli aggiornamenti di Kris. I contenuti non sono coinvolti: segnalalo a chi gestisce il sito.';
+    }
+}
+
 // --- DATI ---
 try {
     $data = getJson($dataFile, []);
@@ -172,7 +230,6 @@ $sectionLabel = match ($action) {
 // I file statici dell'editor stanno in kris/editor/, mentre la pagina e
 // servita dallo stub in editor/: si risale alla root del sito dall'URL.
 $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/kris/editor');
-$krisVersion = SiteState::frameworkVersion();
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -198,6 +255,18 @@ $krisVersion = SiteState::frameworkVersion();
     </header>
     <main id="main" tabindex="-1">
         <div id="request-feedback" class="alert alert-error" role="alert" hidden></div>
+        <?php if ($editorLock !== ''): ?>
+            <div class="alert alert-error system-alert" role="alert">
+                <p><strong>Modifiche sospese.</strong> <?= h($editorLock) ?></p>
+                <?php if ($migrationsPending): ?>
+                    <form method="POST" class="system-alert-action"><button class="btn btn-primary" name="run_migrations" value="1">Aggiorna il formato dei contenuti</button><small>Prima viene salvata una copia dei file dei contenuti.</small></form>
+                <?php elseif (!empty($maintenance['stale']) && $action !== 'settings'): ?>
+                    <a class="btn btn-white" href="?action=settings#versione">Vai alla versione di Kris</a>
+                <?php endif; ?>
+            </div>
+        <?php elseif ($frameworkNotice !== ''): ?>
+            <div class="alert system-alert" role="status"><p><?= h($frameworkNotice) ?></p></div>
+        <?php endif; ?>
         <?php if ($error): ?>
             <div class="alert alert-error" role="alert">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -247,6 +316,9 @@ $krisVersion = SiteState::frameworkVersion();
     <script src="<?= $assetBase ?>/js/scripts.js"></script>
     <?php if ($action === 'structure'): ?>
         <script src="<?= $assetBase ?>/js/structure.js"></script>
+    <?php endif; ?>
+    <?php if ($action === 'settings'): ?>
+        <script src="<?= $assetBase ?>/js/update.js"></script>
     <?php endif; ?>
 </body>
 

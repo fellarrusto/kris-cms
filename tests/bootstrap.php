@@ -69,12 +69,12 @@ function projectSandbox(): string
  *
  * @return array{output: string, status: int, fatal: ?string}
  */
-function renderPage(array $query): array
+function renderPage(array $query, ?string $sandbox = null): array
 {
-    $sandbox = projectSandbox();
+    $sandbox ??= projectSandbox();
     $harness = KRIS_TESTS . '/harness/render.php';
 
-    $cmd = sprintf('%s %s', escapeshellarg(PHP_BINARY), escapeshellarg($harness));
+    $cmd = phpCommand($harness);
 
     // I parametri passano dall'environment: su Windows escapeshellarg()
     // sostituisce i '%' con spazi e corromperebbe i valori urlencoded.
@@ -104,6 +104,33 @@ function renderPage(array $query): array
     }
 
     return ['output' => $stdout, 'status' => $status, 'fatal' => $fatal];
+}
+
+/**
+ * Comando per eseguire uno script PHP in un processo separato con le stesse
+ * estensioni di aggiornamento del processo dei test, anche se sono state
+ * caricate con -d extension=... invece che dal php.ini.
+ */
+function phpCommand(string $script): string
+{
+    $cmd = escapeshellarg(PHP_BINARY);
+    foreach (['sodium' => 'sodium', 'zip' => 'zip'] as $ext => $name) {
+        if (extension_loaded($ext) && !kris_ext_in_ini($ext)) {
+            $cmd .= ' -d extension=' . $name;
+        }
+    }
+    return $cmd . ' ' . escapeshellarg($script);
+}
+
+/** Vero se l'estensione e gia attivata dal php.ini (ripeterla darebbe un avviso). */
+function kris_ext_in_ini(string $ext): bool
+{
+    static $cache = [];
+    if (!isset($cache[$ext])) {
+        $out = shell_exec(escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg("echo extension_loaded('{$ext}') ? 1 : 0;"));
+        $cache[$ext] = trim((string) $out) === '1';
+    }
+    return $cache[$ext];
 }
 
 /** Confronto con un golden file; con --update-snapshots lo riscrive. */
