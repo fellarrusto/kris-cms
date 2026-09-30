@@ -12,9 +12,6 @@ namespace Kris\Entity;
  *    un'interruzione non lascia mai un file troncato
  *  - prima di ogni scrittura viene conservata una copia dello stato precedente
  *  - ogni errore (encode, write, rename) viene rilevato e sollevato
- *
- * Sta nel namespace Kris\Entity di proposito: usa la mappatura PSR-4 gia
- * presente in composer.json, cosi non serve rigenerare l'autoloader sul server.
  */
 final class JsonStore
 {

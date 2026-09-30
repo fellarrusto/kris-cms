@@ -26,6 +26,22 @@ function h(mixed $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+/**
+ * Data ISO 8601 in forma leggibile ("30/09/2026 alle 14:05"), o null se assente o illeggibile.
+ * L'ora resta nel fuso con cui e stata scritta: il fuso predefinito di PHP
+ * sull'hosting e spesso UTC e la sposterebbe di una o due ore.
+ */
+function editorDateTime(mixed $iso): ?string
+{
+    if (!is_string($iso) || $iso === '') return null;
+    try {
+        $date = new DateTimeImmutable($iso);
+    } catch (Exception) {
+        return null;
+    }
+    return $date->format('d/m/Y') . ' alle ' . $date->format('H:i');
+}
+
 function editorLabel(string $name): string
 {
     return ucfirst(str_replace('_', ' ', $name));

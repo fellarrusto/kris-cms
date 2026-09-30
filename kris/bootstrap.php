@@ -27,6 +27,7 @@ spl_autoload_register(static function (string $class): void {
     static $namespaces = [
         'Kris\\Entity\\'   => KRIS_DIR . '/core/entity/',
         'Kris\\Template\\' => KRIS_DIR . '/core/template/',
+        'Kris\\Update\\'   => KRIS_DIR . '/update/',
     ];
     foreach ($namespaces as $prefix => $dir) {
         if (strncmp($class, $prefix, strlen($prefix)) !== 0) {

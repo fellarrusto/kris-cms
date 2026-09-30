@@ -16,6 +16,7 @@ define('KRIS_EDITOR', true);
 require_once __DIR__ . '/helpers.php';
 
 use Kris\Entity\StorageException;
+use Kris\Update\SiteState;
 
 // Cookie di sessione non leggibile da JavaScript e non inviato cross-site.
 session_set_cookie_params([
@@ -171,6 +172,7 @@ $sectionLabel = match ($action) {
 // I file statici dell'editor stanno in kris/editor/, mentre la pagina e
 // servita dallo stub in editor/: si risale alla root del sito dall'URL.
 $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/kris/editor');
+$krisVersion = SiteState::frameworkVersion();
 ?>
 <!DOCTYPE html>
 <html lang="it">

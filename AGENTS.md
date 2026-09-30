@@ -21,6 +21,8 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `index.php`, `editor/index.php`, `editor/upload.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. |
 | `kris/` | Framework ed editor. Viene sostituito in blocco dagli aggiornamenti: niente personalizzazioni del sito qui dentro. |
 | `kris/bootstrap.php` | Definisce `KRIS_ROOT` (root del sito) e `KRIS_DIR` (cartella del framework) e registra l'autoload. Il framework accede ai file del sito solo tramite `KRIS_ROOT`, mai con percorsi relativi. |
+| `kris/VERSION` | Versione del framework (semver), mostrata nell'editor. Cambia solo con una release. |
+| `kris/update/` | Stato del sito rispetto agli aggiornamenti (`SiteState`) e, nelle fasi successive, updater e migrazioni. |
 | `kris/public.php` | Entry point pubblico: valida pagina e lingua, carica l'entità, renderizza il template. |
 | `kris/404.php`, `404.php` | Pagina 404 del framework; un `404.php` nella root del sito, se presente, la sostituisce. |
 | `template/*.html` | Pagine complete e frammenti HTML di liste e componenti. |
@@ -29,6 +31,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `data/k_model.json` | Oggetto che associa ogni raccolta allo schema dei suoi campi. |
 | `data/k_data.json` | Lista delle entità con i valori effettivi dei contenuti. |
 | `data/cms_settings.json` | Lingue abilitate; opzionale, default `it` e `en`. |
+| `data/kris_state.json` | Stato del sito rispetto al framework: formato dei dati, migrazioni applicate, ultimo controllo e registro degli aggiornamenti. Appartiene al sito: non va copiato da un sito all'altro. |
 | `data/backups/` | Copie precedenti prodotte dalle scritture tramite `JsonStore`. |
 | `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
 | `config/auth.php` | Credenziali locali con password sotto forma di hash; generato dal setup, escluso da Git. |
