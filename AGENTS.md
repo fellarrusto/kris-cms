@@ -228,7 +228,7 @@ Le suite dei pacchetti e dell'installazione richiedono le estensioni `sodium` e 
 
 Apri `http://127.0.0.1:8000/` e `/editor/`. Il setup crea l'account se manca `config/auth.php`. Il server PHP integrato serve solo allo sviluppo locale.
 
-Serve almeno PHP 8.1: il codice dell'editor usa il tipo di ritorno `never`. È stato verificato con PHP 8.3. Servono DOM/libxml, mbstring e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`. Per aggiornare dall'editor servono anche `sodium` e `zip`, e cURL (o `allow_url_fopen`) con i certificati configurati: senza, resta il caricamento manuale del pacchetto oppure l'aggiornamento via FTP.
+Serve almeno PHP 8.0, che molti hosting condivisi hanno ancora: niente sintassi o funzioni introdotte dopo (per esempio il tipo `never`, `enum`, `readonly`; `array_is_list` ha un rimpiazzo in `kris/bootstrap.php`). La CI lo verifica su 8.0, 8.1 e 8.3. Servono DOM/libxml, mbstring e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`. Per aggiornare dall'editor servono anche `sodium` e `zip`, e cURL (o `allow_url_fopen`) con i certificati configurati: senza, resta il caricamento manuale del pacchetto oppure l'aggiornamento via FTP.
 
 Prima di consegnare una conversione:
 

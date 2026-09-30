@@ -43,6 +43,21 @@ spl_autoload_register(static function (string $class): void {
     }
 });
 
+// PHP 8.0 e ancora diffuso sugli hosting condivisi: le poche funzioni della
+// 8.1 che il framework usa hanno qui un rimpiazzo equivalente.
+if (!function_exists('array_is_list')) {
+    function array_is_list(array $array): bool
+    {
+        $i = 0;
+        foreach ($array as $key => $_) {
+            if ($key !== $i++) {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+
 if (!function_exists('kris_maintenance')) {
     /**
      * Stato della manutenzione durante un aggiornamento, o null se il sito e

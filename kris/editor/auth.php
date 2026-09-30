@@ -101,7 +101,7 @@ function kris_inject_csrf(string $html): string
 
 // --- Schermate ----------------------------------------------------------
 
-function kris_auth_page(string $title, string $body): never
+function kris_auth_page(string $title, string $body): void // termina sempre con exit
 {
     echo <<<HTML
     <!DOCTYPE html>
@@ -134,7 +134,7 @@ function kris_auth_page(string $title, string $body): never
     exit;
 }
 
-function kris_render_login(string $error = ''): never
+function kris_render_login(string $error = ''): void // termina sempre con exit
 {
     $err = $error !== '' ? '<div class="error">' . htmlspecialchars($error) . '</div>' : '';
     $csrf = kris_csrf_field();
@@ -153,7 +153,7 @@ function kris_render_login(string $error = ''): never
     HTML);
 }
 
-function kris_render_setup(string $error = ''): never
+function kris_render_setup(string $error = ''): void // termina sempre con exit
 {
     $err = $error !== '' ? '<div class="error">' . htmlspecialchars($error) . '</div>' : '';
     $csrf = kris_csrf_field();

@@ -56,3 +56,12 @@ test("l'ultimo aggiornamento e l'ultima voce del registro", function () {
     assertSame('1.1.0', SiteState::lastUpdate($state)['to']);
     assertSame(null, SiteState::lastUpdate(['history' => []]));
 });
+
+test('array_is_list funziona anche dove PHP 8.0 non la fornisce', function () {
+    // Su PHP 8.0 questo esercita il rimpiazzo di kris/bootstrap.php.
+    assertSame(true, array_is_list([]));
+    assertSame(true, array_is_list(['a', 'b']));
+    assertSame(false, array_is_list([1 => 'a']));
+    assertSame(false, array_is_list(['x' => 1]));
+    assertSame(false, array_is_list([0 => 'a', 2 => 'b']));
+});
