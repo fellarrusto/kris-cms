@@ -42,8 +42,6 @@ svg { width:19px; height:19px; vertical-align:middle; flex-shrink:0; }
 .collection-link.selected,.collection-link:hover { color:var(--primary); background:#f6f8f3; }
 .collection-link small { color:var(--muted); }
 .sidebar-bottom { margin-top:auto; padding-top:32px; }
-.help-card { background:#f5f6f0; border-radius:10px; padding:16px 14px; margin-bottom:20px; }
-.help-card p { margin-top:9px; font-size:13px; }
 .logout-link { display:flex; justify-content:space-between; border-top:1px solid var(--border); padding:17px 10px 0; font-size:12px; color:var(--muted); }
 .version-link { display:block; padding:0 10px 12px; font-size:11px; color:var(--muted); }
 .version-link:hover { color:var(--primary); }
@@ -267,7 +265,7 @@ dialog::backdrop { background:#122a2255; backdrop-filter:blur(3px); }
     :root { --sidebar-width:0px; }
     .sidebar { position:relative; width:100%; padding:17px 17px 8px; border-right:0; border-bottom:1px solid var(--border); overflow:visible; }
     .brand { font-size:25px; padding:0; width:fit-content; }.brand-mark { width:34px;height:34px;font-size:27px; }.brand small { font-size:7px; }
-    .workspace-label,.sidebar>.nav-label,.collection-nav,.help-card { display:none; }
+    .workspace-label,.sidebar>.nav-label,.collection-nav { display:none; }
     .sidebar nav { display:flex; gap:4px; margin-top:16px; overflow:auto; }.nav-item { margin:0; padding:10px; font-size:12px; white-space:nowrap; }.nav-count { display:none; }
     .sidebar-bottom { position:absolute; top:22px; right:18px; margin:0; padding:0; }.logout-link { padding:0; border:0; font-size:11px; gap:8px; }.version-link { display:none; }
     .editor-workspace { margin:0; }.topbar { min-height:62px; padding:12px 18px;gap:10px; }.topbar .btn { font-size:11px;padding:7px 10px; }.breadcrumbs { font-size:10px; gap:6px; }

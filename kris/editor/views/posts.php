@@ -9,7 +9,7 @@ foreach ($postSources as $s) {
 ?>
 <div class="container">
 <?php if ($source === null): ?>
-    <header class="page-heading"><div><p class="eyebrow">ACCESSO RAPIDO</p><h1>Posts</h1><p>Gli elenchi che aggiorni più spesso, senza cercarli dentro le pagine.</p></div></header>
+    <header class="page-heading"><div><h1>Posts</h1></div></header>
     <?php if ($group !== null || $field !== ''): ?><div class="alert alert-error" role="alert">Questo elenco non è più disponibile. Scegline uno qui sotto.</div><?php endif; ?>
     <div class="collection-grid">
     <?php foreach ($postSources as $s): $href = '?action=posts&group=' . urlencode($s['group']) . '&id=' . $s['id'] . '&field=' . urlencode($s['field']); ?>

@@ -1,6 +1,6 @@
 <?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } ?>
 <div class="container">
-    <header class="page-heading"><div><p class="eyebrow">IL TUO SPAZIO EDITORIALE</p><h1>I tuoi contenuti</h1><p>Tutto quello che racconta il tuo sito, una raccolta alla volta.</p></div><button class="btn btn-white" data-open-dialog="createModal"><?= uiIcon('plus') ?>Nuova raccolta</button></header>
+    <header class="page-heading"><div><h1>I tuoi contenuti</h1></div><button class="btn btn-white" data-open-dialog="createModal"><?= uiIcon('plus') ?>Nuova raccolta</button></header>
     <div class="toolbar"><label class="search-box"><?= uiIcon('search') ?><input type="search" data-filter="collections" placeholder="Cerca una raccolta..." aria-label="Cerca una raccolta"></label><span class="badge"><?= count($models) ?> raccolte</span></div>
     <div class="collection-grid" data-filter-list="collections">
     <?php foreach ($models as $name => $fields): ?>
@@ -8,6 +8,6 @@
     <?php endforeach; ?>
     </div>
     <div class="empty-state" data-filter-empty="collections" <?= $models ? 'hidden' : '' ?>><h2><?= $models ? 'Nessuna raccolta trovata.' : 'Il primo contenuto inizia da qui.' ?></h2><p><?= $models ? 'Prova un altro nome o svuota la ricerca.' : 'Crea una raccolta e scegli i campi che vuoi gestire.' ?></p></div>
-    <div class="editor-tip"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><strong>Scrivere e configurare, ognuno al suo posto.</strong><p>Apri una raccolta per aggiornare i contenuti. Usa Struttura per configurare i campi del sito.</p></div></div>
+    <div class="editor-tip"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><p>Apri una raccolta per aggiornare i contenuti. Usa Struttura per configurare i campi del sito.</p></div></div>
 </div>
 <dialog id="createModal" aria-labelledby="createTitle"><form method="POST"><div class="modal-header"><h2 id="createTitle">Nuova raccolta</h2><button type="button" class="icon-button" data-close-dialog aria-label="Chiudi"><?= uiIcon('close') ?></button></div><div class="modal-body"><label for="collection-name">Nome della raccolta</label><input id="collection-name" type="text" name="collection_name" pattern="[a-z0-9_]+" placeholder="es. servizi" required autofocus><p class="hint">Lettere minuscole, numeri e underscore. Nel prossimo passaggio potrai configurare i campi.</p></div><div class="modal-footer"><button type="button" class="btn btn-white" data-close-dialog>Annulla</button><button class="btn btn-primary" name="create_collection">Crea raccolta</button></div></form></dialog>
