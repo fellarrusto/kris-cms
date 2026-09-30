@@ -207,13 +207,12 @@ Da un sito installato l'admin aggiorna Kris da Impostazioni › Versione di Kris
 **Pubblicare una release** (solo lo sviluppatore, con la chiave privata):
 
 ```sh
-# 1. aggiorna kris/VERSION, fai il commit, suite verde
-php -d extension=sodium -d extension=zip tools/release.php --key <percorso>/principale.key --changelog "Testo per i clienti"
-# 2. tag vX.Y.Z e release su GitHub con dist/kris-X.Y.Z.zip allegato
-# 3. solo dopo: commit e push di releases.json e releases.json.sig su main
+# aggiorna kris/VERSION con una PR, uniscila, poi da main pulito e allineato:
+php -d extension=sodium -d extension=zip tools/release.php --key <percorso>/principale.key \
+    --changelog "Testo per i clienti" --publish          # --dry-run per provare senza pubblicare
 ```
 
-Il changelog lo leggono i clienti nell'editor. `--breaking` per le release che richiedono lo sviluppatore, `--min-from` se serve un passaggio intermedio.
+Lo script controlla repository e test, costruisce e verifica il pacchetto, chiede conferma, poi crea tag e release GitHub con lo zip, riscarica lo zip per confrontarlo e solo alla fine pubblica `releases.json` e `.sig` su `main`. Se si interrompe, si rilancia lo stesso comando: i passi già fatti vengono riconosciuti, e uno zip già pubblicato viene riusato invece di essere ricostruito. Servono `git` e `gh` autenticato. Il changelog lo leggono i clienti nell'editor. `--breaking` per le release che richiedono lo sviluppatore, `--min-from` se serve un passaggio intermedio.
 
 ## Avvio, verifica e deploy
 

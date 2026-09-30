@@ -6,3 +6,7 @@ tests/snapshots/*.html -text
 *.jpg binary
 *.gif binary
 *.webp binary
+
+# Il canale e firmato byte per byte: niente conversione dei fine riga.
+releases.json -text
+releases.json.sig -text

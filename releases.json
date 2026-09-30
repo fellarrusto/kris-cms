@@ -1,0 +1,24 @@
+{
+    "format": 1,
+    "releases": [
+        {
+            "version": "1.0.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.1",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Prima versione con aggiornamenti dall'editor.",
+            "date": "2026-09-30",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.0.0/kris-1.0.0.zip",
+            "sha256": "539676f050753030a5767754a41f2bb6c9227a0f711704c334092ad992431e31",
+            "size": 101891
+        }
+    ]
+}
