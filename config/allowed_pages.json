@@ -2,6 +2,8 @@
   "allowed_pages": [
     "homepage",
     "detail",
-    "post"
+    "post",
+    "privacy",
+    "cookie"
   ]
 }

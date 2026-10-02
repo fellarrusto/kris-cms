@@ -126,3 +126,14 @@ test('i template leggono kris_legal come un qualunque componente', function () {
     $entity = makeEntity([fieldText('banner_text', ['it' => 'Usiamo cookie', 'en' => 'We use cookies'])], 0, 'kris_legal');
     assertSame('<p>We use cookies</p>', trim(renderTemplate('<p>{{banner_text}}</p>', $entity, 'en')));
 });
+
+test('le pagine privacy e cookie mostrano informativa e titolare', function () {
+    $privacy = renderPage(['page' => 'privacy', 'key' => 'kris_legal']);
+    assertSame(200, $privacy['status']);
+    assertContains('<h2>Dati trattati</h2>', $privacy['output']);
+    assertContains('Kris Demo S.r.l.', $privacy['output']);
+    $cookie = renderPage(['page' => 'cookie', 'key' => 'kris_legal', 'ln' => 'en']);
+    assertSame(200, $cookie['status']);
+    assertContains('<code>kris_consent</code>', $cookie['output']);
+    assertContains('data-kris-consent-banner', $cookie['output']);
+});
