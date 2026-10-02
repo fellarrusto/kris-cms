@@ -18,7 +18,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 
 | Percorso | Responsabilità |
 | --- | --- |
-| `index.php`, `editor/index.php`, `editor/upload.php`, `editor/update.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. |
+| `index.php`, `sitemap.php`, `editor/index.php`, `editor/upload.php`, `editor/update.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. Gli stub aggiunti da una versione nuova li crea l'aggiornamento (`kris/update/Stubs.php`). |
 | `kris/` | Framework ed editor. Viene sostituito in blocco dagli aggiornamenti: niente personalizzazioni del sito qui dentro. |
 | `kris/bootstrap.php` | Definisce `KRIS_ROOT` (root del sito) e `KRIS_DIR` (cartella del framework) e registra l'autoload. Il framework accede ai file del sito solo tramite `KRIS_ROOT`, mai con percorsi relativi. |
 | `kris/VERSION` | Versione del framework (semver), mostrata nell'editor. Cambia solo con una release. |
@@ -38,10 +38,13 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `data/updates/`, `data/snapshots/`, `data/kris_maintenance.json` | Pacchetti in preparazione, copie di sicurezza degli aggiornamenti (14 giorni) e segnale di manutenzione. Gestiti dall'updater: non modificarli a mano, se non per ripristinare a mano uno snapshot. |
 | `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
 | `config/auth.php` | Credenziali locali con password sotto forma di hash; generato dal setup, escluso da Git. |
+| `config/seo.json` | Opzionale: indirizzo pubblico del sito, pagine della sitemap, canonical e hreflang automatici. Vedi "SEO: sitemap e indirizzi". |
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
 | `kris/core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
 | `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
+| `kris/core/scripts/consent.js` | Consenso ai cookie, opzionale. Vedi "Privacy e cookie". |
+| `kris/core/template/Seo.php`, `kris/sitemap.php` | Canonical, hreflang e sitemap generata dai contenuti a ogni richiesta. |
 | `kris/editor/` | Autenticazione, azioni, viste, partial, CSS e JS del pannello. È servito all'indirizzo `/editor/` tramite lo stub. |
 | `tests/` | Test PHP e snapshot pubblici con dati isolati in fixture. |
 
@@ -58,7 +61,8 @@ Il rendering esegue prima variabili e condizioni, poi gli array, poi i component
 5. **Collega il markup a Kris.** Sostituisci i contenuti editoriali con `{{campo}}`, estrai le liste ripetute in frammenti `k-array` e le sezioni condivise in `k-component`. Rimuovi le card statiche di esempio dai contenitori delle liste.
 6. **Completa i flussi.** Menu mobile, modali, accordion, filtri, CTA e link devono funzionare anche con tastiera e contenuti di lunghezza diversa. Gestisci liste vuote, immagini mancanti e testi lunghi. I moduli contatto richiedono un backend esplicito: Kris non offre già un servizio email, prenotazioni, pagamenti o ricerca server.
 7. **Verifica sito ed editor insieme.** Modifica un testo, un'immagine e l'ordine di una lista nell'editor e verifica l'effetto sul sito pubblico. Confronta le pagine renderizzate con il riferimento desktop e mobile.
-8. **Prepara il deploy.** Applica le verifiche di pubblicazione qui sotto. Pubblica sull'ambiente richiesto solo nell'ambito dell'autorizzazione ricevuta; una richiesta di conversione non identifica da sola un server di destinazione.
+8. **Registra le pagine nella sitemap e decidi privacy e cookie.** Ogni tipo di pagina navigabile nuovo va in `config/seo.json` (vedi "SEO: sitemap e indirizzi"); controlla `sitemap.php`. Se il sito usa cookie non tecnici o raccoglie dati, collega banner e informative ai dati di `kris_legal` (vedi "Privacy e cookie"); i testi legali li compila il cliente, non l'agente.
+9. **Prepara il deploy.** Applica le verifiche di pubblicazione qui sotto. Pubblica sull'ambiente richiesto solo nell'ambito dell'autorizzazione ricevuta; una richiesta di conversione non identifica da sola un server di destinazione.
 
 ### Cosa rendere modificabile
 
@@ -73,7 +77,7 @@ Il rendering esegue prima variabili e condizioni, poi gli array, poi i component
 | Navigazione, footer e contenuti riutilizzati su più pagine | Raccolta dedicata con entità condivisa e `k-component`. |
 | Griglie, spaziature, breakpoint, decorazioni e animazioni | HTML/CSS/JS del tema; non campi editoriali generici. |
 
-Gli unici tipi implementati sono `plain`, `text`, `richtext`, `image`, `array`. Non inventare tipi come `boolean`, `select`, `date` o relazioni senza implementarne anche editor e rendering. Usa nomi tecnici stabili in `snake_case` con lettere minuscole, numeri e underscore. Non usare `id` e `language` come nomi di campi: sono esposti dal motore.
+Gli unici tipi implementati sono `plain`, `text`, `richtext`, `image`, `array`. Non inventare tipi come `boolean`, `select`, `date` o relazioni senza implementarne anche editor e rendering. Usa nomi tecnici stabili in `snake_case` con lettere minuscole, numeri e underscore. Non usare `id` e `language` come nomi di campi: sono esposti dal motore. I nomi di raccolta che iniziano con `kris_` sono riservati al framework.
 
 Un campo `array` di primo livello può avere `"posts": true` (in Struttura: “Mostra in Posts”). Rendering e dati non cambiano: l'elenco compare nella sezione **Posts** dell'editor, con un accesso rapido per ogni entità della raccolta, e i nuovi elementi vengono inseriti in cima. Usalo per blog, news o eventi aggiornati spesso; negli elenchi annidati il flag viene rimosso al salvataggio. Il sito demo lo mostra con `homepage.posts`, `template/post-card.html` e la pagina `post`.
 
@@ -183,6 +187,70 @@ I percorsi delle risorse si risolvono rispetto all'URL pubblico, non alla cartel
 
 Esporta immagini e icone necessarie dal design, preserva le proporzioni, ottimizza peso e dimensioni e usa font disponibili per il progetto. Gli SVG fidati del tema possono essere asset statici verificati. L'upload editoriale accetta JPG/JPEG, PNG, GIF, WebP, AVIF e PDF fino a 8 MB; non accetta nuovi SVG. Non aggirare `MediaStore` per renderli caricabili.
 
+## Privacy e cookie
+
+Ogni sito Kris ha la raccolta riservata `kris_legal`, con un solo contenuto (ID `0`) e campi fissi. Il cliente li compila da **Privacy e cookie** nell'editor; non compare tra le raccolte e non si modifica da Struttura. I template la usano solo se vogliono, come qualunque raccolta.
+
+| Campo | Tipo | Contenuto |
+| --- | --- | --- |
+| `owner_name`, `owner_address`, `owner_vat`, `privacy_email` | `plain` | Titolare del trattamento: nome o ragione sociale, indirizzo, P.IVA o codice fiscale, email per le richieste |
+| `updated_at` | `plain` | Data di ultimo aggiornamento delle informative |
+| `privacy_policy`, `cookie_policy` | `richtext` | Testi delle informative |
+| `banner_title`, `banner_text`, `banner_accept`, `banner_reject`, `banner_more` | `text` | Testi del banner cookie |
+
+Lo schema lo gestisce il framework con le migrazioni (`kris/migrations/0002_privacy_e_cookie.php`): non modificarlo a mano e non aggiungere campi a `kris_legal`. Per un dato legale che manca, proponi una migrazione del framework.
+
+**Pagine delle informative:** un template dedicato che legge l'entità `kris_legal`, per esempio `template/privacy.html` con `{{privacy_policy}}` (i `richtext` escono come HTML) e i dati del titolare. Autorizza la pagina in `config/allowed_pages.json`, linkala dal footer con `index.php?page=privacy&amp;key=kris_legal&amp;ln={{language}}` e aggiungila alla sitemap.
+
+**Banner cookie:** serve solo se il sito usa cookie o script non tecnici (analytics, mappe, video incorporati, pixel). Componente in `template/cookie-banner.html`, incluso con `<div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>`:
+
+```html
+<div class="cookie-banner" data-kris-consent-banner hidden role="dialog" aria-labelledby="cookie-title">
+  <h2 id="cookie-title">{{banner_title}}</h2>
+  <p>{{banner_text}} <a href="index.php?page=cookie&amp;key=kris_legal&amp;ln={{language}}">{{banner_more}}</a></p>
+  <button type="button" data-kris-consent="reject">{{banner_reject}}</button>
+  <button type="button" data-kris-consent="accept">{{banner_accept}}</button>
+</div>
+<script src="kris/core/scripts/consent.js" defer></script>
+```
+
+- Gli script non tecnici si scrivono bloccati, `<script type="text/plain" data-kris-consent-script src="…"></script>`: `consent.js` li esegue solo dopo "Accetta". Non caricarli in nessun altro modo.
+- "Rifiuta" deve essere visibile e semplice quanto "Accetta"; niente caselle preselezionate. Un link `data-kris-consent="open"` nel footer riapre il banner.
+- La scelta resta nel cookie `kris_consent` (`accepted` o `rejected`) per 180 giorni. `window.KrisConsent.status()` la legge; l'evento `kris:consent` su `document` la notifica.
+- Lo stile del banner è del tema, in `assets/css/`. Il banner deve restare usabile da tastiera e su mobile.
+- Kris non scrive i testi legali e non sa quali cookie usa il sito: segnala al cliente cosa compilare, senza inventare informative.
+
+## SEO: sitemap e indirizzi
+
+Le pagine sono HTML completo generato sul server: i motori di ricerca le leggono come pagine statiche. Kris aggiunge da solo, prima di `</head>`, il `<link rel="canonical">` e i `hreflang` per ogni lingua, a meno che il template non abbia già un canonical. Gli URL canonici omettono i parametri con il valore predefinito (`page` e `key` `homepage`, `id` 0, lingua principale).
+
+`sitemap.php` genera la sitemap dai contenuti a ogni richiesta: un post aggiunto dall'editor compare subito. Quali pagine elencare lo dice `config/seo.json`:
+
+```json
+{
+  "base_url": "https://www.esempio.it",
+  "sitemap": [
+    {"page": "homepage"},
+    {"page": "progetto", "key": "progetti"},
+    {"page": "post", "key": "homepage", "id": 0, "children": "posts"},
+    {"page": "privacy", "key": "kris_legal", "id": 0}
+  ]
+}
+```
+
+- Senza `id`: una voce per ogni entità della raccolta. Con `id`: quella sola entità. Con `children`: una voce per ogni elemento della lista indicata (`path=lista/ID`). Si elencano solo pagine autorizzate e contenuti esistenti, in tutte le lingue attive.
+- **Regola:** quando aggiungi una pagina navigabile o un tipo di pagina, aggiungila a `config/seo.json` e verifica che compaia in `sitemap.php`. Senza file, la sitemap contiene la sola homepage.
+- `base_url` va impostato in produzione: senza, l'indirizzo si ricava dalla richiesta. `"head": false` disattiva canonical e hreflang automatici.
+- Al deploy crea `robots.txt` nella root con l'URL assoluto della sitemap, che dipende dal dominio:
+
+```text
+User-agent: *
+Disallow: /editor/
+Sitemap: https://www.esempio.it/sitemap.php
+```
+
+Non bloccare `/kris/` né `/assets/`: contengono gli script e gli stili delle pagine. Segnala al cliente di inviare la sitemap in Google Search Console.
+
 ## Editor e persistenza
 
 `kris/editor/index.php` gestisce sessione, autenticazione e dispatch; `actions.php` le mutazioni; `helpers.php` schema e percorsi; `views/` le pagine; `partials/` gli elementi condivisi. `scripts.js` gestisce i flussi UI e `structure.js` la modifica dello schema.
@@ -245,4 +313,4 @@ Per pubblicare:
 - PHP deve poter scrivere in `data/`, nella directory dei backup e in `assets/uploads/`; per il setup iniziale deve poter creare `config/auth.php`; per aggiornare dall'editor deve poter spostare `kris/` nella root del sito. Usa permessi appropriati all'hosting, non `777` come soluzione generica.
 - Verifica sul server che `config/` e `data/` non siano scaricabili e che gli upload non eseguano codice. Gli `.htaccess` presenti sono specifici di Apache; Nginx e altri server richiedono regole equivalenti. Verifica la compatibilità delle direttive upload con l'hosting effettivo.
 - Escludi dall'artefatto pubblico `.git/`, configurazioni locali degli agenti, test e documenti di sviluppo. Configura HTTPS e verifica login, persistenza e asset sul percorso finale, anche se il sito vive in sottocartella.
-- Dopo il rilascio controlla homepage, una pagina di dettaglio, lingua alternativa, 404 e accesso all'editor. Non sovrascrivere le credenziali e non lasciare un setup pubblico non configurato.
+- Dopo il rilascio controlla homepage, una pagina di dettaglio, lingua alternativa, 404, `sitemap.php`, `robots.txt` e accesso all'editor. Non sovrascrivere le credenziali e non lasciare un setup pubblico non configurato.

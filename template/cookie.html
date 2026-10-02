@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="{{language}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie policy - Kris 2</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="kris/core/scripts/script.js"></script>
+</head>
+<body>
+    <header k-component="navbar" k-template="navbar" k-index="0"></header>
+
+    <main class="post-page">
+        <article class="container post-article legal-page">
+            <a href="index.php?ln={{language}}" class="back-link">← Home</a>
+            <h1 class="detail-title">Cookie policy</h1>
+            {{#if updated_at != ""}}<p class="post-date">{{updated_at}}</p>{{/if}}
+            <div class="post-content">{{cookie_policy}}</div>
+            <address class="legal-owner">
+                <strong>{{owner_name}}</strong><br>
+                <a href="mailto:{{privacy_email}}">{{privacy_email}}</a>
+            </address>
+        </article>
+    </main>
+
+    <div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>
+</body>
+</html>

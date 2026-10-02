@@ -53,7 +53,9 @@ function projectSandbox(): string
     if (is_dir($dir)) rrmdir($dir);
     mkdir($dir, 0777, true);
 
-    copy(KRIS_ROOT . '/index.php', $dir . '/index.php');
+    foreach (['index.php', 'sitemap.php'] as $stub) {
+        copy(KRIS_ROOT . '/' . $stub, $dir . '/' . $stub);
+    }
     foreach (['kris', 'template', 'config'] as $folder) {
         rcopy(KRIS_ROOT . '/' . $folder, $dir . '/' . $folder);
     }
@@ -69,7 +71,13 @@ function projectSandbox(): string
  *
  * @return array{output: string, status: int, fatal: ?string}
  */
-function renderPage(array $query, ?string $sandbox = null): array
+/** Output di uno script pubblico della sandbox (per esempio sitemap.php). */
+function runScript(string $sandbox, string $script, array $query = []): string
+{
+    return renderPage($query, $sandbox, $script)['output'];
+}
+
+function renderPage(array $query, ?string $sandbox = null, string $script = 'index.php'): array
 {
     $sandbox ??= projectSandbox();
     $harness = KRIS_TESTS . '/harness/render.php';
@@ -80,6 +88,7 @@ function renderPage(array $query, ?string $sandbox = null): array
     // sostituisce i '%' con spazi e corromperebbe i valori urlencoded.
     $env = getenv();
     $env['KRIS_QUERY'] = http_build_query($query);
+    $env['KRIS_SCRIPT'] = $script;
 
     $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
     $proc = proc_open($cmd, $descriptors, $pipes, $sandbox, $env);

@@ -1,57 +1,332 @@
 {
     "homepage": [
-        { "name": "meta_title", "type": "text", "description": "Titolo della pagina per i motori di ricerca" },
-        { "name": "page_title", "type": "text", "description": "Titolo principale visibile nell'hero" },
-        { "name": "page_subtitle", "type": "text", "description": "Sottotitolo dell'hero" },
-        { "name": "hero_description", "type": "richtext", "description": "Testo descrittivo nella sezione hero" },
-        { "name": "logo", "type": "image", "description": "Logo principale del sito" },
-        { "name": "btn_get_started", "type": "text", "description": "Testo del pulsante di avvio rapido" },
-        { "name": "btn_why_kris", "type": "text", "description": "Testo del pulsante 'Perché Kris'" },
-        { "name": "code_title", "type": "text", "description": "Titolo della sezione con esempio di codice" },
-        { "name": "code_example", "type": "plain", "description": "Snippet di codice mostrato nella homepage" },
-        { "name": "features_title", "type": "text", "description": "Titolo della sezione funzionalità" },
-        { "name": "cta_title", "type": "text", "description": "Titolo della call to action" },
-        { "name": "cta_subtitle", "type": "text", "description": "Sottotitolo della call to action" },
-        { "name": "footer_copyright", "type": "text", "description": "Testo di copyright nel footer" },
-        { "name": "how_it_works_title", "type": "text", "description": "Titolo della sezione 'Come funziona'" },
-        { "name": "steps", "type": "array", "description": "Passaggi della sezione 'Come funziona'", "of": [
-            { "name": "title", "type": "text", "description": "Titolo del passaggio" },
-            { "name": "description", "type": "text", "description": "Descrizione del passaggio" }
-        ]},
-        { "name": "btn_download", "type": "text", "description": "Testo del pulsante di download" },
-        { "name": "btn_docs", "type": "text", "description": "Testo del pulsante per la documentazione" },
-        { "name": "footer_logo_text", "type": "text", "description": "Nome/testo del logo nel footer" },
-        { "name": "footer_tagline", "type": "text", "description": "Tagline breve nel footer" },
-        { "name": "footer_resources_title", "type": "text", "description": "Titolo della colonna risorse nel footer" },
-        { "name": "footer_docs", "type": "text", "description": "Link alla documentazione nel footer" },
-        { "name": "footer_community_title", "type": "text", "description": "Titolo della colonna community nel footer" },
-        { "name": "footer_github", "type": "text", "description": "Link GitHub nel footer" },
-        { "name": "features", "type": "array", "description": "Lista delle funzionalità principali", "of": [
-            { "name": "category", "type": "plain", "description": "Categoria di appartenenza della funzionalità" },
-            { "name": "icon", "type": "text", "description": "Icona rappresentativa della funzionalità" },
-            { "name": "title", "type": "text", "description": "Nome della funzionalità" },
-            { "name": "description", "type": "text", "description": "Breve descrizione della funzionalità" },
-            { "name": "tags", "type": "plain", "description": "Tag associati alla funzionalità" },
-            { "name": "highlights", "type": "array", "description": "Punti salienti della funzionalità", "of": [
-                { "name": "title", "type": "text", "description": "Titolo del punto saliente" },
-                { "name": "description", "type": "text", "description": "Dettaglio del punto saliente" }
-            ]}
-        ]},
-        { "name": "blog_title", "type": "text", "description": "Titolo della sezione blog" },
-        { "name": "posts", "type": "array", "posts": true, "description": "Articoli del blog", "of": [
-            { "name": "title", "type": "text", "description": "Titolo dell'articolo" },
-            { "name": "date", "type": "plain", "description": "Data di pubblicazione (AAAA-MM-GG)" },
-            { "name": "excerpt", "type": "text", "description": "Anteprima mostrata nell'elenco e nei motori di ricerca" },
-            { "name": "cover", "type": "image", "description": "Immagine di copertina (opzionale)" },
-            { "name": "cover_alt", "type": "text", "description": "Testo alternativo della copertina" },
-            { "name": "body", "type": "richtext", "description": "Testo dell'articolo" }
-        ]}
+        {
+            "name": "meta_title",
+            "type": "text",
+            "description": "Titolo della pagina per i motori di ricerca"
+        },
+        {
+            "name": "page_title",
+            "type": "text",
+            "description": "Titolo principale visibile nell'hero"
+        },
+        {
+            "name": "page_subtitle",
+            "type": "text",
+            "description": "Sottotitolo dell'hero"
+        },
+        {
+            "name": "hero_description",
+            "type": "richtext",
+            "description": "Testo descrittivo nella sezione hero"
+        },
+        {
+            "name": "logo",
+            "type": "image",
+            "description": "Logo principale del sito"
+        },
+        {
+            "name": "btn_get_started",
+            "type": "text",
+            "description": "Testo del pulsante di avvio rapido"
+        },
+        {
+            "name": "btn_why_kris",
+            "type": "text",
+            "description": "Testo del pulsante 'Perché Kris'"
+        },
+        {
+            "name": "code_title",
+            "type": "text",
+            "description": "Titolo della sezione con esempio di codice"
+        },
+        {
+            "name": "code_example",
+            "type": "plain",
+            "description": "Snippet di codice mostrato nella homepage"
+        },
+        {
+            "name": "features_title",
+            "type": "text",
+            "description": "Titolo della sezione funzionalità"
+        },
+        {
+            "name": "cta_title",
+            "type": "text",
+            "description": "Titolo della call to action"
+        },
+        {
+            "name": "cta_subtitle",
+            "type": "text",
+            "description": "Sottotitolo della call to action"
+        },
+        {
+            "name": "footer_copyright",
+            "type": "text",
+            "description": "Testo di copyright nel footer"
+        },
+        {
+            "name": "how_it_works_title",
+            "type": "text",
+            "description": "Titolo della sezione 'Come funziona'"
+        },
+        {
+            "name": "steps",
+            "type": "array",
+            "description": "Passaggi della sezione 'Come funziona'",
+            "of": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "description": "Titolo del passaggio"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "description": "Descrizione del passaggio"
+                }
+            ]
+        },
+        {
+            "name": "btn_download",
+            "type": "text",
+            "description": "Testo del pulsante di download"
+        },
+        {
+            "name": "btn_docs",
+            "type": "text",
+            "description": "Testo del pulsante per la documentazione"
+        },
+        {
+            "name": "footer_logo_text",
+            "type": "text",
+            "description": "Nome\/testo del logo nel footer"
+        },
+        {
+            "name": "footer_tagline",
+            "type": "text",
+            "description": "Tagline breve nel footer"
+        },
+        {
+            "name": "footer_resources_title",
+            "type": "text",
+            "description": "Titolo della colonna risorse nel footer"
+        },
+        {
+            "name": "footer_docs",
+            "type": "text",
+            "description": "Link alla documentazione nel footer"
+        },
+        {
+            "name": "footer_community_title",
+            "type": "text",
+            "description": "Titolo della colonna community nel footer"
+        },
+        {
+            "name": "footer_github",
+            "type": "text",
+            "description": "Link GitHub nel footer"
+        },
+        {
+            "name": "features",
+            "type": "array",
+            "description": "Lista delle funzionalità principali",
+            "of": [
+                {
+                    "name": "category",
+                    "type": "plain",
+                    "description": "Categoria di appartenenza della funzionalità"
+                },
+                {
+                    "name": "icon",
+                    "type": "text",
+                    "description": "Icona rappresentativa della funzionalità"
+                },
+                {
+                    "name": "title",
+                    "type": "text",
+                    "description": "Nome della funzionalità"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "description": "Breve descrizione della funzionalità"
+                },
+                {
+                    "name": "tags",
+                    "type": "plain",
+                    "description": "Tag associati alla funzionalità"
+                },
+                {
+                    "name": "highlights",
+                    "type": "array",
+                    "description": "Punti salienti della funzionalità",
+                    "of": [
+                        {
+                            "name": "title",
+                            "type": "text",
+                            "description": "Titolo del punto saliente"
+                        },
+                        {
+                            "name": "description",
+                            "type": "text",
+                            "description": "Dettaglio del punto saliente"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "blog_title",
+            "type": "text",
+            "description": "Titolo della sezione blog"
+        },
+        {
+            "name": "posts",
+            "type": "array",
+            "posts": true,
+            "description": "Articoli del blog",
+            "of": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "description": "Titolo dell'articolo"
+                },
+                {
+                    "name": "date",
+                    "type": "plain",
+                    "description": "Data di pubblicazione (AAAA-MM-GG)"
+                },
+                {
+                    "name": "excerpt",
+                    "type": "text",
+                    "description": "Anteprima mostrata nell'elenco e nei motori di ricerca"
+                },
+                {
+                    "name": "cover",
+                    "type": "image",
+                    "description": "Immagine di copertina (opzionale)"
+                },
+                {
+                    "name": "cover_alt",
+                    "type": "text",
+                    "description": "Testo alternativo della copertina"
+                },
+                {
+                    "name": "body",
+                    "type": "richtext",
+                    "description": "Testo dell'articolo"
+                }
+            ]
+        },
+        {
+            "name": "footer_legal_title",
+            "type": "text",
+            "description": "Titolo della colonna legale nel footer"
+        },
+        {
+            "name": "footer_privacy",
+            "type": "text",
+            "description": "Link alla privacy policy nel footer"
+        },
+        {
+            "name": "footer_cookies",
+            "type": "text",
+            "description": "Link alla cookie policy nel footer"
+        },
+        {
+            "name": "footer_cookie_settings",
+            "type": "text",
+            "description": "Link per riaprire il banner cookie"
+        }
     ],
     "navbar": [
-        { "name": "logo", "type": "image", "description": "Logo nella barra di navigazione" },
-        { "name": "page_title", "type": "text", "description": "Nome del sito nella navbar" },
-        { "name": "nav_features", "type": "text", "description": "Voce di menu per le funzionalità" },
-        { "name": "nav_docs", "type": "text", "description": "Voce di menu per la documentazione" },
-        { "name": "nav_github", "type": "text", "description": "Voce di menu per GitHub" }
+        {
+            "name": "logo",
+            "type": "image",
+            "description": "Logo nella barra di navigazione"
+        },
+        {
+            "name": "page_title",
+            "type": "text",
+            "description": "Nome del sito nella navbar"
+        },
+        {
+            "name": "nav_features",
+            "type": "text",
+            "description": "Voce di menu per le funzionalità"
+        },
+        {
+            "name": "nav_docs",
+            "type": "text",
+            "description": "Voce di menu per la documentazione"
+        },
+        {
+            "name": "nav_github",
+            "type": "text",
+            "description": "Voce di menu per GitHub"
+        }
+    ],
+    "kris_legal": [
+        {
+            "name": "owner_name",
+            "type": "plain",
+            "description": "Titolare del trattamento (ragione sociale o nome)"
+        },
+        {
+            "name": "owner_address",
+            "type": "plain",
+            "description": "Indirizzo del titolare"
+        },
+        {
+            "name": "owner_vat",
+            "type": "plain",
+            "description": "Partita IVA o codice fiscale"
+        },
+        {
+            "name": "privacy_email",
+            "type": "plain",
+            "description": "Email per le richieste sulla privacy"
+        },
+        {
+            "name": "updated_at",
+            "type": "plain",
+            "description": "Data di ultimo aggiornamento delle informative"
+        },
+        {
+            "name": "privacy_policy",
+            "type": "richtext",
+            "description": "Informativa privacy"
+        },
+        {
+            "name": "cookie_policy",
+            "type": "richtext",
+            "description": "Cookie policy"
+        },
+        {
+            "name": "banner_title",
+            "type": "text",
+            "description": "Banner cookie: titolo"
+        },
+        {
+            "name": "banner_text",
+            "type": "text",
+            "description": "Banner cookie: testo"
+        },
+        {
+            "name": "banner_accept",
+            "type": "text",
+            "description": "Banner cookie: pulsante per accettare"
+        },
+        {
+            "name": "banner_reject",
+            "type": "text",
+            "description": "Banner cookie: pulsante per rifiutare"
+        },
+        {
+            "name": "banner_more",
+            "type": "text",
+            "description": "Banner cookie: link all'informativa"
+        }
     ]
 }

@@ -1,0 +1,9 @@
+{
+  "sitemap": [
+    {"page": "homepage"},
+    {"page": "detail", "key": "homepage", "id": 0, "children": "features"},
+    {"page": "post", "key": "homepage", "id": 0, "children": "posts"},
+    {"page": "privacy", "key": "kris_legal", "id": 0},
+    {"page": "cookie", "key": "kris_legal", "id": 0}
+  ]
+}

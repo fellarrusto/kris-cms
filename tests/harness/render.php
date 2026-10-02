@@ -25,4 +25,10 @@ register_shutdown_function(function (): void {
     echo "KRIS-STATUS: {$code}\n" . $output;
 });
 
-include 'index.php';
+// Lo script viene dall'ambiente dei test, ma solo fra quelli pubblici previsti.
+$script = getenv('KRIS_SCRIPT') ?: 'index.php';
+$script = in_array($script, ['index.php', 'sitemap.php'], true) ? $script : 'index.php';
+// Come una richiesta web alla root di http://localhost.
+$_SERVER['SCRIPT_NAME'] = '/' . $script;
+$_SERVER['HTTP_HOST'] = 'localhost';
+include $script;

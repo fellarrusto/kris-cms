@@ -588,56 +588,6 @@
                 "type": "array",
                 "value": [
                     {
-                        "id": 3,
-                        "data": [
-                            {
-                                "name": "title",
-                                "type": "text",
-                                "value": {
-                                    "it": "",
-                                    "en": ""
-                                }
-                            },
-                            {
-                                "name": "date",
-                                "type": "plain",
-                                "value": ""
-                            },
-                            {
-                                "name": "excerpt",
-                                "type": "text",
-                                "value": {
-                                    "it": "",
-                                    "en": ""
-                                }
-                            },
-                            {
-                                "name": "cover",
-                                "type": "image",
-                                "value": {
-                                    "it": "",
-                                    "en": ""
-                                }
-                            },
-                            {
-                                "name": "cover_alt",
-                                "type": "text",
-                                "value": {
-                                    "it": "",
-                                    "en": ""
-                                }
-                            },
-                            {
-                                "name": "body",
-                                "type": "richtext",
-                                "value": {
-                                    "it": "",
-                                    "en": ""
-                                }
-                            }
-                        ]
-                    },
-                    {
                         "id": 2,
                         "data": [
                             {
@@ -788,6 +738,38 @@
                         ]
                     }
                 ]
+            },
+            {
+                "name": "footer_legal_title",
+                "type": "text",
+                "value": {
+                    "it": "Legale",
+                    "en": "Legal"
+                }
+            },
+            {
+                "name": "footer_privacy",
+                "type": "text",
+                "value": {
+                    "it": "Privacy policy",
+                    "en": "Privacy policy"
+                }
+            },
+            {
+                "name": "footer_cookies",
+                "type": "text",
+                "value": {
+                    "it": "Cookie policy",
+                    "en": "Cookie policy"
+                }
+            },
+            {
+                "name": "footer_cookie_settings",
+                "type": "text",
+                "value": {
+                    "it": "Preferenze cookie",
+                    "en": "Cookie settings"
+                }
             }
         ]
     },
@@ -833,6 +815,93 @@
                 "value": {
                     "it": "GitHub",
                     "en": "GitHub"
+                }
+            }
+        ]
+    },
+    {
+        "id": 0,
+        "name": "kris_legal",
+        "data": [
+            {
+                "name": "owner_name",
+                "type": "plain",
+                "value": "Kris Demo S.r.l. (dati di esempio)"
+            },
+            {
+                "name": "owner_address",
+                "type": "plain",
+                "value": "Via dell'Esempio 1, 00100 Roma (RM)"
+            },
+            {
+                "name": "owner_vat",
+                "type": "plain",
+                "value": "P.IVA IT00000000000"
+            },
+            {
+                "name": "privacy_email",
+                "type": "plain",
+                "value": "privacy@esempio.it"
+            },
+            {
+                "name": "updated_at",
+                "type": "plain",
+                "value": "2 ottobre 2026"
+            },
+            {
+                "name": "privacy_policy",
+                "type": "richtext",
+                "value": {
+                    "it": "<p><strong>Testo di esempio: va sostituito con l’informativa reale del sito.<\/strong><\/p><h2>Dati trattati<\/h2><p>Questo sito non raccoglie dati personali tramite moduli. Il server registra dati tecnici di navigazione, come indirizzo IP, data e ora delle richieste, necessari al funzionamento e alla sicurezza del sito.<\/p><h2>Finalità e base giuridica<\/h2><p>I dati tecnici sono trattati per garantire il funzionamento e la sicurezza del sito, sulla base del legittimo interesse del titolare.<\/p><h2>Conservazione<\/h2><p>I dati tecnici sono conservati per il tempo strettamente necessario e poi cancellati, salvo obblighi di legge.<\/p><h2>I tuoi diritti<\/h2><p>Puoi chiedere accesso, rettifica, cancellazione, limitazione e portabilità dei dati, o opporti al trattamento, scrivendo all’indirizzo indicato qui sotto. Puoi anche proporre reclamo al Garante per la protezione dei dati personali.<\/p>",
+                    "en": "<p><strong>Sample text: replace it with the real privacy policy of the site.<\/strong><\/p><h2>Data we process<\/h2><p>This site does not collect personal data through forms. The server logs technical browsing data, such as IP address, date and time of requests, needed to run and secure the site.<\/p><h2>Purpose and legal basis<\/h2><p>Technical data is processed to keep the site working and secure, based on the legitimate interest of the controller.<\/p><h2>Retention<\/h2><p>Technical data is kept only as long as strictly necessary and then deleted, unless the law requires otherwise.<\/p><h2>Your rights<\/h2><p>You can ask for access, rectification, erasure, restriction and portability of your data, or object to the processing, by writing to the address below. You can also lodge a complaint with the Italian Data Protection Authority.<\/p>"
+                }
+            },
+            {
+                "name": "cookie_policy",
+                "type": "richtext",
+                "value": {
+                    "it": "<p><strong>Testo di esempio: va sostituito con la cookie policy reale del sito.<\/strong><\/p><h2>Cookie tecnici<\/h2><p><code>kris_consent<\/code> ricorda la scelta fatta nel banner per 180 giorni. È necessario al funzionamento del sito e non richiede consenso.<\/p><h2>Cookie di statistica e di terze parti<\/h2><p>Questo sito dimostrativo non ne usa. Un sito che li usa li elenca qui, con fornitore, finalità e durata, e li attiva solo dopo il consenso.<\/p><h2>Come cambiare la tua scelta<\/h2><p>Usa il link “Preferenze cookie” in fondo alla homepage.<\/p>",
+                    "en": "<p><strong>Sample text: replace it with the real cookie policy of the site.<\/strong><\/p><h2>Technical cookies<\/h2><p><code>kris_consent<\/code> remembers the choice made in the banner for 180 days. It is needed for the site to work and does not require consent.<\/p><h2>Analytics and third-party cookies<\/h2><p>This demo site does not use any. A site that does lists them here, with provider, purpose and duration, and enables them only after consent.<\/p><h2>How to change your choice<\/h2><p>Use the “Cookie settings” link at the bottom of the home page.<\/p>"
+                }
+            },
+            {
+                "name": "banner_title",
+                "type": "text",
+                "value": {
+                    "it": "Questo sito usa i cookie",
+                    "en": "This site uses cookies"
+                }
+            },
+            {
+                "name": "banner_text",
+                "type": "text",
+                "value": {
+                    "it": "Usiamo cookie tecnici, necessari al funzionamento del sito. Altri cookie, per esempio di statistica, si attivano solo se accetti.",
+                    "en": "We use technical cookies, needed for the site to work. Other cookies, such as analytics, are enabled only if you accept."
+                }
+            },
+            {
+                "name": "banner_accept",
+                "type": "text",
+                "value": {
+                    "it": "Accetta",
+                    "en": "Accept"
+                }
+            },
+            {
+                "name": "banner_reject",
+                "type": "text",
+                "value": {
+                    "it": "Rifiuta",
+                    "en": "Reject"
+                }
+            },
+            {
+                "name": "banner_more",
+                "type": "text",
+                "value": {
+                    "it": "Cookie policy",
+                    "en": "Cookie policy"
                 }
             }
         ]

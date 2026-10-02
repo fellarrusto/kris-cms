@@ -5,6 +5,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 use Kris\Entity\Entity;
 use Kris\Template\TemplateEngine;
+use Kris\Template\Seo;
 
 /** La 404 del sito, se ne ha una propria, altrimenti quella del framework. */
 function kris_not_found_page(): string
@@ -69,4 +70,12 @@ try {
 $html = file_get_contents(KRIS_ROOT . "/template/{$template}.html");
 
 // Render and output the page
-echo $engine->render($html, $entity);
+$output = $engine->render($html, $entity);
+
+// Canonical e alternative per lingua, se il template non li ha gia.
+$seo = Seo::config(KRIS_ROOT);
+if ($seo['head']) {
+    $base = Seo::baseUrl($seo, $_SERVER);
+    $output = Seo::inject($output, Seo::headTags($base, (string) $requestedPage, (string) $key, $index, $path, (string) $lang, $allowedLangs));
+}
+echo $output;
