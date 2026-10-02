@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.1.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Sitemap automatica, indirizzi canonici e nuova sezione Privacy e cookie per informative e banner.",
+            "date": "2026-10-02",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.1.0/kris-1.1.0.zip",
+            "sha256": "daa0be2e83c3018e0f794f64275c2e602fff500e6873d9bf2151fbec2804ebc5",
+            "size": 109976
+        },
+        {
             "version": "1.0.2",
             "min_from": "1.0.0",
             "breaking": false,
