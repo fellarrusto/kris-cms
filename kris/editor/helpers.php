@@ -42,6 +42,31 @@ function editorDateTime(mixed $iso): ?string
     return $date->format('d/m/Y') . ' alle ' . $date->format('H:i');
 }
 
+/**
+ * Raccolte del framework (prefisso kris_): schema fisso, gestite da sezioni
+ * dedicate dell'editor e non da Contenuti o Struttura.
+ */
+function isReservedCollection(mixed $name): bool
+{
+    return is_string($name) && str_starts_with($name, 'kris_');
+}
+
+/**
+ * Vero se la richiesta cambia struttura o numero dei contenuti di una
+ * raccolta del framework, o crea una raccolta con il prefisso riservato.
+ */
+function isReservedStructuralPost(array $post): bool
+{
+    $structural = ['create_collection', 'save_structure', 'delete_collection', 'create_instance', 'delete_instance', 'reorder_root'];
+    if (!array_intersect($structural, array_keys($post))) {
+        return false;
+    }
+    $newName = preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($post['collection_name'] ?? '')));
+    return isReservedCollection($post['group_name'] ?? null)
+        || isReservedCollection($post['group'] ?? null)
+        || isReservedCollection($newName);
+}
+
 function editorLabel(string $name): string
 {
     return ucfirst(str_replace('_', ' ', $name));

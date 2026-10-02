@@ -91,6 +91,10 @@ namespace Kris\Install {
         // Il bootstrap nuovo registra il proprio autoload: una versione che
         // aggiunge namespace deve poter caricare le sue classi gia da qui.
         require $root . '/kris/bootstrap.php';
+        // Punti d'ingresso nuovi nella root (per esempio sitemap.php).
+        if (class_exists(\Kris\Update\Stubs::class)) {
+            \Kris\Update\Stubs::ensure($root);
+        }
         $run->step('Sostituzione dei file', null);
 
         // 5. Migrazioni e verifica, con il framework nuovo.

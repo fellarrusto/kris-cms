@@ -67,6 +67,24 @@ function updatePackage(string $site, string $version, ?callable $change = null, 
 }
 
 /** Esegue un'operazione di aggiornamento nel sito, in un processo separato. */
+/**
+ * Prefisso del file e versione dati per una migrazione di prova che venga
+ * dopo tutte quelle vere del framework: [NNNN, versione].
+ */
+function nextMigration(): array
+{
+    $m = new Kris\Update\Migrator(sys_get_temp_dir(), KRIS_ROOT . '/kris/migrations');
+    return [sprintf('%04d', count($m->all()) + 1), $m->latestDataVersion() + 1];
+}
+
+/** Codice di una migrazione di prova con il corpo dato (riceve $f, restituisce $f). */
+function testMigration(string $kris, string $name, string $body): void
+{
+    [$n, $v] = nextMigration();
+    file_put_contents("{$kris}/migrations/{$n}_{$name}.php",
+        "<?php\nreturn ['version' => {$v}, 'description' => 'prova', 'up' => function (array \$f): array { {$body} }];\n");
+}
+
 function runUpdate(string $site, string $op, string $zip = ''): ?array
 {
     $env = getenv();
@@ -117,7 +135,7 @@ test('installa una patch firmata e il sito funziona con la versione nuova', func
     assertSame(true, $r['ok'] ?? null, 'esito: ' . json_encode($r));
     assertSame('1.0.1', siteVersion($site));
     assertSame('1.0.1', siteState($site)['framework_version']);
-    assertSame(1, siteState($site)['data_version']);
+    assertSame(nextMigration()[1] - 1, siteState($site)['data_version'], 'i dati arrivano al formato del framework');
     assertSame('ok', lastOutcome($site));
     assertSame(false, is_file($site . '/data/kris_maintenance.json'));
 
@@ -132,6 +150,7 @@ test('installa una patch firmata e il sito funziona con la versione nuova', func
 
 test('torna alla versione precedente con contenuti e framework di allora', function () {
     $site = updateSite();
+    $dataBeforeUpdate = file_get_contents($site . '/data/k_data.json');
     runUpdate($site, 'install', updatePackage($site, '1.0.1'));
     assertSame('1.0.1', siteVersion($site));
     $dataAfterUpdate = file_get_contents($site . '/data/k_data.json');
@@ -140,7 +159,7 @@ test('torna alla versione precedente con contenuti e framework di allora', funct
     $r = runUpdate($site, 'rollback');
     assertSame(true, $r['ok'] ?? null, 'esito: ' . json_encode($r));
     assertSame('1.0.0', siteVersion($site));
-    assertSame($dataAfterUpdate, file_get_contents($site . '/data/k_data.json'), 'i contenuti tornano a quelli dell\'aggiornamento');
+    assertSame($dataBeforeUpdate, file_get_contents($site . '/data/k_data.json'), 'i contenuti tornano a quelli di prima dell\'aggiornamento');
     assertSame('manual_rollback', lastOutcome($site));
     assertSame(['ok', 'manual_rollback'], array_column(siteState($site)['history'], 'outcome'), 'il registro non perde l\'aggiornamento annullato');
     $history = siteState($site)['history'];
@@ -153,17 +172,11 @@ test('torna alla versione precedente con contenuti e framework di allora', funct
 test('una migrazione con modifiche ai dati viene applicata e registrata', function () {
     $site = updateSite();
     $zip = updatePackage($site, '1.1.0', function (string $kris) {
-        file_put_contents($kris . '/migrations/0002_aggiunge_campo.php', <<<'PHP'
-<?php
-return ['version' => 2, 'description' => 'prova', 'up' => function (array $f): array {
-    $f['k_model']['homepage'][] = ['name' => 'campo_nuovo', 'type' => 'plain'];
-    return $f;
-}];
-PHP);
+        testMigration($kris, 'aggiunge_campo', "\$f['k_model']['homepage'][] = ['name' => 'campo_nuovo', 'type' => 'plain']; return \$f;");
     });
     $r = runUpdate($site, 'install', $zip);
     assertSame(true, $r['ok'] ?? null, 'esito: ' . json_encode($r));
-    assertSame(2, siteState($site)['data_version']);
+    assertSame(nextMigration()[1], siteState($site)['data_version']);
     assertContains('campo_nuovo', file_get_contents($site . '/data/k_model.json'));
 });
 
@@ -173,7 +186,7 @@ test('se una migrazione fallisce tutto torna com era', function () {
     $site = updateSite();
     $before = md5_file($site . '/data/k_data.json');
     $zip = updatePackage($site, '1.0.1', function (string $kris) {
-        file_put_contents($kris . '/migrations/0002_rotta.php', "<?php\nreturn ['version' => 2, 'up' => function (array \$f): array { \$f['k_data'] = []; throw new RuntimeException('migrazione rotta'); }];\n");
+        testMigration($kris, 'rotta', "\$f['k_data'] = []; throw new RuntimeException('migrazione rotta');");
     });
     $r = runUpdate($site, 'install', $zip);
     assertSame(false, $r['ok']);
@@ -190,7 +203,7 @@ test('se una pagina non si genera piu con il codice nuovo tutto torna com era', 
     $modelBefore = md5_file($site . '/data/k_model.json');
     $zip = updatePackage($site, '1.0.1', function (string $kris) {
         // La migrazione riesce e scrive i dati: il ripristino deve annullarla.
-        file_put_contents($kris . '/migrations/0002_scrive.php', "<?php\nreturn ['version' => 2, 'up' => function (array \$f): array { \$f['k_model']['nuova'] = []; return \$f; }];\n");
+        testMigration($kris, 'scrive', "\$f['k_model']['nuova'] = []; return \$f;");
         $file = $kris . '/core/template/TemplateEngine.php';
         $code = file_get_contents($file);
         $code = preg_replace('/(public function render\([^)]*\)[^{]*\{)/', "$1\n        throw new \\RuntimeException('motore rotto');", $code, 1);
@@ -209,7 +222,7 @@ test('se il processo muore a meta il guardiano rimette tutto a posto', function 
     $site = updateSite();
     $before = md5_file($site . '/data/k_data.json');
     $zip = updatePackage($site, '1.0.1', function (string $kris) {
-        file_put_contents($kris . '/migrations/0002_muore.php', "<?php\nreturn ['version' => 2, 'up' => function (array \$f): array { exit(1); }];\n");
+        testMigration($kris, 'muore', 'exit(1);');
     });
     runUpdate($site, 'install', $zip);
     assertSiteUntouched($site, $before);

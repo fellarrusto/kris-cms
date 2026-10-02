@@ -23,6 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $editorLock !== '') {
     // Aggiornamento in corso o dati di una versione piu recente: niente scritture.
     $error = $editorLock . ' Nulla è stato modificato.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isReservedStructuralPost($_POST)) {
+    $error = 'I nomi che iniziano con kris_ sono riservati a Kris: queste raccolte hanno una struttura fissa. Nulla è stato modificato.';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
     // 1. Crea Collezione

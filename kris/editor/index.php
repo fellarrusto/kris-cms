@@ -169,6 +169,7 @@ if ($maintenance !== null) {
                 }
                 $siteState['framework_version'] = $krisVersion;
                 SiteState::save($siteState);
+                \Kris\Update\Stubs::ensure(KRIS_ROOT);
             }
             if ($runNow && isset($_POST['run_migrations'])) {
                 header("Location: $BASE");
@@ -204,6 +205,8 @@ $BASE = $_SERVER['SCRIPT_NAME'];
 // --- AZIONI POST ---
 require __DIR__ . '/actions.php';
 // View Data
+// Le raccolte del framework non compaiono tra quelle del sito.
+$userModels = array_filter($models, fn($name) => !isReservedCollection($name), ARRAY_FILTER_USE_KEY);
 $counts = [];
 foreach ($models as $k => $v)
     $counts[$k] = 0;
@@ -222,8 +225,16 @@ if (in_array($action, ['edit', 'list', 'structure'], true) && (!is_string($group
     $action = 'dashboard';
     $error = 'La raccolta non è disponibile. Scegli uno dei contenuti qui sotto.';
 }
+// Le raccolte del framework hanno un solo contenuto e uno schema fisso.
+if (isReservedCollection($group) && in_array($action, ['list', 'structure', 'structure_impact'], true)) {
+    $action = 'edit';
+    $_GET['id'] = '0';
+    $_GET['path'] = '';
+}
+$inLegal = $action === 'edit' && $group === 'kris_legal';
 $sectionLabel = match ($action) {
     'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts',
+    'edit' => $inLegal ? 'Privacy e cookie' : 'Contenuti',
     'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
 };
 
@@ -250,7 +261,7 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
 
     <div class="editor-workspace">
     <header class="topbar">
-        <nav class="breadcrumbs" aria-label="Percorso"><a href="?action=dashboard">Il tuo sito</a><span aria-hidden="true">/</span><span><?= h($sectionLabel) ?></span><?php if ($group): ?><span aria-hidden="true">/</span><strong><?= h(editorLabel($group)) ?></strong><?php endif; ?></nav>
+        <nav class="breadcrumbs" aria-label="Percorso"><a href="?action=dashboard">Il tuo sito</a><span aria-hidden="true">/</span><span><?= h($sectionLabel) ?></span><?php if ($group && !isReservedCollection($group)): ?><span aria-hidden="true">/</span><strong><?= h(editorLabel($group)) ?></strong><?php endif; ?></nav>
         <a href="../" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
     </header>
     <main id="main" tabindex="-1">

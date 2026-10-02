@@ -1,0 +1,7 @@
+{
+  "sitemap": [
+    {"page": "homepage"},
+    {"page": "detail", "key": "homepage", "id": 0, "children": "features"},
+    {"page": "post", "key": "homepage", "id": 0, "children": "posts"}
+  ]
+}

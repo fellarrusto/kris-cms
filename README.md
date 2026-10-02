@@ -17,6 +17,11 @@
 * PHP >= 8.0 with DOM/libxml and mbstring.
 * To update from the editor: the `sodium` and `zip` extensions (cURL recommended).
 
+## SEO, privacy and cookies
+
+* **Search engines:** pages get a canonical URL and `hreflang` links automatically. `sitemap.php` is generated from your content on every request; list your page types in `config/seo.json` and set `base_url` in production. Add a `robots.txt` pointing to the sitemap.
+* **Privacy and cookies:** every site has a *Privacy e cookie* section in the editor (data controller, privacy and cookie policies, cookie banner texts). Templates can use it through the reserved `kris_legal` collection, and `kris/core/scripts/consent.js` handles the banner and blocks non-essential scripts until consent. See `AGENTS.md` for the markup.
+
 ## Updating
 
 Everything that belongs to the framework lives in `kris/`; your site (`template/`, `assets/`, `data/`, `config/`) never gets touched by an update.
