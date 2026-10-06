@@ -312,3 +312,6 @@ tr.is-hidden .content-title, tr.is-hidden strong { text-decoration:line-through;
 .account-alert { flex-wrap:wrap; }
 .account-alert-form { display:flex; flex-wrap:wrap; gap:10px; flex:1 1 360px; }
 .account-alert-form input { flex:1 1 220px; min-height:40px; }
+.account-status { font-size:12px; color:var(--primary); margin:0; max-width:520px; }
+.account-status.is-error { color:var(--danger); }
+.account-alert-form .account-status { flex-basis:100%; }

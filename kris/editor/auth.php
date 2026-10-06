@@ -16,8 +16,12 @@ use Kris\Auth\PasswordReset;
 const KRIS_AUTH_FILE = KRIS_ROOT . '/config/auth.php';
 const KRIS_RESET_FILE = KRIS_ROOT . '/config/auth_reset.json';
 
-/** Messaggio per chi non riesce a recuperare l'accesso con l'email. */
-const KRIS_HOSTING_HELP = "Contatta l'amministratore dell'hosting: può reimpostare l'accesso eliminando il file config/auth.php. Al successivo accesso all'editor potrai scegliere nuove credenziali, senza perdere i contenuti.";
+/**
+ * Messaggio per chi non riesce a recuperare l'accesso con l'email. Le pagine
+ * di accesso sono pubbliche: si rimanda all'hosting senza spiegare come si
+ * reimposta l'accesso.
+ */
+const KRIS_HOSTING_HELP = "Per ripristinare l'accesso contatta l'amministratore dell'hosting.";
 
 function kris_credentials(): Credentials
 {
@@ -217,7 +221,7 @@ function kris_render_forgot(string $error = '', string $notice = ''): void // te
     $err .= $notice !== '' ? '<div class="ok">' . htmlspecialchars($notice) . '</div>' : '';
     $csrf = kris_csrf_field();
     // Se l'errore lo dice gia, l'indicazione per l'hosting non si ripete.
-    $footer = $error === '' ? '<p class="help">Non arriva nessuna email? Controlla anche lo spam. Se ancora non la trovi: ' . $help . '</p>' : '';
+    $footer = $error === '' ? '<p class="help">Non arriva nessuna email? Controlla anche lo spam. ' . $help . '</p>' : '';
     if (!Kris\Auth\Credentials::validEmail((string) ($config['email'] ?? '')) || ($config['editor_url'] ?? '') === '') {
         $body = <<<HTML
             <h2>Password dimenticata</h2>
@@ -278,9 +282,8 @@ function kris_render_setup(string $error = ''): void // termina sempre con exit
     $csrf = kris_csrf_field();
     kris_auth_page('Primo accesso', <<<HTML
         <h2>Crea l'accesso</h2>
-        <p class="hint">Non ci sono ancora credenziali configurate. Scegline adesso:
-        verranno salvate cifrate in <strong>config/auth.php</strong>, fuori dal codice
-        versionato.</p>
+        <p class="hint">Non ci sono ancora credenziali configurate: scegli adesso quelle
+        dell'amministratore del sito.</p>
         {$err}
         <form method="POST">
             {$csrf}
