@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.2.1",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Correzioni: la pagina non salta più salvando email e password; messaggi di recupero più riservati.",
+            "date": "2026-10-06",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.2.1/kris-1.2.1.zip",
+            "sha256": "4f899acd28e1dd22e95a6daa89a26144898da9f2c9e6eea5b06284822fccda58",
+            "size": 119702
+        },
+        {
             "version": "1.2.0",
             "min_from": "1.0.0",
             "breaking": false,
