@@ -53,18 +53,30 @@ class Entity
         return new self('', $name, 0, $payload);
     }
 
+    /**
+     * Vero se l'elemento (entita root o figlio di una lista) e sospeso:
+     * resta nei dati e nell'editor, ma il sito non lo mostra.
+     */
+    public static function isHidden(array $item): bool
+    {
+        return ($item['hidden'] ?? false) === true;
+    }
+
     // Load an entity by walking a nested path from a root entity.
     // $path alternates fieldName/subId: ['features', '0', 'highlights', '2'].
+    // Una pagina di un elemento sospeso (o dentro un elemento sospeso) non esiste.
     public static function fromPath(string $filename, string $rootName, int $rootId, array $path): self
     {
-        if (empty($path)) {
-            return new self($filename, $rootName, $rootId);
-        }
-
         $repo = new JsonRepository();
         [$cur, ] = $repo->find($filename, $rootName, $rootId);
         if (!$cur) {
             throw new Exception("Root entity {$rootName} with id {$rootId} not found");
+        }
+        if (self::isHidden($cur)) {
+            throw new Exception("Entity {$rootName} with id {$rootId} is hidden");
+        }
+        if (empty($path)) {
+            return new self($filename, $rootName, $rootId);
         }
 
         $leafName = $rootName;
@@ -87,7 +99,7 @@ class Entity
                     break;
                 }
             }
-            if ($sub === null) {
+            if ($sub === null || self::isHidden($sub)) {
                 throw new Exception("Path not found: {$fieldName}/{$subId}");
             }
             $cur = $sub;

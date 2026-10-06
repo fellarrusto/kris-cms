@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kris\Template;
 
+use Kris\Entity\Entity;
+
 /**
  * Indirizzi canonici, alternative per lingua e sitemap.
  *
@@ -111,7 +113,7 @@ final class Seo
             }
             $page = $rule['page'];
             $key = is_string($rule['key'] ?? null) ? $rule['key'] : 'homepage';
-            $roots = array_values(array_filter($data, fn($e) => is_array($e) && ($e['name'] ?? null) === $key));
+            $roots = array_values(array_filter($data, fn($e) => is_array($e) && ($e['name'] ?? null) === $key && !Entity::isHidden($e)));
 
             if (!array_key_exists('id', $rule) && !isset($rule['children'])) {
                 foreach ($roots as $entity) {
@@ -137,6 +139,9 @@ final class Seo
             foreach (is_array($entity['data'] ?? null) ? $entity['data'] : [] as $field) {
                 if (($field['name'] ?? null) === $rule['children'] && ($field['type'] ?? null) === 'array') {
                     foreach (is_array($field['value'] ?? null) ? $field['value'] : [] as $child) {
+                        if (!is_array($child) || Entity::isHidden($child)) {
+                            continue;
+                        }
                         $entries[] = [$page, $key, $id, [$rule['children'], (string) (int) ($child['id'] ?? 0)]];
                     }
                 }

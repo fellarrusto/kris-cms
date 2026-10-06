@@ -66,13 +66,16 @@ if (kris_auth_config() === null) {
     if ($isPost && isset($_POST['do_setup'])) {
         $user = trim((string) ($_POST['user'] ?? ''));
         $pass = (string) ($_POST['pass'] ?? '');
+        $email = trim((string) ($_POST['email'] ?? ''));
         if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
             kris_render_setup('Sessione scaduta: riprova.');
-        } elseif ($user === '' || strlen($pass) < 10) {
+        } elseif ($user === '' || strlen($pass) < Kris\Auth\Credentials::MIN_PASSWORD) {
             kris_render_setup('Serve uno username e una password di almeno 10 caratteri.');
+        } elseif (!Kris\Auth\Credentials::validEmail($email)) {
+            kris_render_setup('Serve un indirizzo email valido: lo userai per recuperare la password.');
         } elseif ($pass !== (string) ($_POST['pass2'] ?? '')) {
             kris_render_setup('Le due password non coincidono.');
-        } elseif (!kris_save_credentials($user, $pass)) {
+        } elseif (!kris_save_credentials($user, $pass, $email)) {
             kris_render_setup('Non riesco a scrivere config/auth.php: controlla i permessi della cartella.');
         } else {
             header("Location: $BASE");
@@ -80,6 +83,48 @@ if (kris_auth_config() === null) {
         }
     }
     kris_render_setup();
+}
+
+// Recupero della password: richiesta del link e scelta della nuova password.
+if (!kris_is_logged_in()) {
+    if ($isPost && isset($_POST['do_forgot'])) {
+        if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
+            kris_render_forgot('Sessione scaduta: riprova.');
+        }
+        try {
+            if (!kris_password_reset()->canRequest()) {
+                kris_render_forgot('Hai già chiesto diversi link nell\'ultima ora. Controlla la posta (anche lo spam) o riprova più tardi.');
+            }
+            if (!kris_send_reset_link()) {
+                kris_render_forgot('L\'hosting non è riuscito a inviare l\'email. ' . KRIS_HOSTING_HELP);
+            }
+        } catch (RuntimeException $e) {
+            kris_render_forgot($e->getMessage());
+        }
+        kris_render_forgot('', 'Email inviata all\'amministratore del sito: contiene un link valido 30 minuti. Controlla anche lo spam.');
+    }
+    if (isset($_GET['forgot'])) {
+        kris_render_forgot();
+    }
+    if ($isPost && isset($_POST['do_reset'])) {
+        $token = (string) ($_POST['token'] ?? '');
+        $pass = (string) ($_POST['pass'] ?? '');
+        if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
+            kris_render_reset($token, 'Sessione scaduta: riprova.');
+        } elseif (strlen($pass) < Kris\Auth\Credentials::MIN_PASSWORD) {
+            kris_render_reset($token, 'La password deve avere almeno 10 caratteri.');
+        } elseif ($pass !== (string) ($_POST['pass2'] ?? '')) {
+            kris_render_reset($token, 'Le due password non coincidono.');
+        } elseif (!kris_password_reset()->consume($token)) {
+            kris_render_reset($token);
+        } elseif (!kris_credentials()->save(['password' => $pass])) {
+            kris_render_reset($token, 'Non riesco a scrivere config/auth.php: ' . KRIS_HOSTING_HELP);
+        }
+        kris_render_login('', 'Password aggiornata: accedi con quella nuova.');
+    }
+    if (is_string($_GET['reset'] ?? null)) {
+        kris_render_reset($_GET['reset']);
+    }
 }
 
 // Login
@@ -277,6 +322,15 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
             </div>
         <?php elseif ($frameworkNotice !== ''): ?>
             <div class="alert system-alert" role="status"><p><?= h($frameworkNotice) ?></p></div>
+        <?php endif; ?>
+        <?php // Siti installati prima della 1.2.0: l'email di recupero si aggiunge da qui, in un passo.
+        $authConfig = kris_auth_config() ?? [];
+        if (!Kris\Auth\Credentials::validEmail((string) ($authConfig['email'] ?? '')) && empty($_SESSION['kris_email_later']) && $editorLock === ''): ?>
+            <div class="alert account-alert" role="status">
+                <p><strong>Aggiungi la tua email.</strong> Se dimentichi la password, ti manderemo lì un link per sceglierne una nuova.</p>
+                <form method="POST" class="account-alert-form"><input type="hidden" name="save_account_email" value="1"><label class="sr-only" for="account-email-quick">Email</label><input id="account-email-quick" type="email" name="account_email" autocomplete="email" placeholder="nome@esempio.it" required><button class="btn btn-primary">Salva email</button></form>
+                <form method="POST"><input type="hidden" name="account_email_later" value="1"><button class="text-link" type="submit">Più tardi</button></form>
+            </div>
         <?php endif; ?>
         <?php if ($error): ?>
             <div class="alert alert-error" role="alert">

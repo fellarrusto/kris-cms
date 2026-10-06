@@ -79,7 +79,7 @@ form { margin:0; }
 .search-box { display:flex; align-items:center; gap:10px; width:330px; max-width:100%; color:var(--muted); border:1px solid #ced9ce; border-radius:8px; background:white; padding:0 12px; margin:0; }
 .search-box input { border:0!important; background:transparent; padding:11px 0!important; box-shadow:none; min-width:0; }
 .search-box:focus-within { outline:2px solid #459675; }
-input[type=text],input[type=search],input[type=password],textarea,select { width:100%; padding:11px 13px; border:1px solid #cad6cb; border-radius:7px; color:var(--text); background:white; line-height:1.6; transition:border-color .15s; }
+input[type=text],input[type=search],input[type=password],input[type=email],textarea,select { width:100%; padding:11px 13px; border:1px solid #cad6cb; border-radius:7px; color:var(--text); background:white; line-height:1.6; transition:border-color .15s; }
 textarea { resize:vertical; min-height:92px; }
 input:hover,textarea:hover,select:hover { border-color:#90a996; }
 input:focus,textarea:focus,select:focus { outline:2px solid #459675; outline-offset:1px; }
@@ -271,7 +271,7 @@ dialog::backdrop { background:#122a2255; backdrop-filter:blur(3px); }
     .editor-workspace { margin:0; }.topbar { min-height:62px; padding:12px 18px;gap:10px; }.topbar .btn { font-size:11px;padding:7px 10px; }.breadcrumbs { font-size:10px; gap:6px; }
     main { padding:27px 17px 145px; }.page-heading { gap:15px; margin-bottom:25px; flex-wrap:wrap; }.page-heading h1 { font-size:26px; }.page-heading p:not(.eyebrow) { font-size:12px; }.page-heading .actions { flex-wrap:wrap;justify-content:flex-start; }
     .btn { min-height:44px; font-size:12px; padding:9px 12px; }.icon-button { min-height:44px; width:36px; }
-    input[type=text],input[type=search],input[type=password],textarea,select { font-size:16px; }.hint { font-size:12px; }
+    input[type=text],input[type=search],input[type=password],input[type=email],textarea,select { font-size:16px; }.hint { font-size:12px; }
     .collection-grid { grid-template-columns:1fr; gap:16px; }.collection-card { padding:22px; }.collection-card h2 { margin-top:16px; }
     .toolbar { gap:9px; flex-wrap:wrap; }.search-box { flex:1; min-width:190px; }.toolbar .badge { font-size:10px; }
     .card-header,.card-body { padding:17px; }.card-header h2 { font-size:14px; }.card-header p { font-size:11px; }
@@ -289,3 +289,26 @@ dialog::backdrop { background:#122a2255; backdrop-filter:blur(3px); }
     .toast { bottom:122px;left:17px;right:17px;font-size:12px; }.alert { font-size:12px;padding:15px; }
 }
 @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; }*,*::before,*::after { animation:none!important;transition:none!important; } }
+/* Visibile / sospeso */
+.visibility-toggle { display:inline-flex; align-items:center; gap:9px; cursor:pointer; font-size:12px; color:var(--muted); white-space:nowrap; margin:0; }
+.visibility-toggle input { position:absolute; opacity:0; width:1px; height:1px; }
+.visibility-switch { position:relative; width:34px; height:20px; border-radius:20px; background:#cfd6cf; transition:background .15s; flex:none; }
+.visibility-switch::after { content:''; position:absolute; top:3px; left:3px; width:14px; height:14px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition:transform .15s; }
+.visibility-toggle input:checked + .visibility-switch { background:var(--primary); }
+.visibility-toggle input:checked + .visibility-switch::after { transform:translateX(14px); }
+.visibility-toggle input:focus-visible + .visibility-switch { outline:2px solid var(--primary); outline-offset:2px; }
+.visibility-toggle input:disabled + .visibility-switch { opacity:.6; }
+.page-heading .actions { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+tr.is-hidden td:first-child { opacity:.55; }
+tr.is-hidden .content-title, tr.is-hidden strong { text-decoration:line-through; text-decoration-color:var(--muted); }
+/* Account */
+.account-body { display:grid; gap:22px; }
+.account-form { display:grid; gap:8px; justify-items:start; }
+.account-form label, .account-title { font-size:13px; font-weight:600; }
+.account-form input[type=email], .account-form input[type=password] { width:100%; max-width:420px; }
+.account-row { display:flex; flex-wrap:wrap; gap:10px; width:100%; }
+.account-row input { flex:1 1 260px; }
+.account-form .hint { margin:0; }
+.account-alert { flex-wrap:wrap; }
+.account-alert-form { display:flex; flex-wrap:wrap; gap:10px; flex:1 1 360px; }
+.account-alert-form input { flex:1 1 220px; min-height:40px; }

@@ -206,6 +206,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         }
     }
     // 6c. Riordina entità root (drag-and-drop)
+    // --- Account: email di recupero, email di prova, cambio password ---
+    if (isset($_POST['save_account_email'])) {
+        $email = trim((string) ($_POST['account_email'] ?? ''));
+        if (!Kris\Auth\Credentials::validEmail($email)) {
+            $error = 'Indirizzo email non valido: nulla è stato modificato.';
+        } elseif (!kris_credentials()->save(['email' => $email, 'editor_url' => kris_current_editor_url()])) {
+            $error = 'Non riesco a scrivere config/auth.php: controlla i permessi con l\'hosting.';
+        } else {
+            $msg = 'Email salvata: la userai per recuperare la password. Prova a inviarti un\'email di prova da Impostazioni.';
+        }
+    }
+    if (isset($_POST['account_email_later'])) {
+        $_SESSION['kris_email_later'] = true;
+        header("Location: $BASE?" . (string) ($_SERVER['QUERY_STRING'] ?? ''));
+        exit;
+    }
+    if (isset($_POST['send_test_email'])) {
+        $config = kris_auth_config() ?? [];
+        $sent = kris_send_mail((string) ($config['email'] ?? ''), 'Email di prova dall\'editor',
+            "Ciao,\n\nse leggi questo messaggio l'hosting invia correttamente le email del sito:\npotrai recuperare la password dell'editor se la dimentichi.\n");
+        if ($sent) {
+            $msg = 'Email di prova inviata a ' . ($config['email'] ?? '') . '. Se non arriva entro qualche minuto (controlla lo spam), il recupero via email non funzionerà su questo hosting.';
+        } else {
+            $error = 'L\'hosting non ha accettato l\'invio: il recupero della password via email non funzionerà. ' . KRIS_HOSTING_HELP;
+        }
+    }
+    if (isset($_POST['change_password'])) {
+        $config = kris_auth_config() ?? [];
+        $new = (string) ($_POST['new_password'] ?? '');
+        if (!kris_credentials()->verify((string) ($config['user'] ?? ''), (string) ($_POST['current_password'] ?? ''))) {
+            $error = 'La password attuale non è corretta: nulla è stato modificato.';
+        } elseif (strlen($new) < Kris\Auth\Credentials::MIN_PASSWORD) {
+            $error = 'La nuova password deve avere almeno 10 caratteri.';
+        } elseif ($new !== (string) ($_POST['new_password2'] ?? '')) {
+            $error = 'Le due nuove password non coincidono.';
+        } elseif (!kris_credentials()->save(['password' => $new])) {
+            $error = 'Non riesco a scrivere config/auth.php: controlla i permessi con l\'hosting.';
+        } else {
+            session_regenerate_id(true);
+            $msg = 'Password aggiornata.';
+        }
+    }
+
+    // Mostra o sospende un elemento (entita root se path e vuoto, altrimenti figlio).
+    if (isset($_POST['toggle_visibility'])) {
+        $g = (string) ($_POST['group'] ?? '');
+        $rootIdx = findRootIndex($data, $g, (int) ($_POST['id'] ?? -1));
+        $path = parsePath((string) ($_POST['path'] ?? ''));
+        $visible = ($_POST['visible'] ?? '') === '1';
+        if ($rootIdx < 0 || count($path) % 2 !== 0 || isReservedCollection($g)) {
+            throw new StorageException('elemento non trovato');
+        }
+        if ($path) {
+            $target = &walkEntityPath($data[$rootIdx], $path);
+            if ($target === null) {
+                throw new StorageException('elemento non trovato');
+            }
+        } else {
+            $target = &$data[$rootIdx];
+        }
+        if ($visible) {
+            unset($target['hidden']);
+        } else {
+            $target['hidden'] = true;
+        }
+        unset($target);
+        saveJson($dataFile, $data);
+        $msg = $visible ? 'Elemento visibile sul sito.' : 'Elemento sospeso: il sito non lo mostra.';
+        if (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') !== 'visibility') {
+            $back = is_string($_POST['return_to'] ?? null) && preg_match('/^\?action=[a-z_]+(&[A-Za-z0-9_=%.\/-]*)*$/', $_POST['return_to'])
+                ? $_POST['return_to'] : '?action=list&group=' . urlencode($g);
+            header("Location: $BASE$back");
+            exit;
+        }
+    }
+
     if (isset($_POST['reorder_root'])) {
         $g = $_POST['group'];
         $order = array_map('intval', explode(',', $_POST['order'] ?? ''));
@@ -342,7 +418,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
 if ((($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'save'
         && (isset($_POST['save_entity']) || isset($_POST['save_settings'])))
     || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'reorder'
-        && (isset($_POST['reorder_root']) || isset($_POST['reorder_nested'])))) {
+        && (isset($_POST['reorder_root']) || isset($_POST['reorder_nested'])))
+    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'visibility' && isset($_POST['toggle_visibility']))) {
     http_response_code($error !== '' ? 422 : 200);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['ok' => $error === '' && $msg !== '', 'message' => $error ?: $msg,
