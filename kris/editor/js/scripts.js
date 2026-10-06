@@ -17,7 +17,7 @@ const qa = (s, root = document) => [...root.querySelectorAll(s)];
 function snapshot() {
     if (!currentForm) return '';
     return JSON.stringify(qa('input:not([type="hidden"]), textarea[name], select', currentForm)
-        .filter(el => !el.closest('.tox'))
+        .filter(el => !el.closest('.tox') && !el.matches('[data-visibility-toggle]'))
         .map(el => [el.name || el.className, el.type === 'checkbox' ? el.checked : el.value]));
 }
 function markAsDirty() {
@@ -310,6 +310,34 @@ document.addEventListener('input',event=>{
 document.addEventListener('change',event=>{
     if(currentForm?.contains(event.target))markAsDirty();
     if(event.target.matches('[data-upload-input]')&&event.target.files[0])uploadFile(event.target.files[0],event.target);
+});
+// Visibile / sospeso: si salva subito, come il riordino. In caso di errore
+// l'interruttore torna com'era, cosi mostra sempre lo stato salvato.
+async function saveVisibility(input) {
+    const form = input.form;
+    if (!form) return;
+    const label = input.closest('.visibility-toggle')?.querySelector('.visibility-label');
+    const row = input.closest('tr');
+    const body = new FormData(form);
+    body.set('csrf', csrf());
+    input.disabled = true;
+    try {
+        const response = await fetch(form.action || location.href, {method:'POST', body, credentials:'same-origin', headers:{'X-Kris-Editor':'visibility'}});
+        const result = await response.json().catch(() => ({}));
+        if (result.csrf && csrfMeta) csrfMeta.content = result.csrf;
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Non è stato possibile salvare: ricarica la pagina e riprova.');
+        if (label) label.textContent = input.checked ? 'Visibile' : 'Sospeso';
+        row?.classList.toggle('is-hidden', !input.checked);
+        toast(result.message);
+    } catch (error) {
+        input.checked = !input.checked;
+        toast(error.message);
+    } finally {
+        input.disabled = false;
+    }
+}
+document.addEventListener('change', event => {
+    if (event.target.matches('[data-visibility-toggle]')) saveVisibility(event.target);
 });
 qa('dialog').forEach(dialog=>dialog.addEventListener('cancel',event=>{if(uploadBusy){event.preventDefault();toast('Attendi il caricamento prima di chiudere.');}}));
 window.addEventListener('beforeunload',event=>{if(hasUnsavedChanges||saving||uploadBusy){event.preventDefault();event.returnValue='';}});

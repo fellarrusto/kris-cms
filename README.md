@@ -17,6 +17,11 @@
 * PHP >= 8.0 with DOM/libxml and mbstring.
 * To update from the editor: the `sodium` and `zip` extensions (cURL recommended).
 
+## Hiding items and recovering access
+
+* **Visible / suspended:** every item of a list and every entity of a collection has a *Visibile* switch in the editor (in the list and on its detail page). A suspended item stays in your data but disappears from the site, its page returns 404 and it leaves the sitemap.
+* **Forgot your password?** The login page sends a one-time link (valid 30 minutes) to the admin email. Set or change the email in *Impostazioni › Account* and send yourself a test email: some hosts don't deliver mail. If the email never arrives, the hosting administrator can reset access by deleting `config/auth.php`.
+
 ## SEO, privacy and cookies
 
 * **Search engines:** pages get a canonical URL and `hreflang` links automatically. `sitemap.php` is generated from your content on every request; list your page types in `config/seo.json` and set `base_url` in production. Add a `robots.txt` pointing to the sitemap.

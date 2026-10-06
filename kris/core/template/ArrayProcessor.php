@@ -42,13 +42,13 @@ class ArrayProcessor {
         }
     }
 
+    /** Elementi da mostrare: quelli sospesi dall'editor restano fuori. */
     private function resolveEntities(string $name, ?Entity $parent): array {
+        $items = null;
         if ($parent !== null) {
-            $local = $parent->getArray($name);
-            if ($local !== null) {
-                return $local;
-            }
+            $items = $parent->getArray($name);
         }
-        return $this->repo->findAll('k_data', $name);
+        $items ??= $this->repo->findAll('k_data', $name);
+        return array_values(array_filter($items, fn($item) => is_array($item) && !Entity::isHidden($item)));
     }
 }

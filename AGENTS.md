@@ -37,9 +37,11 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `data/backups/` | Copie precedenti prodotte dalle scritture tramite `JsonStore`. |
 | `data/updates/`, `data/snapshots/`, `data/kris_maintenance.json` | Pacchetti in preparazione, copie di sicurezza degli aggiornamenti (14 giorni) e segnale di manutenzione. Gestiti dall'updater: non modificarli a mano, se non per ripristinare a mano uno snapshot. |
 | `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
-| `config/auth.php` | Credenziali locali con password sotto forma di hash; generato dal setup, escluso da Git. |
+| `config/auth.php` | Credenziali locali: utente, hash della password, email di recupero e indirizzo dell'editor da cui partono i link di reset. Generato dal setup, escluso da Git. |
+| `config/auth_reset.json` | Hash del link di reset in corso e richieste dell'ultima ora. Escluso da Git. |
 | `config/seo.json` | Opzionale: indirizzo pubblico del sito, pagine della sitemap, canonical e hreflang automatici. Vedi "SEO: sitemap e indirizzi". |
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
+| `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
 | `kris/core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
 | `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
@@ -116,6 +118,8 @@ I dati corrispondenti in `data/k_data.json` sono una lista, non un oggetto indic
   }
 ]
 ```
+
+Ogni entità root e ogni elemento di una lista può avere `"hidden": true` accanto a `id` e `data`: l'editor lo imposta con l'interruttore **Visibile / Sospeso**. Il sito non lo mostra nelle liste `k-array`, la sua pagina di dettaglio risponde 404 e non compare nella sitemap; nei dati e nell'editor resta. Senza la chiave l'elemento è visibile. I template non devono fare nulla: non usare `hidden` per altri scopi, non impostarlo nei dati iniziali se non è voluto, e non scrivere link fissi a singoli elementi che il cliente potrebbe sospendere. I componenti `k-component` (navbar, footer, `kris_legal`) non si sospendono.
 
 Gli ID root sono univoci nella raccolta; gli ID dei figli nella singola lista. L'ordine è la sequenza degli elementi nel JSON, non il valore numerico degli ID. Riordinare non deve rinumerarli. Ogni campo contiene `name`, `type` e `value`; `text`, `richtext` e `image` usano valori per lingua, `plain` uno scalare, `array` una lista di figli.
 
@@ -257,11 +261,13 @@ Non bloccare `/kris/` né `/assets/`: contengono gli script e gli stili delle pa
 
 Mantieni autenticazione e CSRF per ogni mutazione. I salvataggi asincroni confermano il risultato del server prima di mostrare successo; gli errori devono conservare i campi compilati. Il riordino salva senza ricarica e senza spostare lo scroll, anche con testi non ancora salvati. Non annidare form HTML: i controlli delle liste usano form separati associati tramite l'attributo `form`.
 
+**Accesso e recupero della password.** Il setup chiede utente, email e password; in Impostazioni › Account si cambiano email e password e si invia un'email di prova. "Password dimenticata?" manda all'email un link monouso valido 30 minuti, costruito sull'indirizzo dell'editor salvato da un admin autenticato e mai sull'host della richiesta. L'invio usa `mail()` di PHP: su alcuni hosting non arriva. In quel caso, e quando l'email non è configurata, l'editor dice di contattare l'amministratore dell'hosting, che reimposta l'accesso eliminando `config/auth.php` (al successivo accesso riparte il setup, i contenuti restano).
+
 L'editor permette di configurare anche gli schemi `of` e presenta l'impatto delle modifiche distruttive. I nomi dei campi devono continuare a corrispondere ai template. Non introdurre messaggi che promettono bozze, undo o gestione conflitti non implementati.
 
 ## Aggiornamenti del framework
 
-Da un sito installato l'admin aggiorna Kris da Impostazioni › Versione di Kris: verifica, scaricamento o caricamento dello zip, installazione. Il flusso è in `kris/update/` e il piano con le motivazioni in `PIANO_update_claude.md`.
+Da un sito installato l'admin aggiorna Kris da Impostazioni › Versione di Kris: verifica, scaricamento o caricamento dello zip, installazione. Il flusso è in `kris/update/`.
 
 - **Canale:** `releases.json` e `releases.json.sig` su `main`, letti da raw.githubusercontent.com. Mai l'API di GitHub. Solo `https` e host in `Http::ALLOWED_HOSTS`.
 - **Firme:** Ed25519. Le chiavi pubbliche stanno in `kris/update/keys.php`; le segrete fuori dalla repository. Un pacchetto è uno zip della sola `kris/` con `RELEASE.json`, `MANIFEST.json` (sha256 di ogni file) e `MANIFEST.sig`: si verifica da solo, anche caricato a mano.
@@ -313,4 +319,4 @@ Per pubblicare:
 - PHP deve poter scrivere in `data/`, nella directory dei backup e in `assets/uploads/`; per il setup iniziale deve poter creare `config/auth.php`; per aggiornare dall'editor deve poter spostare `kris/` nella root del sito. Usa permessi appropriati all'hosting, non `777` come soluzione generica.
 - Verifica sul server che `config/` e `data/` non siano scaricabili e che gli upload non eseguano codice. Gli `.htaccess` presenti sono specifici di Apache; Nginx e altri server richiedono regole equivalenti. Verifica la compatibilità delle direttive upload con l'hosting effettivo.
 - Escludi dall'artefatto pubblico `.git/`, configurazioni locali degli agenti, test e documenti di sviluppo. Configura HTTPS e verifica login, persistenza e asset sul percorso finale, anche se il sito vive in sottocartella.
-- Dopo il rilascio controlla homepage, una pagina di dettaglio, lingua alternativa, 404, `sitemap.php`, `robots.txt` e accesso all'editor. Non sovrascrivere le credenziali e non lasciare un setup pubblico non configurato.
+- Dopo il rilascio controlla homepage, una pagina di dettaglio, lingua alternativa, 404, `sitemap.php`, `robots.txt` e accesso all'editor. Da Impostazioni › Account invia un'email di prova e chiedi al cliente se è arrivata: se no, il recupero della password passerà dall'amministratore dell'hosting. Non sovrascrivere le credenziali e non lasciare un setup pubblico non configurato.

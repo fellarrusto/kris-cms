@@ -158,6 +158,36 @@ function renderStorageError(string $detail): void // termina sempre con exit
     exit;
 }
 
+// --- VISIBILITA ---
+// Un elemento sospeso ha "hidden": true: resta nei dati e nell'editor, ma
+// il sito non lo mostra. Il form e separato (attributo form sul checkbox)
+// perche nelle liste annidate i controlli stanno gia dentro un altro form.
+
+/** Form nascosto che salva la visibilita di un elemento. */
+function visibilityForm(string $formId, string $group, int $id, string $path): string
+{
+    return '<form method="POST" id="' . h($formId) . '" hidden data-visibility-form>'
+        . '<input type="hidden" name="toggle_visibility" value="1">'
+        . '<input type="hidden" name="group" value="' . h($group) . '">'
+        . '<input type="hidden" name="id" value="' . $id . '">'
+        . '<input type="hidden" name="path" value="' . h($path) . '"></form>';
+}
+
+/** Interruttore "Visibile" collegato a un form di visibilityForm(). */
+function visibilityToggle(string $formId, bool $visible, string $title): string
+{
+    return '<label class="visibility-toggle" title="Mostra o sospendi sul sito">'
+        . '<input type="checkbox" name="visible" value="1" form="' . h($formId) . '" data-visibility-toggle'
+        . ($visible ? ' checked' : '') . ' aria-label="' . h('Visibile sul sito: ' . $title) . '">'
+        . '<span class="visibility-switch" aria-hidden="true"></span><span class="visibility-label">'
+        . ($visible ? 'Visibile' : 'Sospeso') . '</span></label>';
+}
+
+function isHiddenItem(array $item): bool
+{
+    return ($item['hidden'] ?? false) === true;
+}
+
 // --- NESTED PATH HELPERS ---
 // Path format: "fieldName/subId/fieldName/subId..." (may end on a field name for list views)
 function parsePath(?string $raw): array
