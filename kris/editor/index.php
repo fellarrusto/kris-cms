@@ -118,7 +118,7 @@ if (!kris_is_logged_in()) {
         } elseif (!kris_password_reset()->consume($token)) {
             kris_render_reset($token);
         } elseif (!kris_credentials()->save(['password' => $pass])) {
-            kris_render_reset($token, 'Non riesco a scrivere config/auth.php: ' . KRIS_HOSTING_HELP);
+            kris_render_reset($token, 'Non è stato possibile salvare la nuova password. ' . KRIS_HOSTING_HELP);
         }
         kris_render_login('', 'Password aggiornata: accedi con quella nuova.');
     }
@@ -328,7 +328,7 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
         if (!Kris\Auth\Credentials::validEmail((string) ($authConfig['email'] ?? '')) && empty($_SESSION['kris_email_later']) && $editorLock === ''): ?>
             <div class="alert account-alert" role="status">
                 <p><strong>Aggiungi la tua email.</strong> Se dimentichi la password, ti manderemo lì un link per sceglierne una nuova.</p>
-                <form method="POST" class="account-alert-form"><input type="hidden" name="save_account_email" value="1"><label class="sr-only" for="account-email-quick">Email</label><input id="account-email-quick" type="email" name="account_email" autocomplete="email" placeholder="nome@esempio.it" required><button class="btn btn-primary">Salva email</button></form>
+                <form method="POST" class="account-alert-form" data-account-form><input type="hidden" name="save_account_email" value="1"><label class="sr-only" for="account-email-quick">Email</label><input id="account-email-quick" type="email" name="account_email" autocomplete="email" placeholder="nome@esempio.it" required><button class="btn btn-primary">Salva email</button></form>
                 <form method="POST"><input type="hidden" name="account_email_later" value="1"><button class="text-link" type="submit">Più tardi</button></form>
             </div>
         <?php endif; ?>

@@ -292,6 +292,7 @@ document.addEventListener('click',async event=>{
     }
 });
 document.addEventListener('submit',async event=>{
+    if(event.target.matches('[data-account-form]'))return; // gestiti piu sotto, senza ricarica
     if(event.defaultPrevented)return;
     const form=event.target;const submitter=event.submitter;
     if(form.matches('[data-upload-form]')){event.preventDefault();const input=q('[data-upload-input]',form);if(input.files[0])uploadFile(input.files[0],input);return;}
@@ -338,6 +339,36 @@ async function saveVisibility(input) {
 }
 document.addEventListener('change', event => {
     if (event.target.matches('[data-visibility-toggle]')) saveVisibility(event.target);
+});
+// Account (email, email di prova, password): si salva senza ricaricare,
+// cosi la pagina resta dove si e cliccato. L'esito compare sotto il form.
+document.addEventListener('submit', async event => {
+    const form = event.target.closest('[data-account-form]');
+    if (!form) return;
+    event.preventDefault();
+    const button = form.querySelector('button');
+    let status = form.querySelector('.account-status');
+    if (!status) { status = document.createElement('p'); status.className = 'account-status'; status.setAttribute('role', 'status'); form.append(status); }
+    const body = new FormData(form);
+    body.set('csrf', csrf());
+    if (button) button.disabled = true;
+    status.textContent = 'Salvataggio in corso…';
+    status.classList.remove('is-error');
+    try {
+        const response = await fetch(location.pathname + location.search, {method:'POST', body, credentials:'same-origin', headers:{'X-Kris-Editor':'account'}});
+        const result = await response.json().catch(() => ({}));
+        if (result.csrf && csrfMeta) csrfMeta.content = result.csrf;
+        if (!response.ok || !result.ok) throw new Error(result.message || 'Non è stato possibile salvare: ricarica la pagina e riprova.');
+        status.textContent = result.message;
+        if (form.querySelector('[name=change_password]')) form.reset();
+        // L'avviso in testa all'editor sparisce una volta salvata l'email.
+        if (form.closest('.account-alert')) { toast(result.message); form.closest('.account-alert').remove(); }
+    } catch (error) {
+        status.textContent = error.message;
+        status.classList.add('is-error');
+    } finally {
+        if (button) button.disabled = false;
+    }
 });
 qa('dialog').forEach(dialog=>dialog.addEventListener('cancel',event=>{if(uploadBusy){event.preventDefault();toast('Attendi il caricamento prima di chiudere.');}}));
 window.addEventListener('beforeunload',event=>{if(hasUnsavedChanges||saving||uploadBusy){event.preventDefault();event.returnValue='';}});

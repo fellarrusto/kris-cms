@@ -419,7 +419,9 @@ if ((($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'save'
         && (isset($_POST['save_entity']) || isset($_POST['save_settings'])))
     || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'reorder'
         && (isset($_POST['reorder_root']) || isset($_POST['reorder_nested'])))
-    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'visibility' && isset($_POST['toggle_visibility']))) {
+    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'visibility' && isset($_POST['toggle_visibility']))
+    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'account'
+        && (isset($_POST['save_account_email']) || isset($_POST['send_test_email']) || isset($_POST['change_password'])))) {
     http_response_code($error !== '' ? 422 : 200);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['ok' => $error === '' && $msg !== '', 'message' => $error ?: $msg,
