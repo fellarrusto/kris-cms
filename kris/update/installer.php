@@ -87,7 +87,7 @@ namespace Kris\Install {
             return $run->result();
         }
         $guard->swapped = true;
-        clear_caches();
+        clear_caches($root);
         // Il bootstrap nuovo registra il proprio autoload: una versione che
         // aggiunge namespace deve poter caricare le sue classi gia da qui.
         require $root . '/kris/bootstrap.php';
@@ -197,7 +197,7 @@ namespace Kris\Install {
         try {
             $stateNow = read_json($root . STATE_FILE) ?? [];
             restore_files($snapshot, $root);
-            clear_caches();
+            clear_caches($root);
 
             $state = keep_log(read_json($root . STATE_FILE) ?? [], $stateNow);
             $state = add_history($state, [
@@ -242,6 +242,8 @@ namespace Kris\Install {
                 @rename((string) end($candidates), $root . '/kris');
             }
         }
+        // Anche un sito gia rimesso a posto puo avere in cache il codice dell'aggiornamento annullato
+        clear_caches($root);
         if ($id !== '' && preg_match('/^[0-9A-Za-z.\-]+$/', $id) && empty($info['rollback'])) {
             $guard = new Guard($root, $snapshot, (string) ($info['from'] ?? ''), (string) ($info['to'] ?? ''), (string) ($ctx['user'] ?? ''));
             $guard->swapped = is_dir($snapshot . '/kris');
@@ -267,6 +269,10 @@ namespace Kris\Install {
         }
         if (!is_dir($package) || !is_file($package . '/bootstrap.php')) {
             return 'Il pacchetto preparato non è completo: ripeti la verifica degli aggiornamenti.';
+        }
+        if (opcache_locked()) {
+            return 'La cache del codice PHP di questo hosting non si può svuotare da qui: aggiorna caricando la cartella kris/ via FTP '
+                . 'e chiedi all\'hosting di riavviare PHP, oppure di attivare opcache.validate_timestamps.';
         }
         if (!is_writable($root) || !is_writable($root . '/kris')) {
             return 'PHP non può modificare la cartella del sito o la cartella kris/: controlla i permessi con l\'hosting.';
@@ -470,12 +476,62 @@ namespace Kris\Install {
         @unlink($root . MAINTENANCE_FILE);
     }
 
-    function clear_caches(): void
+    /**
+     * Dopo che kris/ e cambiata sul disco: la cache del codice (OPcache) non
+     * deve piu servire i file della versione precedente. opcache_reset() da
+     * solo non basta: vale dalla richiesta successiva, e molti hosting lo
+     * disabilitano. Con la cache che non ricontrolla i file (comune in
+     * produzione) la richiesta dell'aggiornamento caricava il bootstrap
+     * vecchio con le classi nuove, e dopo un ripristino il sito restava con
+     * file della versione annullata. Ogni file si invalida uno per uno.
+     */
+    function clear_caches(?string $root = null): void
     {
         clearstatcache(true);
+        if ($root !== null && is_dir($root . '/kris')) {
+            invalidate_tree($root . '/kris');
+        }
         if (function_exists('opcache_reset')) {
             @opcache_reset();
         }
+    }
+
+    /** Toglie dalla cache del codice ogni file PHP della cartella. */
+    function invalidate_tree(string $dir): void
+    {
+        if (!function_exists('opcache_invalidate')) {
+            return;
+        }
+        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $file) {
+            if ($file->isFile() && strtolower($file->getExtension()) === 'php') {
+                // La cache usa il percorso risolto: si invalidano entrambi
+                @opcache_invalidate($file->getPathname(), true);
+                $real = $file->getRealPath();
+                if (is_string($real) && $real !== $file->getPathname()) {
+                    @opcache_invalidate($real, true);
+                }
+            }
+        }
+    }
+
+    /**
+     * Vero se la cache del codice non ricontrolla i file e non si puo
+     * svuotare: allora un aggiornamento da qui lascerebbe il sito con codice
+     * misto, e va fatto via FTP con un riavvio di PHP.
+     */
+    function opcache_locked(): bool
+    {
+        if (!function_exists('opcache_get_status') || !filter_var(ini_get('opcache.enable'), FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+        if (filter_var(ini_get('opcache.validate_timestamps'), FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+        $restrict = (string) ini_get('opcache.restrict_api');
+        $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_FILENAME'] ?? ''));
+        return !function_exists('opcache_invalidate')
+            || ($restrict !== '' && !str_starts_with($script, str_replace('\\', '/', $restrict)));
     }
 
     /**
@@ -614,7 +670,7 @@ namespace Kris\Install {
             if (is_dir($this->snapshot)) {
                 restore_files($this->snapshot, $this->root);
             }
-            clear_caches();
+            clear_caches($this->root);
             try {
                 $state = keep_log(read_json($this->root . STATE_FILE) ?? [], $stateNow);
                 write_json($this->root . STATE_FILE, add_history($state, [
