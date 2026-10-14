@@ -279,7 +279,7 @@ if (isReservedCollection($group) && in_array($action, ['list', 'structure', 'str
 $inLegal = $action === 'edit' && $group === 'kris_legal';
 // La voce compare quando ci sono modifiche da pubblicare o una pubblicazione da poter annullare.
 $stagingNav = new \Kris\Staging\Staging();
-$stagingCount = count($stagingNav->changes());
+$stagingCount = count($stagingNav->changes()) + count($stagingNav->operations()) + count($stagingNav->manifest()['uploads']);
 $stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
 $sectionLabel = match ($action) {
     'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts', 'staging' => 'Modifiche in attesa',

@@ -4,25 +4,41 @@ declare(strict_types=1);
 namespace Kris\Staging;
 
 use Kris\Entity\JsonStore;
+use Kris\Entity\MediaStore;
+use Kris\Entity\StorageException;
 
 /**
- * Lo staging del sito: modifiche ai file del tema preparate (per esempio
- * dall'agente) e non ancora pubbliche.
+ * Lo staging del sito: modifiche preparate (per esempio dall'agente) e non
+ * ancora pubbliche. Vive in data/staging/, gia protetta come tutto data/.
  *
- * Vive in data/staging/, gia protetta come tutto data/, e ricalca la
- * struttura del sito: data/staging/template/home.html prende il posto di
- * template/home.html nell'anteprima (vedi Kris\Site\Paths). Contiene solo i
- * file modificati. manifest.json ricorda, per ogni file, l'impronta della
- * versione del sito da cui la modifica e partita: alla promozione, se il sito
- * nel frattempo e cambiato, il file e in conflitto.
+ * Tre tipi di modifiche:
+ *  - file del tema (template/*.html, assets/css/*.css): copie modificate che
+ *    ricalcano la struttura del sito. manifest.json ricorda l'impronta della
+ *    versione del sito da cui ogni modifica e partita: se il sito nel
+ *    frattempo e cambiato, il file e in conflitto;
+ *  - contenuti, schema e pagine: un elenco di operazioni (operations.json,
+ *    vedi Operations) rieseguite sui dati del sito alla pubblicazione, cosi
+ *    le modifiche che il cliente fa intanto dall'editor non vanno perse;
+ *  - immagini caricate: in data/staging/uploads/, spostate in assets/uploads/
+ *    alla pubblicazione.
  *
- * La promozione copia i file nel sito dopo averne salvato la versione
- * precedente in data/staging-backups/: l'ultima promozione si puo annullare
- * per BACKUP_DAYS giorni.
+ * L'anteprima legge data/staging/ sovrapposta al sito (Kris\Site\Paths): per
+ * i contenuti ci sono copie di k_data, k_model e delle pagine con le
+ * operazioni gia applicate, ricostruite da rebuild().
+ *
+ * La pubblicazione salva prima le versioni attuali in data/staging-backups/:
+ * l'ultima si puo annullare per BACKUP_DAYS giorni.
  */
 final class Staging
 {
     public const BACKUP_DAYS = 14;
+
+    private const STATE_FILES = [
+        'data' => 'data/k_data.json',
+        'model' => 'data/k_model.json',
+        'pages' => 'config/allowed_pages.json',
+        'seo' => 'config/seo.json',
+    ];
 
     private string $root;
     private string $dir;
@@ -46,7 +62,7 @@ final class Staging
         return is_file($this->dir . '/manifest.json');
     }
 
-    /** @return array{created_at: string, created_by: string, files: array<string, array{base: ?string, changed_at: string, changed_by: string}>} */
+    /** @return array{created_at: string, created_by: string, files: array, uploads: array} */
     public function manifest(): array
     {
         $manifest = $this->exists() ? (new JsonStore($this->dir . '/manifest.json'))->read([]) : [];
@@ -54,8 +70,17 @@ final class Staging
             'created_at' => (string) ($manifest['created_at'] ?? ''),
             'created_by' => (string) ($manifest['created_by'] ?? ''),
             'files' => is_array($manifest['files'] ?? null) ? $manifest['files'] : [],
+            'uploads' => is_array($manifest['uploads'] ?? null) ? $manifest['uploads'] : [],
         ];
     }
+
+    /** Vero se c'e qualcosa da pubblicare. */
+    public function hasChanges(): bool
+    {
+        return $this->changes() || $this->operations() || $this->manifest()['uploads'];
+    }
+
+    // --- file del tema -------------------------------------------------------
 
     /**
      * Un file come lo vede l'anteprima: dallo staging se modificato, altrimenti dal sito.
@@ -94,21 +119,16 @@ final class Staging
                 : "Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo e riapplica la modifica.");
         }
 
-        $manifest = $this->manifest();
-        $now = gmdate('c');
-        if (!$this->exists()) {
-            $manifest['created_at'] = $now;
-            $manifest['created_by'] = $by;
-        }
+        $manifest = $this->startManifest($by);
         if (!isset($manifest['files'][$relative])) {
             // La base e la versione del sito da cui parte la modifica, non quella dello staging
             $manifest['files'][$relative] = ['base' => self::hashOf("{$this->root}/{$relative}")];
         }
-        $manifest['files'][$relative]['changed_at'] = $now;
+        $manifest['files'][$relative]['changed_at'] = gmdate('c');
         $manifest['files'][$relative]['changed_by'] = $by;
 
         self::writeFile("{$this->dir}/{$relative}", $content);
-        (new JsonStore($this->dir . '/manifest.json'))->write($manifest);
+        $this->saveManifest($manifest);
         return ['hash' => self::hash($content)];
     }
 
@@ -137,8 +157,8 @@ final class Staging
     }
 
     /**
-     * Le modifiche in attesa, con quanto serve al riepilogo: versioni del sito
-     * e dello staging, conflitti, elementi sensibili introdotti.
+     * I file del tema in attesa, con quanto serve al riepilogo: versioni del
+     * sito e dello staging, conflitti, elementi sensibili introdotti.
      *
      * @return list<array{file: string, kind: string, site: ?string, staged: string, conflict: bool, sensitive: string[], changed_at: string, changed_by: string}>
      */
@@ -168,6 +188,130 @@ final class Staging
         return $out;
     }
 
+    // --- contenuti, schema e pagine -------------------------------------------
+
+    /**
+     * Registra un'operazione su contenuti, schema o pagine (vedi Operations),
+     * dopo averla provata sull'anteprima.
+     *
+     * @return array l'operazione completata, per esempio con l'id assegnato a un elemento nuovo
+     * @throws StagingException operazione non valida
+     */
+    public function operate(array $op, string $by): array
+    {
+        if (($op['op'] ?? null) === 'register_page' && !$this->templateExists((string) ($op['page'] ?? ''))) {
+            throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/{$op['page']}.html.");
+        }
+        [$state] = $this->replay($this->operations(), false);
+        $languages = $this->languages();
+        [, $done] = Operations::apply($state, $op, $languages, [$this, 'uploadExists']);
+
+        $manifest = $this->startManifest($by);
+        $this->saveManifest($manifest);
+        $list = $this->operations();
+        $list[] = $done + ['by' => $by, 'at' => gmdate('c')];
+        (new JsonStore($this->dir . '/operations.json'))->write($list);
+        $this->rebuild();
+        return $done;
+    }
+
+    /** @return list<array> le operazioni registrate, nell'ordine */
+    public function operations(): array
+    {
+        $file = $this->dir . '/operations.json';
+        return is_file($file) ? array_values((new JsonStore($file))->read([])) : [];
+    }
+
+    /**
+     * Ricostruisce le copie dei contenuti usate dall'anteprima: dati attuali
+     * del sito con le operazioni applicate. Le operazioni che non si possono
+     * piu applicare vengono saltate e restituite come conflitti.
+     *
+     * @return list<array{op: array, description: string, conflict: ?string}>
+     */
+    public function rebuild(): array
+    {
+        $ops = $this->operations();
+        foreach (self::STATE_FILES as $relative) {
+            @unlink("{$this->dir}/{$relative}");
+        }
+        if (!$ops) return [];
+
+        [$state, $report] = $this->replay($ops, false);
+        $touchesPages = (bool) array_filter($ops, fn($o) => ($o['op'] ?? '') === 'register_page');
+        self::writeJson("{$this->dir}/data/k_data.json", $state['data']);
+        self::writeJson("{$this->dir}/data/k_model.json", $state['model']);
+        if ($touchesPages) {
+            self::writeJson("{$this->dir}/config/allowed_pages.json", ['allowed_pages' => array_values($state['pages'])]);
+            self::writeJson("{$this->dir}/config/seo.json", $state['seo']);
+        }
+        return $report;
+    }
+
+    /**
+     * Template che usano ancora campi tolti o rinominati dalle operazioni:
+     * dopo la pubblicazione mostrerebbero un vuoto.
+     *
+     * @return string[]
+     */
+    public function templateProblems(): array
+    {
+        $retired = [];
+        foreach ($this->operations() as $op) {
+            foreach (Operations::retiredNames($op) as $name) $retired[$name] = true;
+        }
+        if (!$retired) return [];
+
+        $templates = [];
+        foreach ([$this->root, $this->dir] as $base) {
+            foreach (glob("{$base}/template/*.html") ?: [] as $file) {
+                $templates['template/' . basename($file)] = (string) file_get_contents($file);
+            }
+        }
+        $problems = [];
+        foreach ($templates as $relative => $html) {
+            foreach (array_keys($retired) as $name) {
+                $q = preg_quote((string) $name, '/');
+                if (preg_match('/\{\{\s*' . $q . '\s*\}\}|\{\{#(?:if|elif)\s+' . $q . '\b|k-array=["\']' . $q . '["\']/', $html) === 1) {
+                    $problems[] = "{$relative} usa ancora «{$name}»";
+                }
+            }
+        }
+        sort($problems);
+        return $problems;
+    }
+
+    // --- immagini --------------------------------------------------------------
+
+    /**
+     * Carica un'immagine o un PDF nello staging, con gli stessi controlli
+     * dell'upload dell'editor. Restituisce l'URL che avra dopo la
+     * pubblicazione, da usare nei campi image.
+     *
+     * @throws StagingException
+     */
+    public function upload(string $path, string $originalName, string $by): string
+    {
+        try {
+            $url = (new MediaStore($this->dir . '/uploads/', 'assets/uploads/'))->storeLocal($path, $originalName);
+        } catch (StorageException $e) {
+            throw new StagingException($e->getMessage());
+        }
+        $manifest = $this->startManifest($by);
+        $manifest['uploads'][basename($url)] = ['original' => $originalName, 'by' => $by, 'at' => gmdate('c')];
+        $this->saveManifest($manifest);
+        return $url;
+    }
+
+    /** Un URL assets/uploads/<nome> esiste nel sito o fra le immagini dello staging. */
+    public function uploadExists(string $url): bool
+    {
+        $name = basename($url);
+        return is_file("{$this->root}/assets/uploads/{$name}") || is_file("{$this->dir}/uploads/{$name}");
+    }
+
+    // --- pubblicazione ---------------------------------------------------------
+
     /** Elimina lo staging senza toccare il sito. */
     public function discard(): void
     {
@@ -175,40 +319,75 @@ final class Staging
     }
 
     /**
-     * Pubblica le modifiche: salva le versioni attuali del sito, copia i file
-     * dello staging al loro posto ed elimina lo staging. Se una scrittura
-     * fallisce, il sito torna com'era.
+     * Pubblica tutto: salva le versioni attuali del sito, scrive file del tema,
+     * contenuti, schema, pagine e immagini, poi elimina lo staging. Se una
+     * scrittura fallisce, il sito torna com'era.
+     *
+     * Conflitti (file o valori cambiati sul sito nel frattempo, operazioni non
+     * piu applicabili) e template che usano campi tolti fermano la
+     * pubblicazione, salvo $force: allora le modifiche dello staging vincono e
+     * le operazioni impossibili vengono saltate.
      *
      * @return array{backup: string, files: string[]}
-     * @throws StagingException staging vuoto, conflitti senza $force, errore di scrittura
+     * @throws StagingException
      */
     public function promote(string $by, bool $force = false): array
     {
-        $changes = $this->changes();
-        if (!$changes) {
+        if (!$this->hasChanges()) {
             throw new StagingException('Non ci sono modifiche da pubblicare.');
         }
-        $conflicts = array_column(array_filter($changes, fn($c) => $c['conflict']), 'file');
-        if ($conflicts && !$force) {
-            throw new StagingException('Alcuni file sono cambiati sul sito dopo la preparazione delle modifiche.', $conflicts);
+        $changes = $this->changes();
+        $ops = $this->operations();
+        [, $report] = $this->replay($ops, false);
+        $problems = array_merge(
+            array_map(fn($c) => "{$c['file']}: cambiato anche sul sito", array_filter($changes, fn($c) => $c['conflict'])),
+            array_values(array_filter(array_column($report, 'conflict'))),
+            $this->templateProblems()
+        );
+        if ($problems && !$force) {
+            throw new StagingException('Alcune modifiche non si possono pubblicare così come sono.', $problems);
         }
 
+        // Cosa cambia nel sito: percorso relativo => contenuto nuovo
+        $writes = [];
+        foreach ($changes as $change) $writes[$change['file']] = $change['staged'];
+        if ($ops) {
+            [$state] = $this->replay($ops, true);
+            $writes[self::STATE_FILES['data']] = self::encode($state['data']);
+            $writes[self::STATE_FILES['model']] = self::encode($state['model']);
+            if (array_filter($ops, fn($o) => ($o['op'] ?? '') === 'register_page')) {
+                $writes[self::STATE_FILES['pages']] = self::encode(['allowed_pages' => array_values($state['pages'])]);
+                $writes[self::STATE_FILES['seo']] = self::encode($state['seo']);
+            }
+        }
+        $uploads = array_keys($this->manifest()['uploads']);
+        foreach ($uploads as $name) {
+            if (is_file("{$this->root}/assets/uploads/{$name}")) {
+                throw new StagingException("Esiste già un file assets/uploads/{$name}: rinomina il caricamento e riprova.");
+            }
+        }
+
+        // Copia di sicurezza di quello che verra sostituito
         $id = gmdate('Ymd-His') . '-' . bin2hex(random_bytes(3));
         $backup = "{$this->backups}/{$id}";
         $files = [];
-        foreach ($changes as $change) {
-            $relative = $change['file'];
-            $files[$relative] = ['existed' => $change['site'] !== null];
-            if ($change['site'] !== null) {
-                self::writeFile("{$backup}/files/{$relative}", $change['site']);
-            }
+        foreach (array_merge(array_keys($writes), array_map(fn($n) => "assets/uploads/{$n}", $uploads)) as $relative) {
+            $target = "{$this->root}/{$relative}";
+            $files[$relative] = ['existed' => is_file($target)];
+            if (is_file($target)) self::writeFile("{$backup}/files/{$relative}", (string) file_get_contents($target));
         }
         $meta = ['id' => $id, 'promoted_at' => gmdate('c'), 'promoted_by' => $by, 'files' => $files];
         (new JsonStore("{$backup}/meta.json"))->write($meta);
 
         try {
-            foreach ($changes as $change) {
-                self::writeFile("{$this->root}/{$change['file']}", $change['staged']);
+            foreach ($writes as $relative => $content) {
+                self::writeFile("{$this->root}/{$relative}", $content);
+            }
+            foreach ($uploads as $name) {
+                if (!is_dir("{$this->root}/assets/uploads")) @mkdir("{$this->root}/assets/uploads", 0775, true);
+                if (!@copy("{$this->dir}/uploads/{$name}", "{$this->root}/assets/uploads/{$name}")) {
+                    throw new StagingException("Non riesco a copiare l'immagine {$name} in assets/uploads/.");
+                }
             }
         } catch (StagingException $e) {
             $this->restore($meta);
@@ -220,7 +399,7 @@ final class Staging
         return ['backup' => $id, 'files' => array_keys($files)];
     }
 
-    /** L'ultima promozione che si puo ancora annullare, o null. */
+    /** L'ultima pubblicazione che si puo ancora annullare, o null. */
     public function lastPromotion(): ?array
     {
         $this->pruneBackups();
@@ -234,11 +413,11 @@ final class Staging
     }
 
     /**
-     * Rimette i file dell'ultima promozione com'erano prima. I file che la
-     * promozione aveva creato vengono tolti.
+     * Rimette i file dell'ultima pubblicazione com'erano prima. I file che la
+     * pubblicazione aveva creato (template nuovi, immagini) vengono tolti.
      *
      * @return string[] i file ripristinati
-     * @throws StagingException nessuna promozione da annullare
+     * @throws StagingException nessuna pubblicazione da annullare
      */
     public function undoLastPromotion(): array
     {
@@ -251,10 +430,76 @@ final class Staging
         return array_keys($meta['files']);
     }
 
+    // --- interni ---------------------------------------------------------------
+
+    /**
+     * Riapplica le operazioni ai dati attuali del sito.
+     *
+     * @return array{0: array, 1: list<array{op: array, description: string, conflict: ?string}>}
+     */
+    private function replay(array $ops, bool $force): array
+    {
+        $state = $this->siteState();
+        $languages = $this->languages();
+        $report = [];
+        foreach ($ops as $op) {
+            $conflict = null;
+            try {
+                [$state] = Operations::apply($state, $op, $languages, [$this, 'uploadExists'], true, $force);
+            } catch (StagingException $e) {
+                $conflict = $e->getMessage();
+            }
+            $report[] = ['op' => $op, 'description' => Operations::describe($op), 'conflict' => $conflict];
+        }
+        return [$state, $report];
+    }
+
+    private function siteState(): array
+    {
+        $read = fn(string $relative, array $default): array => is_file("{$this->root}/{$relative}")
+            ? (new JsonStore("{$this->root}/{$relative}"))->read($default) : $default;
+        $pages = $read(self::STATE_FILES['pages'], ['allowed_pages' => ['homepage']]);
+        return [
+            'data' => $read(self::STATE_FILES['data'], []),
+            'model' => $read(self::STATE_FILES['model'], []),
+            'pages' => is_array($pages['allowed_pages'] ?? null) ? array_values($pages['allowed_pages']) : ['homepage'],
+            'seo' => $read(self::STATE_FILES['seo'], []),
+        ];
+    }
+
+    /** Le lingue attive del sito, come le legge il sito pubblico. */
+    private function languages(): array
+    {
+        $file = "{$this->root}/data/cms_settings.json";
+        $settings = is_file($file) ? (new JsonStore($file))->read([]) : [];
+        return !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+    }
+
+    private function templateExists(string $page): bool
+    {
+        return preg_match('/^[a-z0-9][a-z0-9_-]*$/', $page) === 1
+            && (is_file("{$this->root}/template/{$page}.html") || is_file("{$this->dir}/template/{$page}.html"));
+    }
+
+    private function startManifest(string $by): array
+    {
+        $manifest = $this->manifest();
+        if (!$this->exists()) {
+            $manifest['created_at'] = gmdate('c');
+            $manifest['created_by'] = $by;
+        }
+        return $manifest;
+    }
+
+    private function saveManifest(array $manifest): void
+    {
+        (new JsonStore($this->dir . '/manifest.json'))->write($manifest);
+    }
+
     private function restore(array $meta): void
     {
         foreach ($meta['files'] as $relative => $info) {
-            FilePolicy::assertEditable((string) $relative);
+            FilePolicy::assertRestorable((string) $relative);
             $target = "{$this->root}/{$relative}";
             if (!empty($info['existed'])) {
                 self::writeFile($target, (string) file_get_contents("{$this->backups}/{$meta['id']}/files/{$relative}"));
@@ -280,6 +525,17 @@ final class Staging
     private static function hashOf(string $file): ?string
     {
         return is_file($file) ? self::hash((string) file_get_contents($file)) : null;
+    }
+
+    /** Stessa forma dei file scritti dall'editor. */
+    private static function encode(array $data): string
+    {
+        return (string) json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    }
+
+    private static function writeJson(string $file, array $data): void
+    {
+        self::writeFile($file, self::encode($data));
     }
 
     /** Scrittura atomica: file temporaneo nella stessa cartella, poi rename. */

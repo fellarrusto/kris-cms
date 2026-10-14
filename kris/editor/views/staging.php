@@ -2,23 +2,61 @@
 <?php
 $staging = new \Kris\Staging\Staging();
 $changes = $staging->changes();
+$operations = $staging->rebuild();
+$uploads = $staging->manifest()['uploads'];
+$templateProblems = $staging->templateProblems();
 $manifest = $staging->manifest();
 $lastPromotion = $staging->lastPromotion();
-$conflicts = array_filter($changes, fn($c) => $c['conflict']);
+$fileConflicts = array_filter($changes, fn($c) => $c['conflict']);
+$opConflicts = array_filter($operations, fn($o) => $o['conflict'] !== null);
+$blocked = $fileConflicts || $opConflicts || $templateProblems;
+$hasChanges = $changes || $operations || $uploads;
 $siteRoot = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
 $previewUrl = $siteRoot . '/index.php?kris_preview=1';
 $when = fn(string $iso): string => $iso === '' ? '' : date('d/m/Y H:i', strtotime($iso));
 ?>
-<div class="container"><header class="page-heading"><div><h1>Modifiche in attesa</h1><p>Modifiche al tema preparate e non ancora pubblicate. I visitatori vedono ancora il sito attuale.</p></div>
-<?php if ($changes): ?><div class="actions"><a class="btn btn-white" href="<?= h($previewUrl) ?>" target="_blank" rel="noopener">Apri l'anteprima</a></div><?php endif; ?></header>
+<div class="container"><header class="page-heading"><div><h1>Modifiche in attesa</h1><p>Modifiche preparate e non ancora pubblicate. I visitatori vedono ancora il sito attuale.</p></div>
+<?php if ($hasChanges): ?><div class="actions"><a class="btn btn-white" href="<?= h($previewUrl) ?>" target="_blank" rel="noopener">Apri l'anteprima</a></div><?php endif; ?></header>
 
-<?php if (!$changes): ?>
+<?php if (!$hasChanges): ?>
     <section class="card"><div class="card-body"><p>Non ci sono modifiche in attesa.</p></div></section>
 <?php else: ?>
-    <?php if ($conflicts): ?>
-        <div class="alert alert-error" role="alert">Alcuni file sono stati cambiati sul sito dopo che le modifiche sono state preparate: pubblicandole sostituisci quelle versioni. Controlla le differenze qui sotto.</div>
+    <p class="staging-origin">Preparate da <?= h($manifest['created_by'] ?: '—') ?><?= $manifest['created_at'] ? ' il ' . h($when($manifest['created_at'])) : '' ?>.</p>
+    <?php if ($blocked): ?>
+        <div class="alert alert-error" role="alert"><div><strong>Prima di pubblicare, controlla:</strong>
+            <ul class="staging-problems">
+                <?php foreach ($fileConflicts as $c): ?><li><?= h($c['file']) ?> è stato cambiato anche sul sito: pubblicando lo sostituisci.</li><?php endforeach; ?>
+                <?php foreach ($opConflicts as $o): ?><li><?= h($o['conflict']) ?></li><?php endforeach; ?>
+                <?php foreach ($templateProblems as $p): ?><li><?= h($p) ?>: dopo la pubblicazione lì comparirà un vuoto.</li><?php endforeach; ?>
+            </ul></div></div>
     <?php endif; ?>
-    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><h2><?= count($changes) ?> file da pubblicare</h2><p>Preparate da <?= h($manifest['created_by'] ?: '—') ?><?= $manifest['created_at'] ? ' il ' . h($when($manifest['created_at'])) : '' ?>.</p></div></header>
+
+    <?php if ($operations): ?>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('content') ?></span><div><h2>Contenuti, struttura e pagine</h2><p><?= count($operations) ?> modifiche, applicate ai contenuti attuali del sito al momento della pubblicazione.</p></div></header>
+    <div class="card-body"><ol class="staging-ops">
+        <?php foreach ($operations as $o): ?>
+            <li class="<?= $o['conflict'] !== null ? 'has-conflict' : '' ?>">
+                <span><?= h($o['description']) ?></span>
+                <?php if (($o['op']['op'] ?? '') === 'set_field' && is_string($o['op']['value'] ?? null)): ?><small class="staging-value"><?= h(mb_strimwidth(strip_tags($o['op']['value']), 0, 160, '…')) ?></small><?php endif; ?>
+                <small><?= h((string) ($o['op']['by'] ?? '')) ?> · <?= h($when((string) ($o['op']['at'] ?? ''))) ?></small>
+                <?php if ($o['conflict'] !== null): ?><span class="badge badge-danger">Non applicabile</span><?php endif; ?>
+            </li>
+        <?php endforeach; ?>
+    </ol></div></section>
+    <?php endif; ?>
+
+    <?php if ($uploads): ?>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('media') ?></span><div><h2>Immagini caricate</h2><p>Finiranno nella libreria media con la pubblicazione.</p></div></header>
+    <div class="card-body staging-uploads">
+        <?php foreach ($uploads as $name => $info): $isPdf = str_ends_with((string) $name, '.pdf'); ?>
+            <figure><?php if ($isPdf): ?><span class="file-placeholder">PDF</span><?php else: ?><img src="<?= h($siteRoot . '/index.php?kris_preview_asset=uploads/' . rawurlencode((string) $name)) ?>" alt="" loading="lazy"><?php endif; ?>
+            <figcaption><?= h((string) ($info['original'] ?? $name)) ?></figcaption></figure>
+        <?php endforeach; ?>
+    </div></section>
+    <?php endif; ?>
+
+    <?php if ($changes): ?>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><h2>File del tema</h2><p><?= count($changes) ?> file da sostituire o aggiungere.</p></div></header>
     <div class="card-body staging-files">
     <?php foreach ($changes as $change): ?>
         <article class="staging-file">
@@ -36,11 +74,12 @@ $when = fn(string $iso): string => $iso === '' ? '' : date('d/m/Y H:i', strtotim
         </article>
     <?php endforeach; ?>
     </div></section>
+    <?php endif; ?>
 
     <div class="staging-actions">
-        <form method="POST" action="?action=staging" data-confirm-title="Pubblicare le modifiche?" data-confirm="<?= count($changes) ?> file del sito verranno sostituiti. Le versioni attuali vengono salvate: potrai annullare la pubblicazione per <?= \Kris\Staging\Staging::BACKUP_DAYS ?> giorni." data-confirm-label="Pubblica">
-            <input type="hidden" name="staging_promote" value="1"><?php if ($conflicts): ?><input type="hidden" name="force" value="1"><?php endif; ?>
-            <button class="btn btn-primary"><?= $conflicts ? 'Pubblica comunque' : 'Pubblica sul sito' ?></button>
+        <form method="POST" action="?action=staging" data-confirm-title="Pubblicare le modifiche?" data-confirm="<?= $blocked ? 'Ci sono avvisi da controllare: le modifiche dello staging prevarranno e quelle non applicabili verranno saltate. ' : '' ?>Le versioni attuali vengono salvate: potrai annullare la pubblicazione per <?= \Kris\Staging\Staging::BACKUP_DAYS ?> giorni." data-confirm-label="Pubblica">
+            <input type="hidden" name="staging_promote" value="1"><?php if ($blocked): ?><input type="hidden" name="force" value="1"><?php endif; ?>
+            <button class="btn btn-primary"><?= $blocked ? 'Pubblica comunque' : 'Pubblica sul sito' ?></button>
         </form>
         <form method="POST" action="?action=staging" data-confirm-title="Scartare le modifiche?" data-confirm="Le modifiche in attesa verranno eliminate. Il sito non cambia." data-confirm-label="Scarta">
             <input type="hidden" name="staging_discard" value="1"><button class="btn btn-danger">Scarta le modifiche</button>
@@ -50,7 +89,7 @@ $when = fn(string $iso): string => $iso === '' ? '' : date('d/m/Y H:i', strtotim
 
 <?php if ($lastPromotion): ?>
     <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('back') ?></span><div><h2>Ultima pubblicazione</h2><p><?= h($when((string) $lastPromotion['promoted_at'])) ?> da <?= h((string) $lastPromotion['promoted_by']) ?>: <?= h(implode(', ', array_keys($lastPromotion['files']))) ?></p></div></header>
-    <div class="card-body"><form method="POST" action="?action=staging" data-confirm-title="Annullare la pubblicazione?" data-confirm="I file pubblicati torneranno alla versione precedente. Le modifiche fatte a quei file dopo la pubblicazione andranno perse." data-confirm-label="Annulla pubblicazione">
+    <div class="card-body"><form method="POST" action="?action=staging" data-confirm-title="Annullare la pubblicazione?" data-confirm="I file pubblicati, compresi contenuti e struttura, torneranno alla versione precedente. Le modifiche fatte dopo la pubblicazione a quei file andranno perse." data-confirm-label="Annulla pubblicazione">
         <input type="hidden" name="staging_undo" value="1"><button class="btn btn-white">Annulla la pubblicazione</button>
     </form></div></section>
 <?php endif; ?>

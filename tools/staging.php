@@ -9,6 +9,8 @@ declare(strict_types=1);
  *   php tools/staging.php read  template/homepage.html
  *   php tools/staging.php edit  template/homepage.html --old="Chi siamo" --new="Il team"
  *   php tools/staging.php write assets/css/extra.css < extra.css     (file nuovo o sostituito)
+ *   php tools/staging.php op    '{"op":"set_field","key":"homepage","id":0,"field":"page_title","lang":"it","value":"Ciao"}'
+ *   php tools/staging.php upload foto.jpg
  *   php tools/staging.php promote [--force]
  *   php tools/staging.php discard
  *   php tools/staging.php undo
@@ -50,7 +52,12 @@ try {
     switch ($command) {
         case 'status':
             $changes = $staging->changes();
-            if (!$changes) {
+            foreach ($staging->rebuild() as $o) {
+                out(($o['conflict'] === null ? 'operazione ' : 'CONFLITTO  ') . $o['description'] . ($o['conflict'] ? "  [{$o['conflict']}]" : ''));
+            }
+            foreach (array_keys($staging->manifest()['uploads']) as $name) out("immagine   assets/uploads/{$name}");
+            foreach ($staging->templateProblems() as $p) out("ATTENZIONE {$p}");
+            if (!$staging->hasChanges()) {
                 out('Nessuna modifica in attesa.');
             }
             foreach ($changes as $change) {
@@ -84,6 +91,17 @@ try {
             out("Scritto nello staging: {$file}");
             break;
 
+        case 'op':
+            $op = json_decode((string) $file, true);
+            if (!is_array($op)) throw new StagingException("Serve un'operazione in JSON, per esempio {\"op\":\"set_field\",...}.");
+            $done = $staging->operate($op, $by);
+            out('Registrata: ' . \Kris\Staging\Operations::describe($done) . (isset($done['assigned_id']) ? " (id {$done['assigned_id']})" : ''));
+            break;
+
+        case 'upload':
+            out('Caricato nello staging: ' . $staging->upload((string) $file, basename((string) $file), $by));
+            break;
+
         case 'promote':
             $done = $staging->promote($by, isset($options['force']));
             out('Pubblicati: ' . implode(', ', $done['files']) . " (copia di sicurezza {$done['backup']})");
@@ -99,7 +117,7 @@ try {
             break;
 
         default:
-            throw new StagingException("Comando sconosciuto: {$command}. Usa status, read, edit, write, promote, discard o undo.");
+            throw new StagingException("Comando sconosciuto: {$command}. Usa status, read, edit, write, op, upload, promote, discard o undo.");
     }
 } catch (StagingException $e) {
     fwrite(STDERR, 'Errore: ' . $e->getMessage() . ($e->details() ? ' (' . implode(', ', $e->details()) . ')' : '') . PHP_EOL);

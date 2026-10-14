@@ -35,6 +35,8 @@ if (Preview::requested($_GET) && Preview::isAdmin()) {
         exit;
     }
     if ($staging->exists()) {
+        // I contenuti del sito possono essere cambiati dall'ultima operazione: l'anteprima riparte da quelli
+        $staging->rebuild();
         $preview = $staging;
         Paths::useOverlay($staging->dir());
         Preview::headers();

@@ -44,8 +44,8 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
-| `kris/core/staging/` | Staging del tema (`Staging`), file ammessi e controlli sul contenuto (`FilePolicy`), anteprima per gli admin (`Preview`), differenze per il riepilogo (`Diff`). |
-| `tools/staging.php` | Le operazioni sullo staging da riga di comando: `status`, `read`, `edit`, `write`, `promote`, `discard`, `undo`. |
+| `kris/core/staging/` | Staging (`Staging`), operazioni su contenuti, schema e pagine (`Operations`), file ammessi e controlli sul contenuto (`FilePolicy`), anteprima per gli admin (`Preview`), differenze per il riepilogo (`Diff`). |
+| `tools/staging.php` | Le operazioni sullo staging da riga di comando: `status`, `read`, `edit`, `write`, `op`, `upload`, `promote`, `discard`, `undo`. |
 | `kris/core/site/Paths.php` | Unico punto da cui il rendering pubblico legge template, `data/` e pagine autorizzate. Con una sovrapposizione attiva (l'anteprima dello staging) un file presente lì vince su quello del sito. Solo letture: le scritture vanno sempre ai file del sito. |
 | `kris/core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
 | `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
@@ -273,7 +273,9 @@ L'editor permette di configurare anche gli schemi `of` e presenta l'impatto dell
 
 Le modifiche al tema preparate senza pubblicarle subito (in futuro dall'agente di Kris Agent, oggi da `tools/staging.php`) vanno in `data/staging/`, che ricalca la struttura del sito e contiene solo i file modificati.
 
-- Si possono modificare solo `template/<nome>.html` e `assets/css/<nome>.css`. Tutto il resto viene rifiutato da `FilePolicy`: framework, stub, PHP, `.htaccess`, `config/`, `data/`. Niente tag PHP nei contenuti.
+- **File del tema:** si possono modificare solo `template/<nome>.html` e `assets/css/<nome>.css`. Tutto il resto viene rifiutato da `FilePolicy`: framework, stub, PHP, `.htaccess`, `config/`, `data/`. Niente tag PHP nei contenuti.
+- **Contenuti, schema e pagine:** non si copiano i file. Si registrano operazioni (`Kris\Staging\Operations`: `set_field`, `add_item`, `remove_item`, `move_item`, `create_entity`, `add_field`, `remove_field`, `rename_field`, `describe_field`, `create_collection`, `register_page`) in `data/staging/operations.json`. Alla pubblicazione si rieseguono sui dati attuali del sito: le modifiche fatte intanto dall'editor restano. Se il cliente ha cambiato lo stesso valore, o l'elemento non esiste più, è un conflitto. Rinomine e rimozioni aggiornano anche i valori; un template che usa ancora un campo tolto blocca la pubblicazione. Le raccolte `kris_` non si toccano.
+- **Immagini:** `Staging::upload()` usa `MediaStore::storeLocal()`, con gli stessi controlli dell'upload dell'editor, e salva in `data/staging/uploads/`. La pubblicazione le copia in `assets/uploads/`.
 - Ogni scrittura porta l'impronta (sha256) della versione letta: se il file è cambiato nel frattempo, la scrittura viene rifiutata. `edit` sostituisce un testo che deve comparire una sola volta.
 - **Anteprima:** `index.php?kris_preview=1`, solo con la sessione dell'editor. Senza sessione il parametro è ignorato. I CSS dello staging li serve `index.php?kris_preview_asset=css/<nome>.css`; la pagina ha `noindex`, `no-store` e una barra in fondo.
 - **Pubblicazione:** da Editor › Da pubblicare. Riepilogo con diff, segnalazione di script, gestori di eventi, URL `javascript:` e domini esterni aggiunti. Se un file è cambiato sul sito dopo la preparazione, serve una conferma esplicita. Prima di scrivere si salvano le versioni attuali: l'ultima pubblicazione si annulla per 14 giorni.
