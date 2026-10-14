@@ -35,6 +35,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `data/cms_settings.json` | Lingue abilitate; opzionale, default `it` e `en`. |
 | `data/kris_state.json` | Stato del sito rispetto al framework: formato dei dati, migrazioni applicate, ultimo controllo e registro degli aggiornamenti. Appartiene al sito: non va copiato da un sito all'altro. |
 | `data/backups/` | Copie precedenti prodotte dalle scritture tramite `JsonStore`. |
+| `data/staging/`, `data/staging-backups/` | Modifiche al tema in attesa di pubblicazione e copie dei file sostituiti dalle ultime pubblicazioni (14 giorni). Gestite da `Kris\Staging\Staging`: vedi "Staging e anteprima". |
 | `data/updates/`, `data/snapshots/`, `data/kris_maintenance.json` | Pacchetti in preparazione, copie di sicurezza degli aggiornamenti (14 giorni) e segnale di manutenzione. Gestiti dall'updater: non modificarli a mano, se non per ripristinare a mano uno snapshot. |
 | `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
 | `config/auth.php` | Credenziali locali: utente, hash della password, email di recupero e indirizzo dell'editor da cui partono i link di reset. Generato dal setup, escluso da Git. |
@@ -43,6 +44,8 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
+| `kris/core/staging/` | Staging del tema (`Staging`), file ammessi e controlli sul contenuto (`FilePolicy`), anteprima per gli admin (`Preview`), differenze per il riepilogo (`Diff`). |
+| `tools/staging.php` | Le operazioni sullo staging da riga di comando: `status`, `read`, `edit`, `write`, `promote`, `discard`, `undo`. |
 | `kris/core/site/Paths.php` | Unico punto da cui il rendering pubblico legge template, `data/` e pagine autorizzate. Con una sovrapposizione attiva (l'anteprima dello staging) un file presente lì vince su quello del sito. Solo letture: le scritture vanno sempre ai file del sito. |
 | `kris/core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
 | `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
@@ -265,6 +268,16 @@ Mantieni autenticazione e CSRF per ogni mutazione. I salvataggi asincroni confer
 **Accesso e recupero della password.** Il setup chiede utente, email e password; in Impostazioni › Account si cambiano email e password e si invia un'email di prova. "Password dimenticata?" manda all'email un link monouso valido 30 minuti, costruito sull'indirizzo dell'editor salvato da un admin autenticato e mai sull'host della richiesta. L'invio usa `mail()` di PHP: su alcuni hosting non arriva. In quel caso, e quando l'email non è configurata, l'editor dice di contattare l'amministratore dell'hosting, che reimposta l'accesso eliminando `config/auth.php` (al successivo accesso riparte il setup, i contenuti restano).
 
 L'editor permette di configurare anche gli schemi `of` e presenta l'impatto delle modifiche distruttive. I nomi dei campi devono continuare a corrispondere ai template. Non introdurre messaggi che promettono bozze, undo o gestione conflitti non implementati.
+
+## Staging e anteprima
+
+Le modifiche al tema preparate senza pubblicarle subito (in futuro dall'agente di Kris Agent, oggi da `tools/staging.php`) vanno in `data/staging/`, che ricalca la struttura del sito e contiene solo i file modificati.
+
+- Si possono modificare solo `template/<nome>.html` e `assets/css/<nome>.css`. Tutto il resto viene rifiutato da `FilePolicy`: framework, stub, PHP, `.htaccess`, `config/`, `data/`. Niente tag PHP nei contenuti.
+- Ogni scrittura porta l'impronta (sha256) della versione letta: se il file è cambiato nel frattempo, la scrittura viene rifiutata. `edit` sostituisce un testo che deve comparire una sola volta.
+- **Anteprima:** `index.php?kris_preview=1`, solo con la sessione dell'editor. Senza sessione il parametro è ignorato. I CSS dello staging li serve `index.php?kris_preview_asset=css/<nome>.css`; la pagina ha `noindex`, `no-store` e una barra in fondo.
+- **Pubblicazione:** da Editor › Da pubblicare. Riepilogo con diff, segnalazione di script, gestori di eventi, URL `javascript:` e domini esterni aggiunti. Se un file è cambiato sul sito dopo la preparazione, serve una conferma esplicita. Prima di scrivere si salvano le versioni attuali: l'ultima pubblicazione si annulla per 14 giorni.
+- Con modifiche in attesa l'aggiornamento di Kris è bloccato: prima si pubblica o si scarta.
 
 ## Aggiornamenti del framework
 

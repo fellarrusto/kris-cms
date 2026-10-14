@@ -315,3 +315,19 @@ tr.is-hidden .content-title, tr.is-hidden strong { text-decoration:line-through;
 .account-status { font-size:12px; color:var(--primary); margin:0; max-width:520px; }
 .account-status.is-error { color:var(--danger); }
 .account-alert-form .account-status { flex-basis:100%; }
+
+/* Modifiche in attesa (staging) */
+.staging-files { display:flex; flex-direction:column; gap:22px; }
+.staging-file-head { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; margin-bottom:10px; }
+.staging-file-head code { font-size:13px; font-weight:650; }
+.staging-file-head small { color:var(--muted); font-size:11px; margin-left:auto; }
+.badge-danger { color:var(--danger); border-color:#e5b8ba; background:#fdf0ef; }
+.notice-warning { background:#fdf6e9; border-color:#efdcb4; }
+.notice-warning p { color:#7a5a1c; }
+.diff-view { margin:0; max-height:420px; overflow:auto; border:1px solid var(--border); border-radius:8px; background:#fbfcfa; font:12px/1.55 Consolas,'Courier New',monospace; white-space:normal; }
+.diff-view span { display:block; padding:0 12px; white-space:pre; min-height:1.55em; }
+.diff-add { background:#e7f4e4; color:#1f5a2c; }
+.diff-del { background:#fbe9e9; color:#8a2a30; }
+.diff-same { color:#5b6862; }
+.diff-gap { color:var(--muted); background:#f1f4ef; text-align:center; }
+.staging-actions { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:28px; }

@@ -7,3 +7,5 @@
 /dist/
 /.claude/
 /config/auth_reset.json
+/data/staging/
+/data/staging-backups/

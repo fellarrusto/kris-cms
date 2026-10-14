@@ -277,8 +277,12 @@ if (isReservedCollection($group) && in_array($action, ['list', 'structure', 'str
     $_GET['path'] = '';
 }
 $inLegal = $action === 'edit' && $group === 'kris_legal';
+// La voce compare quando ci sono modifiche da pubblicare o una pubblicazione da poter annullare.
+$stagingNav = new \Kris\Staging\Staging();
+$stagingCount = count($stagingNav->changes());
+$stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
 $sectionLabel = match ($action) {
-    'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts',
+    'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts', 'staging' => 'Modifiche in attesa',
     'edit' => $inLegal ? 'Privacy e cookie' : 'Contenuti',
     'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
 };
@@ -365,6 +369,7 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
             'edit'             => 'edit.php',
             'media'            => 'media.php',
             'settings'         => 'settings.php',
+            'staging'          => 'staging.php',
         ];
         require __DIR__ . '/views/' . ($views[$action] ?? $views['dashboard']);
         ?>

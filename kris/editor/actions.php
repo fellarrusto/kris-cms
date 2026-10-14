@@ -369,6 +369,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             exit;
         }
     }
+    // Staging: pubblica, scarta, annulla l'ultima pubblicazione
+    if (isset($_POST['staging_promote']) || isset($_POST['staging_discard']) || isset($_POST['staging_undo'])) {
+        $staging = new \Kris\Staging\Staging();
+        $user = (string) ($_SESSION['kris_user'] ?? '');
+        try {
+            if (isset($_POST['staging_promote'])) {
+                $done = $staging->promote($user, isset($_POST['force']));
+                $msg = 'Modifiche pubblicate: ' . count($done['files']) . ' file. Puoi annullare la pubblicazione per ' . \Kris\Staging\Staging::BACKUP_DAYS . ' giorni.';
+            } elseif (isset($_POST['staging_discard'])) {
+                $staging->discard();
+                $msg = 'Modifiche scartate. Il sito non è cambiato.';
+            } else {
+                $restored = $staging->undoLastPromotion();
+                $msg = 'Pubblicazione annullata: ' . count($restored) . ' file sono tornati com\'erano.';
+            }
+        } catch (\Kris\Staging\StagingException $e) {
+            $error = $e->getMessage() . ($e->details() ? ' File: ' . implode(', ', $e->details()) . '.' : '');
+        }
+    }
     // 7. Upload & Settings
     if (isset($_FILES['file'])) {
         // Stesso servizio usato da upload.php: una sola politica su estensioni,
