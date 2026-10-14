@@ -187,3 +187,68 @@ test('la panoramica descrive lingue, pagine, schema, contenuti e file del tema',
     assertSame(0, $overview['entities']['homepage'][0]['id']);
     assertTrue(in_array('homepage.html', $overview['templates'], true));
 });
+
+// --- richieste del sito al Worker ------------------------------------------
+
+/** Un Worker finto che verifica la firma del sito con la chiave pubblica salvata all'abbinamento. */
+function fakeWorker(string $root, callable $answer, array &$seen = []): callable
+{
+    return function (string $url, string $body, array $headers) use ($root, $answer, &$seen): array {
+        $config = (new AgentConfig($root))->load();
+        $message = implode("\n", ['KRIS-AGENT-1', 'POST', $headers['X-Kris-Site'], $headers['X-Kris-Timestamp'], $headers['X-Kris-Nonce'], hash('sha256', $body)]);
+        $ok = sodium_crypto_sign_verify_detached((string) base64_decode($headers['X-Kris-Signature']), $message, (string) base64_decode($config['site_public_key']));
+        $seen[] = ['url' => $url, 'body' => json_decode($body, true), 'headers' => $headers];
+        return $ok ? $answer($url, json_decode($body, true)) : ['status' => 401, 'json' => ['error' => 'UnauthorizedError']];
+    };
+}
+
+test('il sito chiede gli utenti e decide con richieste firmate dalla sua chiave', function () {
+    [$root] = agentSite();
+    $seen = [];
+    $client = new \Kris\Agent\WorkerClient(new AgentConfig($root), fakeWorker($root, fn($url, $body) => ['status' => 200, 'json' => ['users' => [['user_id' => 'u1', 'reason' => 'grant_pending']]]], $seen));
+
+    assertSame('u1', $client->users()[0]['user_id']);
+    $client->decide('u1', 'approved');
+
+    assertSame('https://api.example/api/v1/site-api/users', $seen[0]['url']);
+    assertSame(['user_id' => 'u1', 'status' => 'approved'], $seen[1]['body']);
+    assertSame('key-1', $seen[1]['headers']['X-Kris-Key']);
+    assertTrue($seen[0]['headers']['X-Kris-Nonce'] !== $seen[1]['headers']['X-Kris-Nonce']);
+});
+
+test('reimpostare l accesso salva le chiavi nuove solo se il Worker conferma', function () {
+    [$root] = agentSite();
+    $before = (new AgentConfig($root))->load();
+    $newWorker = sodium_crypto_sign_keypair();
+    $sent = [];
+    $client = new \Kris\Agent\WorkerClient(new AgentConfig($root), fakeWorker($root, fn($url, $body) => ['status' => 200, 'json' => [
+        'key_id' => 'key-2', 'worker_public_key' => base64_encode(sodium_crypto_sign_publickey($newWorker)), 'access_generation' => 1,
+    ]], $sent));
+
+    $client->resetAccess();
+
+    $after = (new AgentConfig($root))->load();
+    assertSame('key-2', $after['key_id']);
+    assertSame($sent[0]['body']['site_public_key'], $after['site_public_key']);
+    assertTrue($after['site_public_key'] !== $before['site_public_key'] && $after['site_secret_key'] !== $before['site_secret_key']);
+
+    $failing = new \Kris\Agent\WorkerClient(new AgentConfig($root), fn() => ['status' => 500, 'json' => ['message' => 'errore']]);
+    try {
+        $failing->resetAccess();
+        fail('il reset doveva fallire');
+    } catch (AgentException $e) {
+        assertContains('rifiutato', $e->getMessage());
+    }
+    assertSame('key-2', (new AgentConfig($root))->load()['key_id'], 'chiavi invariate se il Worker non conferma');
+});
+
+test('un abbinamento non piu riconosciuto chiede di abbinare di nuovo', function () {
+    [$root] = agentSite();
+    $client = new \Kris\Agent\WorkerClient(new AgentConfig($root), fn() => ['status' => 401, 'json' => null]);
+    try {
+        $client->users();
+        fail('doveva fallire');
+    } catch (AgentException $e) {
+        assertContains('abbinalo di nuovo', $e->getMessage());
+    }
+});
