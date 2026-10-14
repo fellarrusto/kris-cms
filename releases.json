@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.3.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Nuova sezione «Da pubblicare»: le modifiche al sito preparate in anticipo si vedono in anteprima solo da chi è collegato all'editor, si pubblicano con un clic e si possono annullare per 14 giorni. Per chi non la usa non cambia nulla.",
+            "date": "2026-10-14",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.3.0/kris-1.3.0.zip",
+            "sha256": "e2672c63b1694bf7878ca988e0f49f062692ab745d705a3001a32afb378c3ce9",
+            "size": 143690
+        },
+        {
             "version": "1.2.1",
             "min_from": "1.0.0",
             "breaking": false,
