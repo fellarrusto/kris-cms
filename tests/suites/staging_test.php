@@ -134,7 +134,7 @@ test('un file cambiato sul sito nel frattempo blocca la pubblicazione, salvo con
         $s->promote('admin');
         fail('la pubblicazione doveva fermarsi');
     } catch (StagingException $e) {
-        assertSame(['template/home.html'], $e->details());
+        assertSame(['template/home.html: cambiato anche sul sito'], $e->details());
     }
     $s->promote('admin', true);
     assertContains('Il team', (string) file_get_contents("{$root}/template/home.html"));

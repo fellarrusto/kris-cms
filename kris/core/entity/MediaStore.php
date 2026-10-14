@@ -56,7 +56,42 @@ final class MediaStore
             throw new StorageException('Caricamento non valido.');
         }
 
-        $size = (int) ($file['size'] ?? 0);
+        $name = $this->checkedName($file['tmp_name'], (string) ($file['name'] ?? ''), (int) ($file['size'] ?? 0));
+        if (!@move_uploaded_file($file['tmp_name'], $this->uploadDir . $name)) {
+            throw new StorageException('Non siamo riusciti a salvare il file.');
+        }
+
+        return $this->publicPrefix . $name;
+    }
+
+    /**
+     * Valida e salva un file che non arriva da un upload HTTP, per esempio
+     * un'immagine caricata dall'agente nello staging. Stessi controlli di store().
+     *
+     * @return string URL pubblico che il file avra
+     * @throws StorageException con un messaggio mostrabile all'utente
+     */
+    public function storeLocal(string $path, string $originalName): string
+    {
+        if (!is_file($path)) {
+            throw new StorageException('Il file da caricare non esiste.');
+        }
+        $name = $this->checkedName($path, $originalName, (int) filesize($path));
+        if (!@copy($path, $this->uploadDir . $name)) {
+            throw new StorageException('Non siamo riusciti a salvare il file.');
+        }
+
+        return $this->publicPrefix . $name;
+    }
+
+    /**
+     * Controlli comuni (dimensione, estensione, contenuto reale) e nome con
+     * cui salvare il file. Prepara anche la cartella di destinazione.
+     *
+     * @throws StorageException
+     */
+    private function checkedName(string $path, string $original, int $size): string
+    {
         if ($size <= 0) {
             throw new StorageException('Il file e vuoto.');
         }
@@ -67,7 +102,6 @@ final class MediaStore
             ));
         }
 
-        $original = (string) ($file['name'] ?? '');
         $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
         if (!isset(self::ALLOWED[$ext])) {
             throw new StorageException(sprintf(
@@ -78,7 +112,7 @@ final class MediaStore
 
         // Il contenuto reale deve corrispondere all'estensione dichiarata,
         // altrimenti basta rinominare uno script in .png per farlo entrare.
-        if (!$this->contentMatches($file['tmp_name'], $ext)) {
+        if (!$this->contentMatches($path, $ext)) {
             throw new StorageException('Il contenuto del file non corrisponde alla sua estensione.');
         }
 
@@ -92,13 +126,7 @@ final class MediaStore
         $base = strtolower(preg_replace('/[^a-zA-Z0-9-_]/', '-', $base) ?? '');
         $base = trim(preg_replace('/-+/', '-', $base) ?? '', '-');
         if ($base === '') $base = 'file';
-        $name = sprintf('%s-%s.%s', substr($base, 0, 60), bin2hex(random_bytes(4)), $ext);
-
-        if (!@move_uploaded_file($file['tmp_name'], $this->uploadDir . $name)) {
-            throw new StorageException('Non siamo riusciti a salvare il file.');
-        }
-
-        return $this->publicPrefix . $name;
+        return sprintf('%s-%s.%s', substr($base, 0, 60), bin2hex(random_bytes(4)), $ext);
     }
 
     /**

@@ -30,15 +30,30 @@ final class Preview
         return ($_SESSION['kris_auth'] ?? false) === true;
     }
 
-    /** Invia un foglio di stile dello staging, oppure risponde 404. */
+    private const UPLOAD_TYPES = [
+        'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif',
+        'webp' => 'image/webp', 'avif' => 'image/avif', 'pdf' => 'application/pdf',
+    ];
+
+    /** Invia un foglio di stile o un'immagine dello staging, oppure risponde 404. */
     public static function serveAsset(Staging $staging, string $asset): void
     {
-        $file = $staging->dir() . '/assets/' . $asset;
-        if (preg_match('#^css/[a-z0-9][a-z0-9_-]*\.css$#', $asset) !== 1 || !is_file($file)) {
+        if (preg_match('#^css/[a-z0-9][a-z0-9_-]*\.css$#', $asset) === 1) {
+            $file = $staging->dir() . '/assets/' . $asset;
+            $type = 'text/css; charset=utf-8';
+        } elseif (preg_match('#^uploads/([A-Za-z0-9][A-Za-z0-9._-]*)\.([a-z0-9]+)$#', $asset, $m) === 1 && isset(self::UPLOAD_TYPES[$m[2]])) {
+            $file = $staging->dir() . '/' . $asset;
+            $type = self::UPLOAD_TYPES[$m[2]];
+        } else {
+            $file = '';
+            $type = '';
+        }
+        if ($file === '' || !is_file($file)) {
             http_response_code(404);
             return;
         }
-        header('Content-Type: text/css; charset=utf-8');
+        header('Content-Type: ' . $type);
+        header('X-Content-Type-Options: nosniff');
         header('Cache-Control: no-store');
         header('X-Robots-Tag: noindex');
         readfile($file);
@@ -63,6 +78,17 @@ final class Preview
             function (array $m) use ($staging): string {
                 return is_file($staging->dir() . '/assets/css/' . $m[2])
                     ? $m[1] . 'index.php?kris_preview_asset=css/' . $m[2] . $m[1]
+                    : $m[0];
+            },
+            $html
+        );
+
+        // assets/uploads/<nome> -> immagine caricata nello staging, non ancora pubblica
+        $html = (string) preg_replace_callback(
+            '#(["\'\s,(])(?:\./)?assets/uploads/([A-Za-z0-9][A-Za-z0-9._-]*)#',
+            function (array $m) use ($staging): string {
+                return is_file($staging->dir() . '/uploads/' . $m[2])
+                    ? $m[1] . 'index.php?kris_preview_asset=uploads/' . $m[2]
                     : $m[0];
             },
             $html
