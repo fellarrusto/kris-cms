@@ -3,13 +3,11 @@ declare(strict_types=1);
 
 namespace Kris\Entity;
 
-class JsonRepository {
-    private static array $cache = [];
-    private string $dataPath;
+use Kris\Site\Paths;
 
-    public function __construct() {
-        $this->dataPath = KRIS_ROOT . '/data/';
-    }
+class JsonRepository {
+    // Per percorso letto: con l'anteprima dello staging lo stesso archivio puo venire da due file diversi
+    private static array $cache = [];
 
     public function find(string $file, string $name, int $id = 0): array {
         $data = $this->load($file);
@@ -26,21 +24,20 @@ class JsonRepository {
         return array_filter($data, fn($item) => $item['name'] === $name);
     }
 
+    /** Scrive sempre nel file del sito, mai nella sovrapposizione dell'anteprima. */
     public function save(string $file, int $index, array $entity): void {
         $data = $this->load($file);
         $data[$index] = $entity;
-        $this->store($file)->write($data);
-        self::$cache[$file] = $data;
+        $path = KRIS_ROOT . '/data/' . $file . '.json';
+        (new JsonStore($path))->write($data);
+        self::$cache[$path] = $data;
     }
 
     private function load(string $file): array {
-        if (!isset(self::$cache[$file])) {
-            self::$cache[$file] = $this->store($file)->read();
+        $path = Paths::data($file);
+        if (!isset(self::$cache[$path])) {
+            self::$cache[$path] = (new JsonStore($path))->read();
         }
-        return self::$cache[$file];
-    }
-
-    private function store(string $file): JsonStore {
-        return new JsonStore($this->dataPath . $file . '.json');
+        return self::$cache[$path];
     }
 }

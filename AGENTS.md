@@ -43,6 +43,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
+| `kris/core/site/Paths.php` | Unico punto da cui il rendering pubblico legge template, `data/` e pagine autorizzate. Con una sovrapposizione attiva (l'anteprima dello staging) un file presente lì vince su quello del sito. Solo letture: le scritture vanno sempre ai file del sito. |
 | `kris/core/template/` | Interpolazione, condizioni, array, componenti e parsing DOM. |
 | `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
 | `kris/core/scripts/consent.js` | Consenso ai cookie, opzionale. Vedi "Privacy e cookie". |

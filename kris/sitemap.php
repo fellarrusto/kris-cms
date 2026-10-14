@@ -10,6 +10,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 
 use Kris\Entity\JsonStore;
+use Kris\Site\Paths;
 use Kris\Template\Seo;
 
 $maintenance = kris_maintenance();
@@ -20,9 +21,9 @@ if ($maintenance !== null && !$maintenance['stale']) {
 }
 
 try {
-    $data = (new JsonStore(KRIS_ROOT . '/data/k_data.json'))->read([]);
+    $data = (new JsonStore(Paths::data('k_data')))->read([]);
     $settings = (new JsonStore(KRIS_ROOT . '/data/cms_settings.json'))->read([]);
-    $pages = (new JsonStore(KRIS_ROOT . '/config/allowed_pages.json'))->read([]);
+    $pages = (new JsonStore(Paths::file('config/allowed_pages.json')))->read([]);
 } catch (Throwable) {
     http_response_code(503);
     exit;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 
 use Kris\Entity\Entity;
+use Kris\Site\Paths;
 use Kris\Template\TemplateEngine;
 use Kris\Template\Seo;
 
@@ -44,7 +45,7 @@ $rawPath = $_GET['path'] ?? '';
 $path = $rawPath === '' ? [] : array_values(array_filter(explode('/', $rawPath), fn($s) => $s !== ''));
 
 // Load allowed pages whitelist
-$configPath = KRIS_ROOT . '/config/allowed_pages.json';
+$configPath = Paths::file('config/allowed_pages.json');
 $allowedPages = json_decode(file_get_contents($configPath), true)['allowed_pages'] ?? ['homepage'];
 
 // Validate requested page against whitelist
@@ -67,7 +68,7 @@ try {
 }
 
 // Get page template
-$html = file_get_contents(KRIS_ROOT . "/template/{$template}.html");
+$html = file_get_contents(Paths::template($template));
 
 // Render and output the page
 $output = $engine->render($html, $entity);
