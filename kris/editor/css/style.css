@@ -361,3 +361,15 @@ tr.is-hidden .content-title, tr.is-hidden strong { text-decoration:line-through;
 .agent-user-state.is-allowed { color:var(--primary); font-weight:600; }
 .agent-reset { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
 .agent-reset small { color:var(--muted); font-size:11px; }
+
+/* Sito pubblico / modifiche in attesa */
+.topbar-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+.mode-switch { display:inline-flex; padding:3px; border:1px solid var(--border); border-radius:8px; background:var(--surface); }
+.mode-switch button { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border:0; border-radius:6px; background:transparent; color:var(--muted); font-size:12px; font-weight:600; }
+.mode-switch button[aria-pressed="true"] { background:var(--primary); color:#fff; }
+.mode-switch button[aria-pressed="true"] .nav-count { border-color:rgba(255,255,255,.5); }
+.mode-switch button:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+.staging-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 38px; background:#fff7e6; border-bottom:1px solid #ecd9ae; color:var(--amber); }
+.staging-banner p { margin:0; }
+.media-badge { padding:2px 7px; border-radius:5px; background:#fff7e6; color:var(--amber); font-size:11px; font-weight:600; }
+@media(max-width:760px) { .staging-banner { padding:10px 18px; } .mode-switch button { padding:5px 8px; font-size:11px; } }

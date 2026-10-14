@@ -67,6 +67,32 @@ function isReservedStructuralPost(array $post): bool
         || isReservedCollection($newName);
 }
 
+/**
+ * Richieste che non riguardano i contenuti (account, Kris Agent, pubblicazione
+ * dello staging): valgono uguali anche mentre si preparano modifiche in attesa.
+ */
+function isStagingNeutralPost(array $post): bool
+{
+    $neutral = ['save_account_email', 'account_email_later', 'send_test_email', 'change_password',
+        'agent_pair', 'agent_toggle', 'agent_unpair', 'agent_grant', 'agent_reset',
+        'staging_promote', 'staging_discard', 'staging_undo'];
+    return (bool) array_intersect($neutral, array_keys($post));
+}
+
+/**
+ * I file caricati fra le modifiche in attesa e non ancora pubblici: l'editor li
+ * mostra attraverso l'anteprima. Si impostano una volta, poi si leggono.
+ *
+ * @param string[]|null $names
+ * @return array<string, true>
+ */
+function editorStagedUploads(?array $names = null): array
+{
+    static $set = [];
+    if ($names !== null) $set = array_fill_keys($names, true);
+    return $set;
+}
+
 function editorLabel(string $name): string
 {
     return ucfirst(str_replace('_', ' ', $name));
@@ -102,6 +128,9 @@ function editorMediaSource(string $url): string
 {
     if ($url === '' || preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $url)) {
         return preg_match('~^https?://~i', $url) ? $url : '';
+    }
+    if (preg_match('~^assets/uploads/([A-Za-z0-9._-]+)$~', $url, $m) && isset(editorStagedUploads()[$m[1]])) {
+        return '../index.php?kris_preview_asset=uploads/' . rawurlencode($m[1]);
     }
     return str_starts_with($url, '/') || str_starts_with($url, '../') ? $url : '../' . $url;
 }

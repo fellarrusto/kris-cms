@@ -25,6 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
     $error = $editorLock . ' Nulla è stato modificato.';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isReservedStructuralPost($_POST)) {
     $error = 'I nomi che iniziano con kris_ sono riservati a Kris: queste raccolte hanno una struttura fissa. Nulla è stato modificato.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $stagingMode && !isStagingNeutralPost($_POST)) {
+    // Modifiche in attesa: i contenuti diventano operazioni dello staging, il sito non cambia
+    require __DIR__ . '/staging_actions.php';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
   try {
     // 1. Crea Collezione

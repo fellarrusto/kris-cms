@@ -30,9 +30,23 @@ if (kris_maintenance() !== null) {
 }
 
 $store = new MediaStore(KRIS_ROOT . '/assets/uploads/', 'assets/uploads/');
+// Con le modifiche in attesa il file va nello staging: diventa pubblico solo alla pubblicazione
+$staged = ($_SESSION['kris_editing'] ?? '') === 'staging';
 
 try {
-    $url = $store->store($_FILES['file'] ?? []);
+    if ($staged) {
+        $file = $_FILES['file'] ?? [];
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+            throw new StorageException('Caricamento non riuscito: riprova.');
+        }
+        try {
+            $url = (new \Kris\Staging\Staging())->upload((string) $file['tmp_name'], (string) ($file['name'] ?? ''), 'editor: ' . (string) ($_SESSION['kris_user'] ?? ''));
+        } catch (\Kris\Staging\StagingException $e) {
+            throw new StorageException($e->getMessage());
+        }
+    } else {
+        $url = $store->store($_FILES['file'] ?? []);
+    }
 } catch (StorageException $e) {
     http_response_code(422);
     if ($isAjax) {
@@ -45,7 +59,7 @@ try {
 
 if ($isAjax) {
     header('Content-Type: application/json');
-    echo json_encode(['url' => $url]);
+    echo json_encode(['url' => $url] + ($staged ? ['staged' => true] : []));
 } else {
     header('Location: index.php?action=media');
 }

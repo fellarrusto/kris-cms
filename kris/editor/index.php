@@ -226,11 +226,30 @@ if ($maintenance !== null) {
     }
 }
 
+// --- MODALITA: SITO PUBBLICO O MODIFICHE IN ATTESA ---
+// Con le modifiche in attesa l'editor mostra lo staging e ogni salvataggio
+// diventa un'operazione dello staging: il sito cambia solo alla pubblicazione.
+if ($isPost && isset($_POST['editing_mode']) && kris_csrf_valid($_POST['csrf'] ?? null)) {
+    $_SESSION['kris_editing'] = $_POST['editing_mode'] === 'staging' ? 'staging' : 'live';
+    $back = is_string($_POST['return_to'] ?? null) && preg_match('/^\?action=[a-z_]+(&[A-Za-z0-9_=%.\/-]*)*$/', $_POST['return_to'])
+        ? $_POST['return_to'] : '?action=dashboard';
+    header("Location: $BASE$back");
+    exit;
+}
+$stagingMode = ($_SESSION['kris_editing'] ?? '') === 'staging';
+$stagingNav = new \Kris\Staging\Staging();
+
 // --- DATI ---
 try {
     $data = getJson($dataFile, []);
     $models = getJson($modelFile, []);
     $settings = getJson($settingsFile, ['languages' => ['it', 'en']]);
+    if ($stagingMode) {
+        $stagingState = $stagingNav->state();
+        $data = $stagingState['data'];
+        $models = $stagingState['model'];
+        editorStagedUploads(array_map('basename', $stagingNav->uploadFiles()));
+    }
 } catch (StorageException $e) {
     renderStorageError($e->getMessage());
 }
@@ -260,6 +279,10 @@ foreach ($data as $d) {
         $counts[$d['name']]++;
 }
 $images = editorMediaFiles($uploadDir);
+if ($stagingMode) {
+    // I file in attesa vengono prima: sono quelli appena caricati
+    $images = array_merge($stagingNav->uploadFiles(), $images);
+}
 $postSources = editorPostSources($models, $data);
 // Un elemento di un elenco posts si apre dalla sezione Posts e vi ritorna.
 $editPath = parsePath(is_string($_GET['path'] ?? null) ? $_GET['path'] : '');
@@ -276,9 +299,13 @@ if (isReservedCollection($group) && in_array($action, ['list', 'structure', 'str
     $_GET['id'] = '0';
     $_GET['path'] = '';
 }
+// La struttura si cambia solo sul sito pubblico: le modifiche in attesa riguardano i contenuti
+if ($stagingMode && in_array($action, ['structure', 'structure_impact'], true)) {
+    $action = 'list';
+    $error = 'La struttura si modifica sul sito pubblico: passa a «Sito pubblico» per cambiarla.';
+}
 $inLegal = $action === 'edit' && $group === 'kris_legal';
 // La voce compare quando ci sono modifiche da pubblicare o una pubblicazione da poter annullare.
-$stagingNav = new \Kris\Staging\Staging();
 $stagingCount = count($stagingNav->changes()) + count($stagingNav->operations()) + count($stagingNav->manifest()['uploads']);
 $stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
 $sectionLabel = match ($action) {
@@ -303,7 +330,7 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
     <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css">
 </head>
 
-<body data-editor-action="<?= h($action) ?>">
+<body data-editor-action="<?= h($action) ?>"<?php if ($stagingMode): ?> data-staging-mode data-staged-uploads="<?= h(json_encode(array_keys(editorStagedUploads()))) ?>"<?php endif; ?>>
     <a class="skip-link" href="#main">Vai al contenuto</a>
 
     <?php require __DIR__ . '/partials/sidebar.php'; ?>
@@ -311,8 +338,23 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
     <div class="editor-workspace">
     <header class="topbar">
         <nav class="breadcrumbs" aria-label="Percorso"><a href="?action=dashboard">Il tuo sito</a><span aria-hidden="true">/</span><span><?= h($sectionLabel) ?></span><?php if ($group && !isReservedCollection($group)): ?><span aria-hidden="true">/</span><strong><?= h(editorLabel($group)) ?></strong><?php endif; ?></nav>
-        <a href="../" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
+        <div class="topbar-actions">
+            <?php $returnTo = str_starts_with((string) ($_SERVER['QUERY_STRING'] ?? ''), 'action=') ? '?' . $_SERVER['QUERY_STRING'] : '?action=dashboard'; ?>
+            <form method="POST" class="mode-switch" aria-label="Dove salvano le modifiche">
+                <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
+                <button name="editing_mode" value="live" aria-pressed="<?= $stagingMode ? 'false' : 'true' ?>">Sito pubblico</button>
+                <button name="editing_mode" value="staging" aria-pressed="<?= $stagingMode ? 'true' : 'false' ?>">In attesa<?php if ($stagingCount): ?> <span class="nav-count"><?= $stagingCount ?></span><?php endif; ?></button>
+            </form>
+            <?php if ($stagingMode): ?>
+                <a href="../index.php?kris_preview=1" target="_blank" rel="noopener" class="btn btn-white">Apri l'anteprima <span aria-hidden="true">↗</span></a>
+            <?php else: ?>
+                <a href="../" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
+            <?php endif; ?>
+        </div>
     </header>
+    <?php if ($stagingMode): ?>
+        <div class="staging-banner" role="status"><p><strong>Stai preparando modifiche in attesa.</strong> Il sito pubblico non cambia finché non le pubblichi. Qui vedi anche le modifiche dell'assistente.</p><a class="btn btn-white" href="?action=staging">Rivedi e pubblica</a></div>
+    <?php endif; ?>
     <main id="main" tabindex="-1">
         <div id="request-feedback" class="alert alert-error" role="alert" hidden></div>
         <?php if ($editorLock !== ''): ?>
