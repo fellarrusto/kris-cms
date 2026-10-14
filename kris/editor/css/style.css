@@ -349,3 +349,15 @@ tr.is-hidden .content-title, tr.is-hidden strong { text-decoration:line-through;
 .agent-pair-form small { color:var(--muted); font-size:11px; }
 .agent-pair-form .btn { align-self:flex-start; margin-top:6px; }
 .agent-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+.agent-users { margin-top:26px; padding-top:22px; border-top:1px solid #edf0e9; }
+.agent-users h3 { font-size:13px; }
+.agent-users > p { font-size:12px; color:var(--muted); margin:4px 0 14px; }
+.agent-empty { font-size:12px; color:var(--muted); }
+.agent-user-list { list-style:none; margin:0 0 18px; padding:0; display:flex; flex-direction:column; }
+.agent-user-list li { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; padding:12px 0; border-bottom:1px solid #edf0e9; }
+.agent-user { display:flex; flex-direction:column; flex:1 1 220px; min-width:0; }
+.agent-user small { color:var(--muted); font-size:11px; overflow-wrap:anywhere; }
+.agent-user-state { font-size:12px; color:var(--muted); flex:0 1 220px; }
+.agent-user-state.is-allowed { color:var(--primary); font-weight:600; }
+.agent-reset { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+.agent-reset small { color:var(--muted); font-size:11px; }

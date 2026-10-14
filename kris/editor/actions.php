@@ -370,6 +370,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         }
     }
     // Kris Agent: abbina, spegni o riaccendi, scollega
+    if (isset($_POST['agent_grant']) || isset($_POST['agent_reset'])) {
+        try {
+            $workerClient = new \Kris\Agent\WorkerClient(new \Kris\Agent\AgentConfig());
+            if (isset($_POST['agent_reset'])) {
+                $workerClient->resetAccess();
+                $msg = 'Accesso reimpostato: chiavi nuove, e ogni collaboratore aspetta di nuovo la tua approvazione.';
+            } else {
+                $grantStatus = ($_POST['status'] ?? '') === 'approved' ? 'approved' : 'revoked';
+                $workerClient->decide((string) $_POST['agent_grant'], $grantStatus);
+                $msg = $grantStatus === 'approved' ? 'Collaboratore approvato.' : 'Collaboratore escluso: non può più usare l\'assistente su questo sito.';
+            }
+        } catch (\Kris\Agent\AgentException $e) {
+            $error = $e->getMessage();
+        }
+    }
     if (isset($_POST['agent_pair']) || isset($_POST['agent_toggle']) || isset($_POST['agent_unpair'])) {
         $agentConfig = new \Kris\Agent\AgentConfig();
         try {

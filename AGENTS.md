@@ -289,7 +289,8 @@ Un assistente AI esterno (via MCP, backend nella repository `kris-agent`) prepar
 - **Abbinamento:** Editor › Impostazioni › Kris Agent. L'admin incolla il codice generato nel pannello di Kris Agent: vale 30 minuti, una volta, e contiene indirizzo dell'API, id del sito e un segreto. Il sito crea le proprie chiavi Ed25519 (`sodium`), le scambia con il Worker e salva tutto in `config/agent.php`. Il Worker accetta solo se l'indirizzo del sito è quello registrato nel pannello. Dall'editor l'agente si spegne, si riaccende e si scollega.
 - **Richieste:** arrivano su `kris-agent.php` (`Kris\Agent\Server`), firmate dal Worker. La firma copre `KRIS-AGENT-1`, metodo, id del sito, ora, nonce e sha256 del corpo. Ora entro 5 minuti, nonce mai ripetuti (`data/agent_nonces.json`), chiave dell'abbinamento in corso.
 - **Azioni ammesse:** `ping`, `overview`, `read_file`, `write_file`, `edit_file`, `get_entity`, `operate`, `upload`, `status`, `discard`. Tutte lavorano sullo staging; non esiste un'azione per pubblicare.
-- Le richieste in uscita (solo l'abbinamento) passano da `Kris\Agent\HttpPost`: https obbligatorio, http solo verso localhost per lo sviluppo.
+- **Chi può usare l'agente:** nella stessa scheda l'admin del sito vede gli utenti con un abbonamento sul sito (e gli admin di piattaforma, che possono sempre), li approva o li esclude, e reimposta l'accesso: tutti tornano in attesa e le chiavi di entrambe le parti cambiano. Sono richieste del sito al Worker (`Kris\Agent\WorkerClient`, rotte `/api/v1/site-api/*`), firmate con la chiave del sito con lo stesso protocollo. Le chiavi nuove si salvano solo se il Worker conferma.
+- Le richieste in uscita (abbinamento e richieste al Worker) passano da `Kris\Agent\HttpPost`: https obbligatorio, http solo verso localhost per lo sviluppo.
 
 ## Aggiornamenti del framework
 
