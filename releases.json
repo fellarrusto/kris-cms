@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.3.7",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Kris Agent: un assistente AI può preparare modifiche al sito, che restano in attesa finché non le pubblichi da «Da pubblicare». Da Impostazioni decidi chi può usarlo.",
+            "date": "2026-10-14",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.3.7/kris-1.3.7.zip",
+            "sha256": "d73dd1261af1a8505d1a6461b368260b5f9609eb19e03a1c1abde3108a432d8f",
+            "size": 158978
+        },
+        {
             "version": "1.3.6",
             "min_from": "1.0.0",
             "breaking": false,
