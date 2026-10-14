@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.4.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Modifiche in attesa: dal selettore in alto nell'editor puoi preparare testi, immagini ed elenchi senza pubblicarli subito, insieme a quelle dell'assistente. Le rivedi nell'anteprima e le pubblichi da «Da pubblicare».",
+            "date": "2026-10-14",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.4.0/kris-1.4.0.zip",
+            "sha256": "466d7003f0ecad167e8412ade18e2d41129563c92208d0f78454036d6e66f677",
+            "size": 166443
+        },
+        {
             "version": "1.3.7",
             "min_from": "1.0.0",
             "breaking": false,
