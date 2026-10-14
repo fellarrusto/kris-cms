@@ -5,6 +5,8 @@ require_once __DIR__ . '/bootstrap.php';
 
 use Kris\Entity\Entity;
 use Kris\Site\Paths;
+use Kris\Staging\Preview;
+use Kris\Staging\Staging;
 use Kris\Template\TemplateEngine;
 use Kris\Template\Seo;
 
@@ -21,6 +23,22 @@ $maintenance = kris_maintenance();
 if ($maintenance !== null && !$maintenance['stale']) {
     require KRIS_DIR . '/maintenance.php';
     exit;
+}
+
+// Anteprima dello staging: solo con una sessione dell'editor. Senza, i
+// parametri sono ignorati e si vede il sito come lo vedono tutti.
+$preview = null;
+if (Preview::requested($_GET) && Preview::isAdmin()) {
+    $staging = new Staging();
+    if (isset($_GET['kris_preview_asset'])) {
+        Preview::serveAsset($staging, (string) $_GET['kris_preview_asset']);
+        exit;
+    }
+    if ($staging->exists()) {
+        $preview = $staging;
+        Paths::useOverlay($staging->dir());
+        Preview::headers();
+    }
 }
 
 $key = $_GET['key'] ?? 'homepage';
@@ -78,5 +96,8 @@ $seo = Seo::config(KRIS_ROOT);
 if ($seo['head']) {
     $base = Seo::baseUrl($seo, $_SERVER);
     $output = Seo::inject($output, Seo::headTags($base, (string) $requestedPage, (string) $key, $index, $path, (string) $lang, $allowedLangs));
+}
+if ($preview !== null) {
+    $output = Preview::decorate($output, $preview, 'editor/index.php?action=staging', Preview::exitUrl($_GET));
 }
 echo $output;

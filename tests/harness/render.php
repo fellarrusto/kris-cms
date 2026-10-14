@@ -25,6 +25,13 @@ register_shutdown_function(function (): void {
     echo "KRIS-STATUS: {$code}\n" . $output;
 });
 
+// Sessione dell'editor simulata (per l'anteprima dello staging): la pagina la trova gia aperta.
+if (getenv('KRIS_TEST_ADMIN') === '1') {
+    session_save_path(sys_get_temp_dir());
+    @session_start();
+    $_SESSION['kris_auth'] = true;
+}
+
 // Lo script viene dall'ambiente dei test, ma solo fra quelli pubblici previsti.
 $script = getenv('KRIS_SCRIPT') ?: 'index.php';
 $script = in_array($script, ['index.php', 'sitemap.php'], true) ? $script : 'index.php';

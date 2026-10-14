@@ -94,6 +94,10 @@ try {
             kris_update_respond(['ok' => true, 'prepared' => $prepared]);
 
         case 'install':
+            // Le migrazioni non conoscono lo staging: prima si pubblicano o si scartano le modifiche in attesa
+            if ((new \Kris\Staging\Staging())->exists()) {
+                throw new UpdateException('Ci sono modifiche in attesa di pubblicazione: pubblicale o scartale da "Modifiche in attesa", poi aggiorna Kris.');
+            }
             $result = $updater->installPrepared($user);
             kris_update_respond($result);
 
