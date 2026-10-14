@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.4.1",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Corretto l'aspetto del selettore «Sito pubblico / In attesa» dopo l'aggiornamento: l'editor ora carica sempre gli stili della versione installata. Barra in alto più ordinata su smartphone.",
+            "date": "2026-10-14",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.4.1/kris-1.4.1.zip",
+            "sha256": "2ec7cb63f39bd78a1111a593f77a686c12c73ade25891a64922644b632a4ca66",
+            "size": 166546
+        },
+        {
             "version": "1.4.0",
             "min_from": "1.0.0",
             "breaking": false,
