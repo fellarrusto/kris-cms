@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.3.6",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Aggiornamenti più sicuri: dopo l'installazione o un ripristino la cache del codice PHP viene svuotata file per file, così il sito non resta con parti di due versioni. Se l'hosting non lo permette, l'aggiornamento non parte e indica di farlo via FTP.",
+            "date": "2026-10-14",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.3.6/kris-1.3.6.zip",
+            "sha256": "5e7675786a73636c5ab6e455723dc17c3666d8ff858174e7605fcdf93bc59582",
+            "size": 155812
+        },
+        {
             "version": "1.3.5",
             "min_from": "1.0.0",
             "breaking": false,
