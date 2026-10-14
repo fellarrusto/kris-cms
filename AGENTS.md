@@ -18,7 +18,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 
 | Percorso | Responsabilità |
 | --- | --- |
-| `index.php`, `sitemap.php`, `editor/index.php`, `editor/upload.php`, `editor/update.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. Gli stub aggiunti da una versione nuova li crea l'aggiornamento (`kris/update/Stubs.php`). |
+| `index.php`, `sitemap.php`, `kris-agent.php`, `editor/index.php`, `editor/upload.php`, `editor/update.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. Gli stub aggiunti da una versione nuova li crea l'aggiornamento (`kris/update/Stubs.php`). |
 | `kris/` | Framework ed editor. Viene sostituito in blocco dagli aggiornamenti: niente personalizzazioni del sito qui dentro. |
 | `kris/bootstrap.php` | Definisce `KRIS_ROOT` (root del sito) e `KRIS_DIR` (cartella del framework) e registra l'autoload. Il framework accede ai file del sito solo tramite `KRIS_ROOT`, mai con percorsi relativi. |
 | `kris/VERSION` | Versione del framework (semver), mostrata nell'editor. Cambia solo con una release. |
@@ -40,6 +40,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
 | `config/auth.php` | Credenziali locali: utente, hash della password, email di recupero e indirizzo dell'editor da cui partono i link di reset. Generato dal setup, escluso da Git. |
 | `config/auth_reset.json` | Hash del link di reset in corso e richieste dell'ultima ora. Escluso da Git. |
+| `config/agent.php` | Abbinamento con Kris Agent: indirizzo dell'API, id del sito, chiave pubblica del Worker, chiavi del sito. Creato dall'editor, escluso da Git, privato come `auth.php`. |
 | `config/seo.json` | Opzionale: indirizzo pubblico del sito, pagine della sitemap, canonical e hreflang automatici. Vedi "SEO: sitemap e indirizzi". |
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
@@ -280,6 +281,15 @@ Le modifiche al tema preparate senza pubblicarle subito (in futuro dall'agente d
 - **Anteprima:** `index.php?kris_preview=1`, solo con la sessione dell'editor. Senza sessione il parametro è ignorato. I CSS dello staging li serve `index.php?kris_preview_asset=css/<nome>.css`; la pagina ha `noindex`, `no-store` e una barra in fondo.
 - **Pubblicazione:** da Editor › Da pubblicare. Riepilogo con diff, segnalazione di script, gestori di eventi, URL `javascript:` e domini esterni aggiunti. Se un file è cambiato sul sito dopo la preparazione, serve una conferma esplicita. Prima di scrivere si salvano le versioni attuali: l'ultima pubblicazione si annulla per 14 giorni.
 - Con modifiche in attesa l'aggiornamento di Kris è bloccato: prima si pubblica o si scarta.
+
+## Kris Agent
+
+Un assistente AI esterno (via MCP, backend nella repository `kris-agent`) prepara modifiche nello staging. Non pubblica mai: pubblica l'admin del sito.
+
+- **Abbinamento:** Editor › Impostazioni › Kris Agent. L'admin incolla il codice generato nel pannello di Kris Agent: vale 30 minuti, una volta, e contiene indirizzo dell'API, id del sito e un segreto. Il sito crea le proprie chiavi Ed25519 (`sodium`), le scambia con il Worker e salva tutto in `config/agent.php`. Il Worker accetta solo se l'indirizzo del sito è quello registrato nel pannello. Dall'editor l'agente si spegne, si riaccende e si scollega.
+- **Richieste:** arrivano su `kris-agent.php` (`Kris\Agent\Server`), firmate dal Worker. La firma copre `KRIS-AGENT-1`, metodo, id del sito, ora, nonce e sha256 del corpo. Ora entro 5 minuti, nonce mai ripetuti (`data/agent_nonces.json`), chiave dell'abbinamento in corso.
+- **Azioni ammesse:** `ping`, `overview`, `read_file`, `write_file`, `edit_file`, `get_entity`, `operate`, `upload`, `status`, `discard`. Tutte lavorano sullo staging; non esiste un'azione per pubblicare.
+- Le richieste in uscita (solo l'abbinamento) passano da `Kris\Agent\HttpPost`: https obbligatorio, http solo verso localhost per lo sviluppo.
 
 ## Aggiornamenti del framework
 

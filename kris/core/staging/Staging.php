@@ -215,6 +215,12 @@ final class Staging
         return $done;
     }
 
+    /** Contenuti, schema e pagine come li vede l'anteprima: il sito con le operazioni applicate. */
+    public function state(): array
+    {
+        return $this->replay($this->operations(), false)[0];
+    }
+
     /** @return list<array> le operazioni registrate, nell'ordine */
     public function operations(): array
     {

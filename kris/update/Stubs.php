@@ -17,6 +17,7 @@ final class Stubs
     /** Percorso dello stub nella root => file del framework a cui punta. */
     private const STUBS = [
         'sitemap.php' => 'kris/sitemap.php',
+        'kris-agent.php' => 'kris/agent.php',
     ];
 
     /** Crea gli stub mancanti; restituisce quelli creati. Non solleva errori. */

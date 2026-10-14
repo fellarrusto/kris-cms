@@ -52,6 +52,7 @@ $rollback = $updater->enabled() && $maintenance === null ? $updater->availableRo
 </form>
 <p class="hint">Se perdi l'accesso e l'email non arriva: <?= h(lcfirst(KRIS_HOSTING_HELP)) ?></p>
 </div></section>
+<?php require __DIR__ . '/../partials/agent_settings.php'; ?>
 <section class="card" id="versione"><header class="card-header"><span class="collection-icon"><?= uiIcon('check') ?></span><div><h2>Versione di Kris</h2></div></header><div class="card-body">
 <?php if ($stateError): ?><div class="alert alert-error" role="alert">Lo storico degli aggiornamenti non è leggibile (file <code>data/kris_state.json</code>). I contenuti non sono coinvolti: segnalalo a chi gestisce il sito.</div><?php endif; ?>
 <div class="setting-row static"><span><strong>Versione installata</strong><small>Indicala quando chiedi assistenza.</small></span><span class="setting-value">Kris <?= h($krisVersion) ?></span></div>

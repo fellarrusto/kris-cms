@@ -33,6 +33,7 @@ spl_autoload_register(static function (string $class): void {
         'Kris\\Auth\\'     => KRIS_DIR . '/core/auth/',
         'Kris\\Site\\'     => KRIS_DIR . '/core/site/',
         'Kris\\Staging\\'  => KRIS_DIR . '/core/staging/',
+        'Kris\\Agent\\'    => KRIS_DIR . '/core/agent/',
     ];
     foreach ($namespaces as $prefix => $dir) {
         if (strncmp($class, $prefix, strlen($prefix)) !== 0) {

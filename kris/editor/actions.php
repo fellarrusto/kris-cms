@@ -369,6 +369,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             exit;
         }
     }
+    // Kris Agent: abbina, spegni o riaccendi, scollega
+    if (isset($_POST['agent_pair']) || isset($_POST['agent_toggle']) || isset($_POST['agent_unpair'])) {
+        $agentConfig = new \Kris\Agent\AgentConfig();
+        try {
+            if (isset($_POST['agent_pair'])) {
+                $siteUrl = (string) preg_replace('#/editor(/index\.php)?$#', '', kris_current_editor_url());
+                \Kris\Agent\Pairing::pair($agentConfig, (string) ($_POST['agent_code'] ?? ''), $siteUrl, $siteUrl . '/kris-agent.php',
+                    $krisVersion, (string) ($_SESSION['kris_user'] ?? ''));
+                \Kris\Update\Stubs::ensure(KRIS_ROOT);
+                $msg = 'Sito abbinato a Kris Agent.';
+            } elseif (isset($_POST['agent_toggle'])) {
+                $agentConfig->setEnabled($_POST['agent_toggle'] === '1');
+                $msg = $_POST['agent_toggle'] === '1' ? 'Kris Agent riacceso.' : 'Kris Agent spento: le sue richieste vengono rifiutate.';
+            } else {
+                $agentConfig->delete();
+                $msg = 'Sito scollegato da Kris Agent.';
+            }
+        } catch (\Kris\Agent\AgentException $e) {
+            $error = $e->getMessage();
+        }
+    }
     // Staging: pubblica, scarta, annulla l'ultima pubblicazione
     if (isset($_POST['staging_promote']) || isset($_POST['staging_discard']) || isset($_POST['staging_undo'])) {
         $staging = new \Kris\Staging\Staging();
