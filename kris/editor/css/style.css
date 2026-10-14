@@ -372,4 +372,4 @@ tr.is-hidden .content-title, tr.is-hidden strong { text-decoration:line-through;
 .staging-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding:12px 38px; background:#fff7e6; border-bottom:1px solid #ecd9ae; color:var(--amber); }
 .staging-banner p { margin:0; }
 .media-badge { padding:2px 7px; border-radius:5px; background:#fff7e6; color:var(--amber); font-size:11px; font-weight:600; }
-@media(max-width:760px) { .staging-banner { padding:10px 18px; } .mode-switch button { padding:5px 8px; font-size:11px; } }
+@media(max-width:760px) { .topbar { flex-wrap:wrap; } .topbar-actions { width:100%; justify-content:space-between; flex-wrap:nowrap; } .staging-banner { padding:10px 18px; font-size:12px; } .staging-banner .btn { font-size:11px; padding:7px 10px; } .mode-switch button { padding:5px 8px; font-size:11px; } }

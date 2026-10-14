@@ -317,6 +317,8 @@ $sectionLabel = match ($action) {
 // I file statici dell'editor stanno in kris/editor/, mentre la pagina e
 // servita dallo stub in editor/: si risale alla root del sito dall'URL.
 $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/kris/editor');
+// La versione nell'indirizzo: dopo un aggiornamento il browser non riusa CSS e JS vecchi dalla cache
+$assetVersion = '?v=' . rawurlencode($krisVersion);
 ?>
 <!DOCTYPE html>
 <html lang="it">
@@ -327,7 +329,7 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
     <meta name="kris-csrf" content="<?= htmlspecialchars(kris_csrf_token()) ?>">
     <title><?= h($sectionLabel) ?> · Kris CMS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
-    <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css">
+    <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css<?= $assetVersion ?>">
 </head>
 
 <body data-editor-action="<?= h($action) ?>"<?php if ($stagingMode): ?> data-staging-mode data-staged-uploads="<?= h(json_encode(array_keys(editorStagedUploads()))) ?>"<?php endif; ?>>
@@ -425,12 +427,12 @@ $assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '
     </dialog>
     <div id="toast" class="toast" role="status" hidden></div>
 
-    <script src="<?= $assetBase ?>/js/scripts.js"></script>
+    <script src="<?= $assetBase ?>/js/scripts.js<?= $assetVersion ?>"></script>
     <?php if ($action === 'structure'): ?>
-        <script src="<?= $assetBase ?>/js/structure.js"></script>
+        <script src="<?= $assetBase ?>/js/structure.js<?= $assetVersion ?>"></script>
     <?php endif; ?>
     <?php if ($action === 'settings'): ?>
-        <script src="<?= $assetBase ?>/js/update.js"></script>
+        <script src="<?= $assetBase ?>/js/update.js<?= $assetVersion ?>"></script>
     <?php endif; ?>
 </body>
 
