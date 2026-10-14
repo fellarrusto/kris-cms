@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kris\Template;
 
 use Kris\Entity\Entity;
+use Kris\Site\Paths;
 use DOMXPath;
 use DOMDocument;
 
@@ -26,7 +27,7 @@ class ComponentProcessor {
             $index = (int)($component->getAttribute('k-index') ?: 0);
 
             $entity = new Entity('k_data', $entityName, $index);
-            $template = file_get_contents(KRIS_ROOT . "/template/{$templateName}.html");
+            $template = file_get_contents(Paths::template($templateName));
 
             $engine = new TemplateEngine($this->lang);
             $rendered = $engine->render($template, $entity);

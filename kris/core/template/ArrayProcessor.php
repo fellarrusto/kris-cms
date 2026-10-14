@@ -5,6 +5,7 @@ namespace Kris\Template;
 
 use Kris\Entity\Entity;
 use Kris\Entity\JsonRepository;
+use Kris\Site\Paths;
 use DOMXPath;
 use DOMDocument;
 
@@ -24,7 +25,7 @@ class ArrayProcessor {
         foreach ($arrays as $array) {
             $entityName = $array->getAttribute('k-array');
             $templateName = $array->getAttribute('k-template');
-            $template = file_get_contents(KRIS_ROOT . "/template/{$templateName}.html");
+            $template = file_get_contents(Paths::template($templateName));
 
             $entities = $this->resolveEntities($entityName, $parent);
 
