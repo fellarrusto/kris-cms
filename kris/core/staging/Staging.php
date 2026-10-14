@@ -199,20 +199,76 @@ final class Staging
      */
     public function operate(array $op, string $by): array
     {
-        if (($op['op'] ?? null) === 'register_page' && !$this->templateExists((string) ($op['page'] ?? ''))) {
-            throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/{$op['page']}.html.");
-        }
+        return $this->operateAll([$op], $by)[0];
+    }
+
+    /**
+     * Piu operazioni insieme, come un salvataggio dell'editor che cambia piu
+     * campi: o si registrano tutte o nessuna.
+     *
+     * @return list<array> le operazioni completate
+     * @throws StagingException la prima operazione non valida; nulla e stato registrato
+     */
+    public function operateAll(array $ops, string $by): array
+    {
+        if (!$ops) return [];
         [$state] = $this->replay($this->operations(), false);
         $languages = $this->languages();
-        [, $done] = Operations::apply($state, $op, $languages, [$this, 'uploadExists']);
+        $done = [];
+        foreach ($ops as $op) {
+            if (($op['op'] ?? null) === 'register_page' && !$this->templateExists((string) ($op['page'] ?? ''))) {
+                throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/{$op['page']}.html.");
+            }
+            [$state, $completed] = Operations::apply($state, $op, $languages, [$this, 'uploadExists']);
+            $done[] = $completed;
+        }
 
         $manifest = $this->startManifest($by);
         $this->saveManifest($manifest);
         $list = $this->operations();
-        $list[] = $done + ['by' => $by, 'at' => gmdate('c')];
+        foreach ($done as $completed) {
+            $list = self::append($list, $completed + ['by' => $by, 'at' => gmdate('c')]);
+        }
         (new JsonStore($this->dir . '/operations.json'))->write($list);
         $this->rebuild();
         return $done;
+    }
+
+    /**
+     * Aggiunge un'operazione all'elenco. Chi salva piu volte lo stesso campo
+     * (dall'editor succede a ogni salvataggio) non allunga l'elenco: la nuova
+     * modifica sostituisce la precedente, che conserva il valore di partenza
+     * per il controllo dei conflitti. Se il campo torna al valore di partenza,
+     * la modifica sparisce.
+     */
+    private static function append(array $list, array $op): array
+    {
+        if (($op['op'] ?? '') !== 'set_field') {
+            $list[] = $op;
+            return $list;
+        }
+        // Solo fra le modifiche di campi in fondo all'elenco: dopo un'operazione che
+        // cambia la forma dei dati (elementi aggiunti o spostati) l'ordine conta
+        for ($i = count($list) - 1; $i >= 0 && ($list[$i]['op'] ?? '') === 'set_field'; $i--) {
+            if (self::sameField($list[$i], $op)) {
+                $op['before'] = $list[$i]['before'] ?? null;
+                array_splice($list, $i, 1);
+                break;
+            }
+        }
+        if (!array_key_exists('before', $op) || $op['before'] !== ($op['value'] ?? null)) {
+            $list[] = $op;
+        }
+        return $list;
+    }
+
+    private static function sameField(array $a, array $b): bool
+    {
+        foreach (['key', 'field', 'lang'] as $k) {
+            if (($a[$k] ?? null) !== ($b[$k] ?? null)) return false;
+        }
+        return (int) ($a['id'] ?? 0) === (int) ($b['id'] ?? 0)
+            && array_map('strval', (array) ($a['path'] ?? [])) === array_map('strval', (array) ($b['path'] ?? []));
     }
 
     /** Contenuti, schema e pagine come li vede l'anteprima: il sito con le operazioni applicate. */
@@ -307,6 +363,25 @@ final class Staging
         $manifest['uploads'][basename($url)] = ['original' => $originalName, 'by' => $by, 'at' => gmdate('c')];
         $this->saveManifest($manifest);
         return $url;
+    }
+
+    /** @return string[] i percorsi dei file caricati nello staging, piu recenti prima */
+    public function uploadFiles(): array
+    {
+        $files = array_values(array_filter(
+            array_map(fn($name) => "{$this->dir}/uploads/{$name}", array_keys($this->manifest()['uploads'])),
+            'is_file'
+        ));
+        usort($files, fn($a, $b) => filemtime($b) <=> filemtime($a));
+        return $files;
+    }
+
+    /** Vero se il file e stato caricato nello staging e non esiste ancora nel sito. */
+    public function isStagedUpload(string $url): bool
+    {
+        $name = basename($url);
+        return preg_match('#^assets/uploads/[A-Za-z0-9._-]+$#', $url) === 1
+            && is_file("{$this->dir}/uploads/{$name}") && !is_file("{$this->root}/assets/uploads/{$name}");
     }
 
     /** Un URL assets/uploads/<nome> esiste nel sito o fra le immagini dello staging. */

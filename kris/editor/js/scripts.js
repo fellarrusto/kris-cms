@@ -120,7 +120,11 @@ function submitNative(form, submitter) {
     const buttons = qa('button', form); buttons.forEach(b => b.disabled = true);
     HTMLFormElement.prototype.submit.call(form);
 }
+// File caricati fra le modifiche in attesa: non ancora pubblici, si vedono dall'anteprima
+const stagedUploads = new Set(JSON.parse(document.body.dataset.stagedUploads || '[]'));
 function safeMediaSource(url) {
+    const staged = /^assets\/uploads\/([A-Za-z0-9._-]+)$/.exec(url);
+    if (staged && stagedUploads.has(staged[1])) return '../index.php?kris_preview_asset=uploads/' + encodeURIComponent(staged[1]);
     if (/^https?:\/\//i.test(url)) return url;
     if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(url)) return '';
     return url.startsWith('/') || url.startsWith('../') ? url : '../' + url;
@@ -188,7 +192,8 @@ async function uploadFile(file, input) {
         const response=await fetch('upload.php',{method:'POST',body,credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}});
         const result=await response.json().catch(()=>null);
         if(!response.ok||!result?.url)throw new Error(result?.error || (response.status===403?'Sessione scaduta. Accedi di nuovo e riprova.':'Non possiamo confermare il caricamento. Verifica la libreria prima di riprovare.'));
-        status.textContent='Caricato. Il file è disponibile nella libreria.';row.classList.add('success');appendMedia(result.url,file);
+        if(result.staged)stagedUploads.add(result.url.split('/').pop());
+        status.textContent=result.staged?'Caricato fra le modifiche in attesa: sarà pubblico quando pubblichi.':'Caricato. Il file è disponibile nella libreria.';row.classList.add('success');appendMedia(result.url,file);
         if(scope instanceof HTMLDialogElement){selectedMedia=result.url;const button=qa('[data-media-url]').find(b=>b.dataset.mediaUrl===result.url);button?.click();}
         toast('File caricato.');
     } catch(error) {

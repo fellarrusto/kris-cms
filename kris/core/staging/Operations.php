@@ -45,6 +45,7 @@ final class Operations
         $method = [
             'set_field' => 'setField', 'add_item' => 'addItem', 'remove_item' => 'removeItem',
             'move_item' => 'moveItem', 'create_entity' => 'createEntity',
+            'remove_entity' => 'removeEntity', 'move_entity' => 'moveEntity', 'set_hidden' => 'setHidden',
             'add_field' => 'addField', 'remove_field' => 'removeField', 'rename_field' => 'renameField',
             'describe_field' => 'describeField', 'create_collection' => 'createCollection',
             'register_page' => 'registerPage',
@@ -66,6 +67,9 @@ final class Operations
             'remove_item' => "Elimina l'elemento {$op['item_id']} da «{$op['array']}» di {$where}",
             'move_item' => "Sposta l'elemento {$op['item_id']} di «{$op['array']}» in posizione " . ((int) $op['to'] + 1) . " in {$where}",
             'create_entity' => "Nuovo contenuto in «{$op['key']}»",
+            'remove_entity' => "Elimina {$where}",
+            'move_entity' => "Sposta {$where} in posizione " . ((int) ($op['to'] ?? 0) + 1),
+            'set_hidden' => (!empty($op['hidden']) ? 'Sospende ' : 'Rende visibile ') . $where,
             'add_field' => "Nuovo campo «{$op['field']['name']}» ({$op['field']['type']}) in " . self::schemaWhere($op),
             'remove_field' => "Elimina il campo «{$op['name']}» da " . self::schemaWhere($op) . ', con i suoi valori',
             'rename_field' => "Rinomina il campo «{$op['from']}» in «{$op['to']}» in " . self::schemaWhere($op),
@@ -149,7 +153,15 @@ final class Operations
         $items = &$entity['data'][$index]['value'];
 
         $newId = $items ? max(array_map(fn($c) => (int) ($c['id'] ?? 0), $items)) + 1 : 0;
-        $item = ['id' => $newId, 'data' => self::fill($def['of'] ?? [], (array) ($op['fields'] ?? []), $ctx)];
+        if ($ctx['replay'] && isset($op['assigned_id'])) {
+            // Le operazioni successive si riferiscono all'id avuto nell'anteprima: deve restare quello
+            if (self::itemPosition($items, (int) $op['assigned_id']) !== null) {
+                if ($ctx['force']) return [$state, $op];
+                throw new StagingException(self::conflict($op, "sul sito esiste già un elemento con id {$op['assigned_id']}"));
+            }
+            $newId = (int) $op['assigned_id'];
+        }
+        $item =['id' => $newId, 'data' => self::fill($def['of'] ?? [], (array) ($op['fields'] ?? []), $ctx)];
         $position = $op['position'] ?? 'end';
         $at = $position === 'start' ? 0 : (is_int($position) ? max(0, min($position, count($items))) : count($items));
         array_splice($items, $at, 0, [$item]);
@@ -198,8 +210,65 @@ final class Operations
         }
         $ids = array_map(fn($e) => (int) $e['id'], array_filter($state['data'], fn($e) => ($e['name'] ?? null) === $key));
         $newId = $ids ? max($ids) + 1 : 0;
+        if ($ctx['replay'] && isset($op['assigned_id'])) {
+            if (in_array((int) $op['assigned_id'], $ids, true)) {
+                if ($ctx['force']) return [$state, $op];
+                throw new StagingException(self::conflict($op, "sul sito esiste già un contenuto con id {$op['assigned_id']}"));
+            }
+            $newId = (int) $op['assigned_id'];
+        }
         $state['data'][] = ['name' => $key, 'id' => $newId, 'data' => self::fill($state['model'][$key], (array) ($op['fields'] ?? []), $ctx)];
         if (!$ctx['replay']) $op['assigned_id'] = $newId;
+        return [$state, $op];
+    }
+
+    private static function removeEntity(array $state, array $op, array $ctx): array
+    {
+        $key = (string) ($op['key'] ?? '');
+        self::assertUserCollection($key);
+        $pos = self::rootPosition($state['data'], $key, (int) ($op['id'] ?? -1));
+        if ($pos === null) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, 'il contenuto non esiste più'));
+        }
+        array_splice($state['data'], $pos, 1);
+        return [$state, $op];
+    }
+
+    /** Sposta un'entita radice fra quelle della sua raccolta; le altre raccolte restano dove sono. */
+    private static function moveEntity(array $state, array $op, array $ctx): array
+    {
+        $key = (string) ($op['key'] ?? '');
+        self::assertUserCollection($key);
+        $slots = array_keys(array_filter($state['data'], fn($e) => ($e['name'] ?? null) === $key));
+        $entities = array_map(fn($i) => $state['data'][$i], $slots);
+        $pos = self::itemPosition($entities, (int) ($op['id'] ?? -1));
+        if ($pos === null) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, 'il contenuto non esiste più'));
+        }
+        $entity = $entities[$pos];
+        array_splice($entities, $pos, 1);
+        array_splice($entities, max(0, min((int) ($op['to'] ?? 0), count($entities))), 0, [$entity]);
+        foreach ($slots as $n => $i) $state['data'][$i] = $entities[$n];
+        return [$state, $op];
+    }
+
+    /** Sospende o rende visibile un'entita radice o un elemento di un elenco. */
+    private static function setHidden(array $state, array $op, array $ctx): array
+    {
+        try {
+            $entity = &self::entity($state['data'], (string) ($op['key'] ?? ''), (int) ($op['id'] ?? 0), self::path($op));
+        } catch (StagingException $e) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "l'elemento non esiste più"));
+        }
+        if (!empty($op['hidden'])) {
+            $entity['hidden'] = true;
+        } else {
+            unset($entity['hidden']);
+        }
+        unset($entity);
         return [$state, $op];
     }
 
@@ -561,6 +630,14 @@ final class Operations
     {
         foreach ($entity['data'] ?? [] as $i => $field) {
             if (($field['name'] ?? null) === $name) return $i;
+        }
+        return null;
+    }
+
+    private static function rootPosition(array $data, string $key, int $id): ?int
+    {
+        foreach (array_values($data) as $i => $root) {
+            if (($root['name'] ?? null) === $key && (int) ($root['id'] ?? -1) === $id) return $i;
         }
         return null;
     }
