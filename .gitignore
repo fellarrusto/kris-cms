@@ -9,3 +9,7 @@
 /config/auth_reset.json
 /data/staging/
 /data/staging-backups/
+/config/agent.php
+/data/agent_nonces.json
+/config/agent.php
+/data/agent_nonces.json
