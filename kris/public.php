@@ -25,21 +25,25 @@ if ($maintenance !== null && !$maintenance['stale']) {
     exit;
 }
 
-// Anteprima dello staging: solo con una sessione dell'editor. Senza, i
-// parametri sono ignorati e si vede il sito come lo vedono tutti.
+// Anteprima dello staging: solo con una sessione dell'editor. Senza, la
+// pagina non esiste: chi riceve il link dell'anteprima vede la 404.
 $preview = null;
-if (Preview::requested($_GET) && Preview::isAdmin()) {
+if (Preview::requested($_GET)) {
+    if (!Preview::isAdmin()) {
+        require_once kris_not_found_page();
+        exit;
+    }
     $staging = new Staging();
     if (isset($_GET['kris_preview_asset'])) {
         Preview::serveAsset($staging, (string) $_GET['kris_preview_asset']);
         exit;
     }
+    $preview = $staging;
+    Preview::headers();
     if ($staging->exists()) {
         // I contenuti del sito possono essere cambiati dall'ultima operazione: l'anteprima riparte da quelli
         $staging->rebuild();
-        $preview = $staging;
         Paths::useOverlay($staging->dir());
-        Preview::headers();
     }
 }
 
