@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.4.2",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Anteprima più chiara: una barra sottile in cima alla pagina dice sempre che stai guardando l'anteprima. Chi apre il link dell'anteprima senza essere entrato nell'editor vede la pagina 404.",
+            "date": "2026-10-15",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.4.2/kris-1.4.2.zip",
+            "sha256": "5c9f40b8dee55b4da718240524c3a91547363ccbd1d7b2a5442356d01a2e324b",
+            "size": 167344
+        },
+        {
             "version": "1.4.1",
             "min_from": "1.0.0",
             "breaking": false,
