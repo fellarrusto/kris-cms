@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.4.3",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Pagina 404 personalizzabile: se il tema ha un template 404, Kris lo usa come le altre pagine, con i testi modificabili dall'editor e nella lingua del visitatore.",
+            "date": "2026-10-15",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.4.3/kris-1.4.3.zip",
+            "sha256": "18300ece20e3d813107fd6cc1ac383df3d4d9e4fa252be48b7243252244d9a16",
+            "size": 167866
+        },
+        {
             "version": "1.4.2",
             "min_from": "1.0.0",
             "breaking": false,
