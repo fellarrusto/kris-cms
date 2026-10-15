@@ -193,7 +193,7 @@ test('l anteprima riscrive i fogli di stile modificati e i link interni', functi
     assertContains('id="kris-preview-bar"', $out);
 });
 
-test('senza sessione dell editor l anteprima mostra il sito normale', function () {
+test('senza sessione dell editor l anteprima risponde 404', function () {
     $sandbox = projectSandbox();
     $s = new Staging($sandbox);
     $file = 'template/homepage.html';
@@ -201,11 +201,13 @@ test('senza sessione dell editor l anteprima mostra il sito normale', function (
     $s->write($file, str_replace('</body>', '<p>SOLO-IN-STAGING</p></body>', $original), Staging::hash($original), 'test');
     try {
         $page = renderPage(['kris_preview' => '1']);
-        assertSame(200, $page['status']);
+        assertSame(404, $page['status']);
         assertNotContains('SOLO-IN-STAGING', $page['output']);
         assertNotContains('kris-preview-bar', $page['output']);
         $asset = renderPage(['kris_preview_asset' => 'css/style.css']);
+        assertSame(404, $asset['status']);
         assertNotContains('SOLO-IN-STAGING', $asset['output']);
+        assertSame(200, renderPage([])['status'], 'senza il parametro il sito si vede come sempre');
     } finally {
         $s->discard();
     }
@@ -223,11 +225,19 @@ test('con la sessione dell editor l anteprima mostra lo staging e i suoi fogli d
         assertSame(200, $page['status']);
         assertContains('SOLO-IN-STAGING', $page['output']);
         assertContains('id="kris-preview-bar"', $page['output']);
+        assertContains('le modifiche non ancora pubblicate', $page['output']);
+        // La barra sta in cima al body, prima del contenuto del sito
+        assertTrue(strpos($page['output'], 'kris-preview-bar') < strpos($page['output'], 'SOLO-IN-STAGING'));
 
         $css = renderPage(['kris_preview_asset' => 'css/anteprima.css'], null, 'index.php', true);
         assertSame('.solo-staging { color: teal; }', $css['output']);
         $missing = renderPage(['kris_preview_asset' => '../../config/auth.php'], null, 'index.php', true);
         assertSame(404, $missing['status']);
+
+        $s->discard();
+        $empty = renderPage(['kris_preview' => '1'], null, 'index.php', true);
+        assertSame(200, $empty['status']);
+        assertContains('Non ci sono modifiche in attesa', $empty['output'], 'anche senza modifiche si capisce che è un anteprima');
 
         $normal = renderPage([], null, 'index.php', true);
         assertNotContains('SOLO-IN-STAGING', $normal['output'], 'senza ?kris_preview anche un admin vede il sito');

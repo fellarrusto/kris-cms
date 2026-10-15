@@ -5,8 +5,8 @@ namespace Kris\Staging;
 
 /**
  * Anteprima dello staging sul sito pubblico, solo per chi ha una sessione
- * dell'editor. Si chiede con ?kris_preview=1; senza sessione il parametro e
- * ignorato e si vede il sito normale.
+ * dell'editor. Si chiede con ?kris_preview=1; senza sessione la pagina
+ * risponde 404, come se non esistesse.
  *
  * I fogli di stile modificati stanno in data/staging/, che non e pubblica:
  * li serve index.php stesso (?kris_preview_asset=css/<nome>.css), sempre solo
@@ -68,7 +68,7 @@ final class Preview
 
     /**
      * Pagina in anteprima: CSS dello staging, link interni che restano in
-     * anteprima, barra con i comandi in fondo al body.
+     * anteprima, barra sottile fissa in cima alla pagina (come quella di WordPress).
      */
     public static function decorate(string $html, Staging $staging, string $editorUrl, string $exitUrl): string
     {
@@ -106,11 +106,12 @@ final class Preview
             $html
         );
 
-        $bar = self::bar($editorUrl, $exitUrl);
-        $html = (string) preg_replace('#<head(\s[^>]*)?>#i', "\$0\n<meta name=\"robots\" content=\"noindex\">", $html, 1);
-        return stripos($html, '</body>') !== false
-            ? (string) preg_replace('#</body>#i', $bar . "\n</body>", $html, 1)
-            : $html . $bar;
+        $bar = self::bar($editorUrl, $exitUrl, $staging->hasChanges());
+        $html = (string) preg_replace('#<head(\s[^>]*)?>#i', "\$0\n<meta name=\"robots\" content=\"noindex\">\n" . self::BAR_STYLE, $html, 1);
+        // In cima al body, prima di tutto il resto, come la barra di WordPress
+        return preg_match('#<body(\s[^>]*)?>#i', $html) === 1
+            ? (string) preg_replace('#<body(\s[^>]*)?>#i', "\$0\n" . $bar, $html, 1)
+            : $bar . $html;
     }
 
     /** La stessa pagina senza anteprima. */
@@ -120,16 +121,55 @@ final class Preview
         return 'index.php' . ($query ? '?' . http_build_query($query) : '');
     }
 
-    /** Barra fissa con stili propri, per non dipendere dal tema del sito. */
-    private static function bar(string $editorUrl, string $exitUrl): string
+    /**
+     * Stili della barra: propri e con !important, per non dipendere dal tema
+     * del sito. La pagina scende dell'altezza della barra, che resta sopra a tutto.
+     */
+    private const BAR_STYLE = <<<'HTML'
+<style id="kris-preview-style">
+html{margin-top:36px!important}
+#kris-preview-bar{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:2147483647!important;height:36px!important;margin:0!important;padding:0 12px!important;display:flex!important;align-items:center!important;gap:12px!important;background:#202b27!important;color:#e8efe9!important;font:13px/1 'Segoe UI',system-ui,-apple-system,sans-serif!important;box-shadow:0 1px 4px rgba(0,0,0,.3)!important;box-sizing:border-box!important;text-align:left!important}
+#kris-preview-bar *{box-sizing:border-box!important;font:inherit!important;letter-spacing:normal!important;text-transform:none!important}
+#kris-preview-bar .kpb-tag{flex:none!important;padding:4px 8px!important;border-radius:4px!important;background:#e2b54a!important;color:#202b27!important;font-weight:700!important}
+#kris-preview-bar .kpb-text{flex:1!important;min-width:0!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important}
+#kris-preview-bar a{flex:none!important;color:#fff!important;text-decoration:none!important;padding:5px 10px!important;border-radius:4px!important;border:1px solid #63716a!important;background:transparent!important}
+#kris-preview-bar a.kpb-main{background:#b7d6a6!important;border-color:#b7d6a6!important;color:#202b27!important;font-weight:600!important}
+#kris-preview-bar a:focus-visible{outline:2px solid #e2b54a!important;outline-offset:1px!important}
+@media(max-width:640px){#kris-preview-bar .kpb-text{display:none!important}#kris-preview-bar{justify-content:space-between!important}}
+</style>
+HTML;
+
+    /** Barra sottile fissa in cima alla pagina. */
+    private static function bar(string $editorUrl, string $exitUrl, bool $hasChanges): string
     {
         $url = htmlspecialchars($editorUrl, ENT_QUOTES);
         $exit = htmlspecialchars($exitUrl, ENT_QUOTES);
+        $text = $hasChanges
+            ? 'Stai vedendo le modifiche non ancora pubblicate. I visitatori vedono ancora il sito attuale.'
+            : 'Non ci sono modifiche in attesa: stai vedendo il sito pubblicato.';
         return <<<HTML
-<div id="kris-preview-bar" role="region" aria-label="Anteprima delle modifiche" style="position:fixed;left:0;right:0;bottom:0;z-index:2147483647;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;padding:10px 16px;background:#202b27;color:#fff;font:14px/1.4 'Segoe UI',system-ui,sans-serif;box-shadow:0 -2px 12px rgba(0,0,0,.25)">
-<span><strong style="color:#b7d6a6">Anteprima</strong> · stai vedendo le modifiche non ancora pubblicate. I visitatori vedono ancora il sito attuale.</span>
-<span style="display:flex;gap:8px;flex-wrap:wrap"><a href="{$url}" style="color:#202b27;background:#b7d6a6;padding:6px 12px;border-radius:6px;text-decoration:none;font-weight:600">Rivedi e pubblica</a><a href="{$exit}" style="color:#fff;padding:6px 12px;border:1px solid #63716a;border-radius:6px;text-decoration:none">Esci dall'anteprima</a></span>
+<div id="kris-preview-bar" role="region" aria-label="Anteprima">
+<span class="kpb-tag">Anteprima</span><span class="kpb-text">{$text}</span><a class="kpb-main" href="{$url}">Rivedi e pubblica</a><a href="{$exit}">Esci</a>
 </div>
+<script>
+/* Gli header fissati in cima al sito scendono sotto la barra invece di finirci dietro */
+(function () {
+  var bar = document.getElementById('kris-preview-bar');
+  function shift() {
+    var h = bar.offsetHeight;
+    document.querySelectorAll('body *').forEach(function (el) {
+      if (el === bar || bar.contains(el) || el.hasAttribute('data-kpb-shifted')) return;
+      var cs = getComputedStyle(el);
+      if ((cs.position === 'fixed' || cs.position === 'sticky') && parseFloat(cs.top) === 0) {
+        el.style.setProperty('top', h + 'px', 'important');
+        el.setAttribute('data-kpb-shifted', '');
+      }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', shift); else shift();
+  window.addEventListener('load', shift);
+})();
+</script>
 HTML;
     }
 }
