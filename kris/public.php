@@ -10,11 +10,51 @@ use Kris\Staging\Staging;
 use Kris\Template\TemplateEngine;
 use Kris\Template\Seo;
 
-/** La 404 del sito, se ne ha una propria, altrimenti quella del framework. */
-function kris_not_found_page(): string
+/**
+ * La pagina 404, con lo stato 404. In ordine:
+ *  - template/404.html del tema, resa come le altre pagine: i testi dalla
+ *    raccolta not_found (contenuto 0) se esiste, navbar e footer se il
+ *    template li include con k-component;
+ *  - 404.php nella root del sito (siti precedenti alla 1.4.3);
+ *  - quella generica di Kris.
+ */
+function kris_not_found(string $lang): string
 {
+    http_response_code(404);
+    $template = Paths::template('404');
+    if (is_file($template)) {
+        try {
+            try {
+                $entity = new Entity('k_data', 'not_found', 0);
+            } catch (Exception $e) {
+                // Il template puo non avere testi propri: entita vuota
+                $entity = new Entity('k_data', 'not_found', 0, ['name' => 'not_found', 'id' => 0, 'data' => []]);
+            }
+            return (new TemplateEngine($lang))->render((string) file_get_contents($template), $entity);
+        } catch (Throwable $e) {
+            // Un template rotto non deve trasformare la 404 in un errore: si usa quella di riserva
+        }
+    }
     $site = KRIS_ROOT . '/404.php';
-    return is_file($site) ? $site : KRIS_DIR . '/404.php';
+    ob_start();
+    require is_file($site) ? $site : KRIS_DIR . '/404.php';
+    http_response_code(404);
+    return (string) ob_get_clean();
+}
+
+/** La lingua chiesta, fra quelle attive; altrimenti la principale. */
+function kris_request_language(array $query): array
+{
+    $settingsFile = KRIS_ROOT . '/data/cms_settings.json';
+    $allowedLangs = ['it', 'en'];
+    if (is_file($settingsFile)) {
+        $settings = json_decode((string) file_get_contents($settingsFile), true);
+        if (!empty($settings['languages']) && is_array($settings['languages'])) {
+            $allowedLangs = array_values($settings['languages']);
+        }
+    }
+    $lang = $query['ln'] ?? $allowedLangs[0];
+    return [in_array($lang, $allowedLangs, true) ? (string) $lang : $allowedLangs[0], $allowedLangs];
 }
 
 // Durante un aggiornamento il sito risponde 503. Se l'aggiornamento si e
@@ -25,12 +65,16 @@ if ($maintenance !== null && !$maintenance['stale']) {
     exit;
 }
 
+// La lingua arriva dall'URL: va confrontata con quelle configurate, non
+// usata cosi com'e (finisce nei contenuti e negli attributi delle pagine).
+[$lang, $allowedLangs] = kris_request_language($_GET);
+
 // Anteprima dello staging: solo con una sessione dell'editor. Senza, la
 // pagina non esiste: chi riceve il link dell'anteprima vede la 404.
 $preview = null;
 if (Preview::requested($_GET)) {
     if (!Preview::isAdmin()) {
-        require_once kris_not_found_page();
+        echo kris_not_found($lang);
         exit;
     }
     $staging = new Staging();
@@ -51,20 +95,6 @@ $key = $_GET['key'] ?? 'homepage';
 $index = (int)($_GET['id'] ?? 0);
 $requestedPage = $_GET['page'] ?? 'homepage';
 
-// La lingua arriva dall'URL: va confrontata con quelle configurate, non
-// usata cosi com'e (finisce nei contenuti e negli attributi delle pagine).
-$settingsFile = KRIS_ROOT . '/data/cms_settings.json';
-$allowedLangs = ['it', 'en'];
-if (is_file($settingsFile)) {
-    $settings = json_decode((string) file_get_contents($settingsFile), true);
-    if (!empty($settings['languages']) && is_array($settings['languages'])) {
-        $allowedLangs = array_values($settings['languages']);
-    }
-}
-$lang = $_GET['ln'] ?? $allowedLangs[0];
-if (!in_array($lang, $allowedLangs, true)) {
-    $lang = $allowedLangs[0];
-}
 $rawPath = $_GET['path'] ?? '';
 $path = $rawPath === '' ? [] : array_values(array_filter(explode('/', $rawPath), fn($s) => $s !== ''));
 
@@ -73,8 +103,10 @@ $configPath = Paths::file('config/allowed_pages.json');
 $allowedPages = json_decode(file_get_contents($configPath), true)['allowed_pages'] ?? ['homepage'];
 
 // Validate requested page against whitelist
-if (!in_array($requestedPage, $allowedPages, true)) {
-    require_once kris_not_found_page();
+// La 404 del tema non e una pagina navigabile: si vede solo come 404
+if ($requestedPage === '404' || !in_array($requestedPage, $allowedPages, true)) {
+    $notFound = kris_not_found($lang);
+    echo $preview !== null ? Preview::decorate($notFound, $preview, 'editor/index.php?action=staging', Preview::exitUrl($_GET)) : $notFound;
     exit;
 }
 
@@ -87,7 +119,8 @@ $engine = new TemplateEngine($lang);
 try {
     $entity = Entity::fromPath('k_data', $key, $index, $path);
 } catch (Exception $e) {
-    require_once kris_not_found_page();
+    $notFound = kris_not_found($lang);
+    echo $preview !== null ? Preview::decorate($notFound, $preview, 'editor/index.php?action=staging', Preview::exitUrl($_GET)) : $notFound;
     exit;
 }
 
