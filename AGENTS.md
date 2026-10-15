@@ -26,7 +26,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `kris/migrations/` | Migrazioni del formato dei dati, `NNNN_nome.php`, applicate in ordine e una sola volta. |
 | `kris/maintenance.php` | Pagina 503 mostrata ai visitatori durante un aggiornamento. |
 | `kris/public.php` | Entry point pubblico: valida pagina e lingua, carica l'entità, renderizza il template. |
-| `kris/404.php`, `404.php` | Pagina 404 del framework; un `404.php` nella root del sito, se presente, la sostituisce. |
+| `template/404.html`, `404.php`, `kris/404.php` | Pagina 404, in quest'ordine: il template del tema (vedi "Pagina 404"), un `404.php` nella root del sito (siti precedenti alla 1.4.3), quella generica del framework. |
 | `template/*.html` | Pagine complete e frammenti HTML di liste e componenti. |
 | `assets/css/`, `assets/js/`, `assets/images/`, `assets/fonts/` | Stili, interazioni e risorse del tema. Crea le sottocartelle solo quando servono. |
 | `assets/uploads/` | File editoriali caricati dal CMS, da preservare nei deploy successivi. |
@@ -195,6 +195,10 @@ Kris non configura automaticamente slug o rewrite per URL puliti. Usa le route q
 I percorsi delle risorse si risolvono rispetto all'URL pubblico, non alla cartella `template/`. Usa `assets/...` per l'installazione corrente e verifica anche il deploy in sottocartella; `/assets/...` punta invece alla radice del dominio. Non lasciare link a file locali, export Figma o URL temporanei di preview.
 
 Esporta immagini e icone necessarie dal design, preserva le proporzioni, ottimizza peso e dimensioni e usa font disponibili per il progetto. Gli SVG fidati del tema possono essere asset statici verificati. L'upload editoriale accetta JPG/JPEG, PNG, GIF, WebP, AVIF e PDF fino a 8 MB; non accetta nuovi SVG. Non aggirare `MediaStore` per renderli caricabili.
+
+## Pagina 404
+
+La 404 del sito è `template/404.html`, un template come gli altri: lo rende il motore di Kris con lo stato 404, nella lingua richiesta. Navbar, footer e altri componenti li include il template con `k-component`, se servono. I testi modificabili stanno nella raccolta `not_found` (contenuto con ID `0`), creata come qualunque raccolta; senza, il template si rende con un'entità vuota. Non va in `config/allowed_pages.json` né nella sitemap: `?page=404` risponde comunque 404. Si può preparare anche dallo staging e vedere in anteprima aprendo un indirizzo inesistente con `?kris_preview=1`. Se il template ha un errore, Kris usa la 404 di riserva invece di un errore 500.
 
 ## Privacy e cookie
 
