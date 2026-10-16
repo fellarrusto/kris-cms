@@ -90,7 +90,7 @@ Un campo `array` di primo livello può avere `"posts": true` (in Struttura: “M
 
 Anche una raccolta intera può stare in **Posts** (Struttura della raccolta › “Mostra in Posts”): ogni suo contenuto è un post e i nuovi vanno in cima. L'elenco delle raccolte è in `data/cms_settings.json`, chiave `post_collections`; rendering e dati non cambiano. Per articoli o progetti con pagina di dettaglio è l'alternativa all'elenco `posts`.
 
-Ogni campo, a qualunque livello, può avere `"section": "Meta"` (in Struttura: “Sezione”, al massimo 60 caratteri). Nell'editor i campi con la stessa sezione stanno in un pannello a scomparsa, nell'ordine in cui le sezioni compaiono; i campi senza sezione restano in testa. Serve solo a ordinare l'editor: dati, template e nomi dei campi non cambiano. Su una pagina con molti campi raggruppa per area (Meta, Intestazione, Contatti, Progetti…). Lo staging la imposta con `add_field` o `describe_field` (`section`, vuota per toglierla).
+Ogni campo, a qualunque livello, può avere `"section": "Meta"` (al massimo 60 caratteri). In Struttura le sezioni dei campi di primo livello sono riquadri: «Aggiungi sezione», nome scritto una volta, campi trascinati dentro o spostati con il menu «Sezione»; le sezioni vuote non si salvano. Nell'editor i campi con la stessa sezione stanno in un pannello a scomparsa, nell'ordine in cui le sezioni compaiono; i campi senza sezione restano in testa. Serve solo a ordinare l'editor: dati, template e nomi dei campi non cambiano. Su una pagina con molti campi raggruppa per area (Meta, Intestazione, Contatti, Progetti…). Lo staging la imposta con `add_field` o `describe_field` (`section`, vuota per toglierla).
 
 ## Esempio completo: pagina con servizi
 
