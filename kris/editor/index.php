@@ -305,12 +305,13 @@ if ($stagingMode && in_array($action, ['structure', 'structure_impact'], true)) 
     $error = 'La struttura si modifica sul sito pubblico: passa a «Sito pubblico» per cambiarla.';
 }
 $inLegal = $action === 'edit' && $group === 'kris_legal';
+$inSite = $action === 'edit' && $group === 'kris_site';
 // La voce compare quando ci sono modifiche da pubblicare o una pubblicazione da poter annullare.
 $stagingCount = count($stagingNav->changes()) + count($stagingNav->operations()) + count($stagingNav->manifest()['uploads']);
 $stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
 $sectionLabel = match ($action) {
     'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts', 'staging' => 'Modifiche in attesa',
-    'edit' => $inLegal ? 'Privacy e cookie' : 'Contenuti',
+    'edit' => $inLegal ? 'Privacy e cookie' : ($inSite ? 'Favicon' : 'Contenuti'),
     'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
 };
 

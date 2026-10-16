@@ -137,3 +137,56 @@ test('le pagine privacy e cookie mostrano informativa e titolare', function () {
     assertContains('<code>kris_consent</code>', $cookie['output']);
     assertContains('data-kris-consent-banner', $cookie['output']);
 });
+
+// --- Favicon ----------------------------------------------------------------
+
+test('0004 aggiunge kris_site con la favicon vuota ed e idempotente', function () {
+    $m = require KRIS_ROOT . '/kris/migrations/0004_favicon.php';
+    $once = ($m['up'])(['k_data' => [], 'k_model' => [], 'cms_settings' => ['languages' => ['it', 'en']]]);
+    assertSame('favicon', $once['k_model']['kris_site'][0]['name']);
+    assertSame('image', $once['k_model']['kris_site'][0]['type']);
+    assertSame(['it' => '', 'en' => ''], $once['k_data'][0]['data'][0]['value']);
+    $once['k_data'][0]['data'][0]['value']['it'] = 'assets/uploads/icona.png';
+    $twice = ($m['up'])($once);
+    assertSame(1, count($twice['k_data']));
+    assertSame(1, count($twice['k_model']['kris_site']));
+    assertSame('assets/uploads/icona.png', $twice['k_data'][0]['data'][0]['value']['it']);
+});
+
+test('la favicon va prima di </head>, solo se e un file caricato e il template non ne ha gia una', function () {
+    $html = '<html><head><title>x</title></head><body></body></html>';
+    assertContains('<link rel="icon" type="image/png" href="assets/uploads/icona-1a2b.png">' . "\n</head>", Seo::injectIcon($html, 'assets/uploads/icona-1a2b.png'));
+    assertContains('type="image/webp"', Seo::injectIcon($html, 'assets/uploads/i.webp'));
+    assertSame($html, Seo::injectIcon($html, ''));
+    assertSame($html, Seo::injectIcon($html, null));
+    assertSame($html, Seo::injectIcon($html, 'https://altro.it/i.png'));
+    assertSame($html, Seo::injectIcon($html, 'assets/uploads/"><script>.png'));
+    assertSame($html, Seo::injectIcon($html, 'assets/uploads/doc.pdf'));
+    $own = '<html><head><link rel="shortcut icon" href="mia.ico"></head></html>';
+    assertSame($own, Seo::injectIcon($own, 'assets/uploads/i.png'));
+});
+
+test('le pagine e la 404 mostrano la favicon scelta nell editor', function () {
+    assertNotContains('rel="icon"', renderPage([])['output']);
+
+    $root = sys_get_temp_dir() . '/kris-favicon-' . bin2hex(random_bytes(4));
+    rcopy(projectSandbox(), $root);
+    register_shutdown_function(fn() => rrmdir($root));
+    $files = ['k_data' => json_decode((string) file_get_contents("{$root}/data/k_data.json"), true),
+        'k_model' => json_decode((string) file_get_contents("{$root}/data/k_model.json"), true), 'cms_settings' => null];
+    $files = ((require KRIS_ROOT . '/kris/migrations/0004_favicon.php')['up'])($files);
+    foreach ($files['k_data'] as &$entity) {
+        if ($entity['name'] === 'kris_site') $entity['data'][0]['value']['it'] = 'assets/uploads/icona.png';
+    }
+    unset($entity);
+    file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
+    file_put_contents("{$root}/data/k_model.json", json_encode($files['k_model']));
+
+    $tag = '<link rel="icon" type="image/png" href="assets/uploads/icona.png">';
+    assertContains($tag, renderPage(['ln' => 'en'], $root)['output']);
+    assertContains($tag, renderPage(['page' => 'inesistente'], $root)['output']);
+    file_put_contents("{$root}/template/404.html", '<!doctype html><html><head><title>404</title></head><body>no</body></html>');
+    $missing = renderPage(['page' => 'inesistente'], $root);
+    assertSame(404, $missing['status']);
+    assertContains($tag, $missing['output']);
+});

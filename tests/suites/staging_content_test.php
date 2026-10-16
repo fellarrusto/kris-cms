@@ -251,3 +251,25 @@ test('l anteprima mostra i contenuti dello staging a un admin', function () {
         $s->discard();
     }
 });
+
+test('la favicon (kris_site) si prepara con set_field; il resto delle raccolte kris_ resta chiuso', function () {
+    $root = contentSite();
+    $files = ['k_data' => json_decode((string) file_get_contents("{$root}/data/k_data.json"), true),
+        'k_model' => json_decode((string) file_get_contents("{$root}/data/k_model.json"), true), 'cms_settings' => ['languages' => ['it', 'en']]];
+    $files = ((require KRIS_ROOT . '/kris/migrations/0004_favicon.php')['up'])($files);
+    file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
+    file_put_contents("{$root}/data/k_model.json", json_encode($files['k_model']));
+
+    $s = new Staging($root);
+    $tmp = tempnam(sys_get_temp_dir(), 'png');
+    file_put_contents($tmp, base64_decode(KRIS_TEST_PNG));
+    $url = $s->upload($tmp, 'icona.png', 'agente');
+    $s->operate(['op' => 'set_field', 'key' => 'kris_site', 'id' => 0, 'field' => 'favicon', 'lang' => 'it', 'value' => $url], 'agente');
+    expectStaging(fn() => $s->operate(['op' => 'set_hidden', 'key' => 'kris_site', 'id' => 0, 'hidden' => true], 'agente'), 'non esiste');
+    expectStaging(fn() => $s->operate(['op' => 'create_entity', 'key' => 'kris_site'], 'agente'), 'appartiene a Kris');
+    expectStaging(fn() => $s->operate(['op' => 'add_field', 'collection' => 'kris_site', 'field' => ['name' => 'extra', 'type' => 'text']], 'agente'), 'appartiene a Kris');
+
+    $s->promote('admin');
+    assertSame($url, siteValue("{$root}/data/k_data.json", 'kris_site', 0, 'favicon')['it']);
+    assertTrue(is_file("{$root}/" . $url));
+});
