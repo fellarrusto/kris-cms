@@ -30,7 +30,7 @@ function kris_not_found(string $lang): string
                 // Il template puo non avere testi propri: entita vuota
                 $entity = new Entity('k_data', 'not_found', 0, ['name' => 'not_found', 'id' => 0, 'data' => []]);
             }
-            return (new TemplateEngine($lang))->render((string) file_get_contents($template), $entity);
+            return kris_with_favicon((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $lang);
         } catch (Throwable $e) {
             // Un template rotto non deve trasformare la 404 in un errore: si usa quella di riserva
         }
@@ -39,7 +39,19 @@ function kris_not_found(string $lang): string
     ob_start();
     require is_file($site) ? $site : KRIS_DIR . '/404.php';
     http_response_code(404);
-    return (string) ob_get_clean();
+    return kris_with_favicon((string) ob_get_clean(), $lang);
+}
+
+/** La favicon scelta nell'editor (raccolta kris_site), se c'e. */
+function kris_with_favicon(string $html, string $lang): string
+{
+    try {
+        $url = (new Entity('k_data', 'kris_site', 0))->getData('favicon', $lang);
+    } catch (Throwable $e) {
+        // Siti senza la raccolta (migrazione non ancora applicata): niente favicon
+        return $html;
+    }
+    return Seo::injectIcon($html, is_string($url) ? $url : null);
 }
 
 /** La lingua chiesta, fra quelle attive; altrimenti la principale. */
@@ -136,6 +148,7 @@ if ($seo['head']) {
     $base = Seo::baseUrl($seo, $_SERVER);
     $output = Seo::inject($output, Seo::headTags($base, (string) $requestedPage, (string) $key, $index, $path, (string) $lang, $allowedLangs));
 }
+$output = kris_with_favicon($output, (string) $lang);
 if ($preview !== null) {
     $output = Preview::decorate($output, $preview, 'editor/index.php?action=staging', Preview::exitUrl($_GET));
 }

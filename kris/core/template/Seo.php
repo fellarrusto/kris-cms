@@ -100,6 +100,33 @@ final class Seo
         return $pos === false ? $html : substr($html, 0, $pos) . $tags . "\n" . substr($html, $pos);
     }
 
+    /** Tipi delle immagini caricabili come favicon, per l'attributo type. */
+    private const ICON_TYPES = [
+        'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp', 'avif' => 'image/avif',
+        'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
+    ];
+
+    /**
+     * Inserisce la favicon prima di </head>, a meno che il template ne abbia
+     * gia una. Si accettano solo file caricati dal CMS (assets/uploads/).
+     */
+    public static function injectIcon(string $html, ?string $url): string
+    {
+        if (!is_string($url) || preg_match('#^assets/uploads/[A-Za-z0-9][A-Za-z0-9._-]*\.([A-Za-z0-9]+)$#', $url, $m) !== 1) {
+            return $html;
+        }
+        $type = self::ICON_TYPES[strtolower($m[1])] ?? null;
+        if ($type === null || preg_match('/<link\b[^>]*\brel\s*=\s*["\']?(?:shortcut\s+)?icon\b/i', $html)) {
+            return $html;
+        }
+        $pos = stripos($html, '</head>');
+        if ($pos === false) {
+            return $html;
+        }
+        $tag = '<link rel="icon" type="' . $type . '" href="' . htmlspecialchars($url, ENT_QUOTES, 'UTF-8') . '">';
+        return substr($html, 0, $pos) . $tag . "\n" . substr($html, $pos);
+    }
+
     /**
      * Pagine da elencare nella sitemap: [page, key, id, path].
      * Si scartano le voci con pagine non autorizzate o contenuti inesistenti.

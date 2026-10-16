@@ -21,7 +21,8 @@ $g = is_string($_POST['group'] ?? null) ? $_POST['group'] : '';
 $isAjax = in_array($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '', ['save', 'reorder', 'visibility'], true);
 
 try {
-    if ($g !== '' && isReservedCollection($g)) {
+    // La favicon si prepara anche in attesa; Privacy e cookie solo sul sito pubblico
+    if ($g !== '' && $g !== 'kris_site' && isReservedCollection($g)) {
         throw new StagingException('Privacy e cookie si modificano sul sito pubblico: passa a «Sito pubblico» per cambiarli.');
     }
 

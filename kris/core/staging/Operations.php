@@ -108,7 +108,7 @@ final class Operations
             throw new StagingException("La lingua '{$lang}' non è attiva sul sito. Lingue attive: " . implode(', ', $ctx['languages']) . '.');
         }
 
-        $entity = &self::entity($state['data'], (string) $op['key'], (int) ($op['id'] ?? 0), $path);
+        $entity = &self::entity($state['data'], (string) $op['key'], (int) ($op['id'] ?? 0), $path, true);
         $index = self::fieldIndex($entity, $def['name']);
         $current = $index === null ? null : $entity['data'][$index]['value'];
         $before = $lang === null ? $current : (is_array($current) ? ($current[$lang] ?? null) : null);
@@ -582,9 +582,12 @@ final class Operations
         return null;
     }
 
-    private static function &entity(array &$data, string $key, int $id, array $path): array
+    /** $setField: i valori di kris_site (la favicon) si possono cambiare, il resto delle raccolte kris_ no. */
+    private static function &entity(array &$data, string $key, int $id, array $path, bool $setField = false): array
     {
-        self::assertUserCollection($key);
+        if (!($setField && $key === 'kris_site' && !$path)) {
+            self::assertUserCollection($key);
+        }
         $found = null;
         foreach ($data as $i => $root) {
             if (($root['name'] ?? null) === $key && (int) ($root['id'] ?? -1) === $id) { $found = $i; break; }

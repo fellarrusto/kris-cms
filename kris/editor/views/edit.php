@@ -29,7 +29,9 @@ $siblings = count(array_filter($data, fn($d) => ($d['name'] ?? null) === $group)
 $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path || $siblings > 1);
 ?>
 <div class="container">
-    <?php if (isReservedCollection($group)): ?>
+    <?php if ($group === 'kris_site'): ?>
+    <header class="page-heading"><div><h1>Favicon</h1><p>L’icona del sito nella scheda del browser e nei preferiti. Kris la aggiunge a tutte le pagine; usa un PNG quadrato di almeno 48×48 pixel.</p></div></header>
+    <?php elseif (isReservedCollection($group)): ?>
     <header class="page-heading"><div><h1>Privacy e cookie</h1><p>Dati del titolare, informative e testi del banner. Il sito li mostra dove i suoi template li usano.</p></div></header>
     <?php else: ?>
     <header class="page-heading"><div><p class="eyebrow"><?= h(editorLabel($group)) ?><?= $path ? ' / ' . h(editorLabel($path[count($path)-2])) : '' ?></p><h1><?= h($title) ?></h1><?php if ($path): ?><p>Modifica questo elemento, poi torna al contenuto principale.</p><?php endif; ?></div><div class="actions"><?php if ($canHideCurrent): ?><?= visibilityToggle('vis_current', !isHiddenItem($entity), $title) ?><?= visibilityForm('vis_current', $group, $id, $pathRaw) ?><?php endif; ?><a class="btn btn-white" href="<?= h($backHref) ?>"><?= uiIcon('back') ?><?= h($backLabel) ?></a></div></header>
