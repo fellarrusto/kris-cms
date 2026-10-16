@@ -53,6 +53,19 @@ svg { width:19px; height:19px; vertical-align:middle; flex-shrink:0; }
 main { padding:38px 38px 110px; }
 .container { max-width:1200px; margin:0 auto; }
 .container.narrow { max-width:840px; }
+/* Impostazioni: barra interna con una sotto-pagina per volta */
+.settings-layout { display:grid; grid-template-columns:220px minmax(0,1fr); gap:28px; align-items:start; }
+.settings-nav { position:sticky; top:24px; display:grid; gap:4px; }
+.settings-nav a { display:flex; align-items:flex-start; gap:11px; padding:10px 12px; border-radius:9px; color:var(--text); border:1px solid transparent; }
+.settings-nav a svg { width:17px; height:17px; flex:none; margin-top:1px; color:var(--muted); }
+.settings-nav a strong { display:block; font-size:13px; font-weight:600; }
+.settings-nav a small { display:block; font-size:11px; color:var(--muted); margin-top:2px; }
+.settings-nav a:hover { background:var(--mint); }
+.settings-nav a.active { background:var(--surface); border-color:var(--border); }
+.settings-nav a.active svg,.settings-nav a.active strong { color:var(--primary); }
+.settings-nav a:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+.settings-content { min-width:0; max-width:840px; }
+@media(max-width:960px) { .settings-layout { grid-template-columns:1fr; gap:16px; }.settings-nav { position:static; display:flex; overflow-x:auto; gap:6px; padding-bottom:4px; }.settings-nav a { flex:none; padding:8px 11px; }.settings-nav a small { display:none; } }
 .page-heading { display:flex; justify-content:space-between; align-items:center; gap:26px; margin-bottom:30px; }
 .page-heading .eyebrow { margin-bottom:9px; }
 .page-heading p:not(.eyebrow) { margin-top:9px; color:var(--muted); font-size:13px; }

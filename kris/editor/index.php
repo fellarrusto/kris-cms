@@ -368,7 +368,7 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
                 <?php if ($migrationsPending): ?>
                     <form method="POST" class="system-alert-action"><button class="btn btn-primary" name="run_migrations" value="1">Aggiorna il formato dei contenuti</button><small>Prima viene salvata una copia dei file dei contenuti.</small></form>
                 <?php elseif (!empty($maintenance['stale']) && $action !== 'settings'): ?>
-                    <a class="btn btn-white" href="?action=settings#versione">Vai alla versione di Kris</a>
+                    <a class="btn btn-white" href="?action=settings&amp;tab=versione">Vai alla versione di Kris</a>
                 <?php endif; ?>
             </div>
         <?php elseif ($frameworkNotice !== ''): ?>

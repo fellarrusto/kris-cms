@@ -13,6 +13,9 @@ const csrfMeta = document.querySelector('meta[name="kris-csrf"]');
 const csrf = () => csrfMeta?.content || '';
 const q = (s, root = document) => root.querySelector(s);
 const qa = (s, root = document) => [...root.querySelectorAll(s)];
+// Impostazioni: i vecchi link con l'ancora (#versione, #account, #kris-agent) aprono la sotto-pagina giusta.
+{const params=new URLSearchParams(location.search);const tabs={'#versione':'versione','#account':'account','#kris-agent':'agent'};
+if(params.get('action')==='settings'&&!params.has('tab')&&tabs[location.hash]){params.set('tab',tabs[location.hash]);location.replace('?'+params.toString());}}
 
 function snapshot() {
     if (!currentForm) return '';

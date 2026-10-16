@@ -5,7 +5,7 @@
 (() => {
     const panel = q('[data-update-panel]');
     const recoverButton = q('[data-update-recover]');
-    const settingsUrl = 'index.php?action=settings#versione';
+    const settingsUrl = 'index.php?action=settings&tab=versione';
     let busy = false;
 
     function el(tag, className, text) {

@@ -1,5 +1,18 @@
-<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } ?>
-<div class="container narrow"><header class="page-heading"><div><h1>Impostazioni</h1></div></header>
+<?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; }
+// Una sotto-pagina per volta, scelta dalla barra interna: ?action=settings&tab=...
+$settingsTabs = [
+    'lingue' => ['Lingue', 'Lingue dei moduli', 'content'],
+    'account' => ['Account', 'Email e password', 'settings'],
+    'agent' => ['Kris Agent', 'Assistente AI', 'structure'],
+    'versione' => ['Versione di Kris', 'Aggiornamenti', 'check'],
+];
+$tab = is_string($_GET['tab'] ?? null) && isset($settingsTabs[$_GET['tab']]) ? $_GET['tab'] : 'lingue';
+?>
+<div class="container"><header class="page-heading"><div><h1>Impostazioni</h1></div></header>
+<div class="settings-layout">
+<nav class="settings-nav" aria-label="Sezioni delle impostazioni"><?php foreach ($settingsTabs as $key => [$label, $hint, $icon]): ?><a href="?action=settings&amp;tab=<?= $key ?>" class="<?= $key === $tab ? 'active' : '' ?>" <?= $key === $tab ? 'aria-current="page"' : '' ?>><?= uiIcon($icon) ?><span><strong><?= h($label) ?></strong><small><?= h($hint) ?></small></span></a><?php endforeach; ?></nav>
+<div class="settings-content">
+<?php if ($tab === 'lingue'): ?>
 <form method="POST" id="settingsForm" data-dirty-form data-async-save>
 <input type="hidden" name="save_settings" value="1">
 <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('settings') ?></span><div><h2>Lingue di modifica</h2><p>Scegli le lingue disponibili nei moduli dell’editor.</p></div></header><div class="card-body">
@@ -7,7 +20,28 @@
 <div class="notice"><strong>I testi restano al sicuro.</strong><p>Disattivare una lingua la nasconde nei moduli, ma conserva le traduzioni già salvate. La navigazione del sito dipende dai suoi template.</p></div></div></section>
 <?php require __DIR__ . '/../partials/save_bar.php'; ?>
 </form>
-<?php
+<?php elseif ($tab === 'account'): ?>
+<?php $account = kris_auth_config() ?? []; $accountEmail = (string) ($account['email'] ?? ''); ?>
+<section class="card" id="account"><header class="card-header"><span class="collection-icon"><?= uiIcon('settings') ?></span><div><h2>Account</h2><p>Accedi come <strong><?= h($account['user'] ?? '') ?></strong>.</p></div></header><div class="card-body account-body">
+<form method="POST" action="?action=settings&amp;tab=account" class="account-form" data-account-form><input type="hidden" name="save_account_email" value="1">
+    <label for="account-email">Email per recuperare la password</label>
+    <div class="account-row"><input id="account-email" type="email" name="account_email" value="<?= h($accountEmail) ?>" autocomplete="email" placeholder="nome@esempio.it" required><button class="btn btn-white">Salva email</button></div>
+</form>
+<?php if (Kris\Auth\Credentials::validEmail($accountEmail)): ?>
+<form method="POST" action="?action=settings&amp;tab=account" class="account-form" data-account-form><input type="hidden" name="send_test_email" value="1"><p class="hint">Inviati un'email di prova: se non arriva, su questo hosting il recupero della password via email non funziona.</p><button class="btn btn-white">Invia email di prova</button></form>
+<?php endif; ?>
+<form method="POST" action="?action=settings&amp;tab=account" class="account-form" data-account-form><input type="hidden" name="change_password" value="1">
+    <p class="account-title">Cambia password</p>
+    <label for="current-password">Password attuale</label><input id="current-password" type="password" name="current_password" autocomplete="current-password" required>
+    <label for="new-password">Nuova password (almeno 10 caratteri)</label><input id="new-password" type="password" name="new_password" autocomplete="new-password" minlength="10" required>
+    <label for="new-password2">Ripeti la nuova password</label><input id="new-password2" type="password" name="new_password2" autocomplete="new-password" minlength="10" required>
+    <button class="btn btn-white">Aggiorna password</button>
+</form>
+<p class="hint">Se perdi l'accesso e l'email non arriva: <?= h(lcfirst(KRIS_HOSTING_HELP)) ?></p>
+</div></section>
+<?php elseif ($tab === 'agent'): ?>
+<?php require __DIR__ . '/../partials/agent_settings.php'; ?>
+<?php else:
 // Lo stato degli aggiornamenti e informativo: se il file e rovinato lo si
 // segnala qui, senza impedire di lavorare sui contenuti.
 $stateError = false;
@@ -34,25 +68,6 @@ $lastUpdate = is_array($lastUpdate) ? $lastUpdate : null;
 $updater = new \Kris\Update\Updater();
 $rollback = $updater->enabled() && $maintenance === null ? $updater->availableRollback() : null;
 ?>
-<?php $account = kris_auth_config() ?? []; $accountEmail = (string) ($account['email'] ?? ''); ?>
-<section class="card" id="account"><header class="card-header"><span class="collection-icon"><?= uiIcon('settings') ?></span><div><h2>Account</h2><p>Accedi come <strong><?= h($account['user'] ?? '') ?></strong>.</p></div></header><div class="card-body account-body">
-<form method="POST" action="?action=settings#account" class="account-form" data-account-form><input type="hidden" name="save_account_email" value="1">
-    <label for="account-email">Email per recuperare la password</label>
-    <div class="account-row"><input id="account-email" type="email" name="account_email" value="<?= h($accountEmail) ?>" autocomplete="email" placeholder="nome@esempio.it" required><button class="btn btn-white">Salva email</button></div>
-</form>
-<?php if (Kris\Auth\Credentials::validEmail($accountEmail)): ?>
-<form method="POST" action="?action=settings#account" class="account-form" data-account-form><input type="hidden" name="send_test_email" value="1"><p class="hint">Inviati un'email di prova: se non arriva, su questo hosting il recupero della password via email non funziona.</p><button class="btn btn-white">Invia email di prova</button></form>
-<?php endif; ?>
-<form method="POST" action="?action=settings#account" class="account-form" data-account-form><input type="hidden" name="change_password" value="1">
-    <p class="account-title">Cambia password</p>
-    <label for="current-password">Password attuale</label><input id="current-password" type="password" name="current_password" autocomplete="current-password" required>
-    <label for="new-password">Nuova password (almeno 10 caratteri)</label><input id="new-password" type="password" name="new_password" autocomplete="new-password" minlength="10" required>
-    <label for="new-password2">Ripeti la nuova password</label><input id="new-password2" type="password" name="new_password2" autocomplete="new-password" minlength="10" required>
-    <button class="btn btn-white">Aggiorna password</button>
-</form>
-<p class="hint">Se perdi l'accesso e l'email non arriva: <?= h(lcfirst(KRIS_HOSTING_HELP)) ?></p>
-</div></section>
-<?php require __DIR__ . '/../partials/agent_settings.php'; ?>
 <section class="card" id="versione"><header class="card-header"><span class="collection-icon"><?= uiIcon('check') ?></span><div><h2>Versione di Kris</h2></div></header><div class="card-body">
 <?php if ($stateError): ?><div class="alert alert-error" role="alert">Lo storico degli aggiornamenti non è leggibile (file <code>data/kris_state.json</code>). I contenuti non sono coinvolti: segnalalo a chi gestisce il sito.</div><?php endif; ?>
 <div class="setting-row static"><span><strong>Versione installata</strong><small>Indicala quando chiedi assistenza.</small></span><span class="setting-value">Kris <?= h($krisVersion) ?></span></div>
@@ -96,4 +111,6 @@ $rollback = $updater->enabled() && $maintenance === null ? $updater->availableRo
 </ul></div>
 <?php endif; ?>
 </div></section>
+<?php endif; ?>
+</div></div>
 </div>
