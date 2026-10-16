@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.5.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Favicon dall'editor. Raccolte intere in Posts. Campi organizzati in sezioni a scomparsa. Impostazioni divise in sotto-pagine.",
+            "date": "2026-10-16",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.5.0/kris-1.5.0.zip",
+            "sha256": "ab98df410a92f92158a2e3b4e246a819312bf2cbbff3147a7bf2155a8fb046ff",
+            "size": 175303
+        },
+        {
             "version": "1.4.3",
             "min_from": "1.0.0",
             "breaking": false,
