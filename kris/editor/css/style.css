@@ -101,6 +101,20 @@ label { display:block; margin-bottom:7px; font-size:13px; font-weight:600; }
 .card-header h2 { font-size:14px; }
 .card-header p { font-size:11px; color:var(--muted); margin-top:4px; overflow-wrap:anywhere; }
 .card-body { padding:23px 24px; }
+/* Sezioni di campi nella modifica di un contenuto: pannelli a scomparsa */
+.field-section { margin-bottom:22px; border:1px solid var(--border); border-radius:12px; background:#fafbf8; }
+.field-section > summary { display:flex; align-items:center; gap:12px; padding:17px 22px; cursor:pointer; list-style:none; border-radius:12px; }
+.field-section > summary::-webkit-details-marker { display:none; }
+.field-section > summary::before { content:''; width:7px; height:7px; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(-45deg); transition:transform .15s; flex:none; }
+.field-section[open] > summary::before { transform:rotate(45deg); }
+.field-section > summary:hover { background:var(--mint); }
+.field-section > summary:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+.field-section-title { font-size:14px; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere; }
+.field-section-body { padding:4px 16px 0; }
+.context-panel .context-section { margin:10px 5px 2px; font-size:9px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.posts-collection .card-body { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+.posts-collection h2 { font-size:14px; }
+.posts-collection p { font-size:12px; color:var(--muted); margin-top:4px; max-width:620px; }
 .section-number { display:grid; place-items:center; width:27px; min-width:27px; height:27px; font-size:10px; border:1px solid var(--border); border-radius:7px; color:var(--muted); }
 .edit-layout { display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:28px; align-items:start; }
 .edit-content { min-width:0; }
@@ -237,12 +251,30 @@ dialog::backdrop { background:#122a2255; backdrop-filter:blur(3px); }
 .selection-label { color:var(--muted); font-size:11px; margin-right:auto; max-width:40%; overflow-wrap:anywhere; }
 .toast { position:fixed; right:26px; bottom:100px; max-width:380px; padding:15px 20px; background:var(--text); color:white; border-radius:9px; box-shadow:0 8px 35px #1725192c; z-index:15; font-size:13px; }
 .sf-container,.sf-nested { display:flex; flex-direction:column; gap:14px; }
+#root-schema { gap:22px; }
 .sf-row { padding:17px; border:1px solid var(--border); background:#fafbf8; border-radius:9px; }
 .sf-header { display:flex; align-items:center; gap:10px; }
 .sf-header .sf-name { flex:1; min-width:0; }
 .sf-header .sf-type { width:190px; }
 .sf-description-label { font-size:11px; color:var(--muted); margin:12px 0 0; }
 .sf-description { margin-top:5px; font-size:12px; font-weight:400; }
+.sf-section-label { display:block; font-size:11px; color:var(--muted); margin:12px 0 0; }
+.sf-move { display:block; margin-top:5px; font-size:12px; max-width:320px; }
+/* Sezioni della Struttura: riquadri con i campi di primo livello */
+.sf-group { display:flex; flex-direction:column; gap:12px; }
+.sf-group-fields { display:flex; flex-direction:column; gap:14px; min-height:12px; }
+.sf-group-label { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.sf-group-none.is-empty .sf-group-label { display:none; }
+.sf-section-group { padding:16px; border:1px dashed #b5ceb3; border-radius:12px; background:#f4f8f3; }
+.sf-group-header { display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; }
+.sf-group-header label { flex:1; min-width:200px; font-size:11px; color:var(--muted); }
+.sf-section-name { margin-top:5px; font-size:14px; font-weight:600; }
+.sf-section-group.is-empty .sf-group-fields { min-height:60px; border:1px dashed var(--border); border-radius:9px; }
+.sf-drop-hint { font-size:11px; color:var(--muted); }
+.sf-section-group:not(.is-empty) .sf-drop-hint { display:none; }
+.sf-drag { cursor:grab; font-size:16px; line-height:1; flex:none; }
+.sf-dragging { opacity:.5; }
+.sf-actions { display:flex; gap:10px; flex-wrap:wrap; }
 .sf-posts-label { display:flex; align-items:flex-start; gap:10px; margin:12px 0 0; font-size:12px; cursor:pointer; }
 .sf-posts-label[hidden] { display:none; }
 .sf-posts-label input { accent-color:var(--primary); width:16px; height:16px; margin-top:1px; flex:none; }

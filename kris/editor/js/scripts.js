@@ -381,6 +381,11 @@ document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&e
 baseline=snapshot();initDnd();
 if(currentForm)updateSaveState();
 try { const lang=sessionStorage.getItem('kris-editor-language');qa('[data-editor-language]').find(b=>b.dataset.editorLanguage===lang)?.click(); } catch {}
+// Sezioni a scomparsa: si apre quella del campo cercato, dall'indice, dall'indirizzo o da un errore di validazione.
+function openFieldSection(target){const section=target?.closest?.('details.field-section');if(section)section.open=true;}
+document.addEventListener('click',event=>{const link=event.target.closest('a[href^="#field-"]');if(link)openFieldSection(document.getElementById(link.getAttribute('href').slice(1)));});
+document.addEventListener('invalid',event=>openFieldSection(event.target),true);
+if(location.hash.startsWith('#field-'))openFieldSection(document.getElementById(location.hash.slice(1)));
 if(q('.richtext')){
     if(window.tinymce){
         tinymce.init({selector:'.richtext',height:300,menubar:false,plugins:'image link lists code fullscreen',toolbar:'undo redo | blocks | bold italic | bullist numlist | link image | code fullscreen',file_picker_callback:openCmsMediaPicker,

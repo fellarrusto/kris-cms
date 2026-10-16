@@ -43,6 +43,10 @@ try {
         $msg = $ops ? 'Modifiche messe in attesa: il sito pubblico non cambia finché non le pubblichi.' : 'Nessuna modifica da mettere in attesa.';
     } elseif (isset($_POST['create_instance'])) {
         $done = $staging->operate(['op' => 'create_entity', 'key' => $g], $by);
+        // In una raccolta mostrata in Posts il contenuto piu recente va in cima
+        if (in_array($g, editorPostCollections($settings, $models), true)) {
+            $staging->operate(['op' => 'move_entity', 'key' => $g, 'id' => (int) $done['assigned_id'], 'to' => 0], $by);
+        }
         header("Location: $BASE?action=edit&group=" . urlencode($g) . '&id=' . (int) $done['assigned_id']);
         exit;
     } elseif (isset($_POST['create_nested'])) {
@@ -58,7 +62,7 @@ try {
         exit;
     } elseif (isset($_POST['delete_instance'])) {
         $staging->operate(['op' => 'remove_entity', 'key' => $g, 'id' => (int) ($_POST['id'] ?? -1)], $by);
-        header("Location: $BASE?action=list&group=" . urlencode($g));
+        header("Location: $BASE?action=" . (isset($_POST['return_posts']) ? 'posts' : 'list') . '&group=' . urlencode($g));
         exit;
     } elseif (isset($_POST['delete_nested'])) {
         $id = (int) ($_POST['id'] ?? -1);

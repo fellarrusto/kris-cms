@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             if ($problems) {
                 $error = "Struttura non salvata: " . implode(' ', $problems);
             } else {
-                $merged = normalizePostsFlag(mergeSchemaMetadata($decoded, $models[$g] ?? []));
+                $merged = normalizeSections(normalizePostsFlag(mergeSchemaMetadata($decoded, $models[$g] ?? [])));
 
                 // Prima di applicare: quali contenuti gia scritti sparirebbero?
                 $impact = isset($_POST['confirm_impact'])
@@ -133,7 +133,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
                 $maxId = max($maxId, $d['id']);
         $skeleton = buildSkeleton($models[$g] ?? [], $activeLangs);
         $newId = $maxId + 1;
-        $data[] = ['id' => $newId, 'name' => $g, 'data' => $skeleton];
+        $entity = ['id' => $newId, 'name' => $g, 'data' => $skeleton];
+        // In una raccolta mostrata in Posts il contenuto piu recente va in cima.
+        $data = array_values($data);
+        $first = null;
+        if (in_array($g, editorPostCollections($settings, $models), true)) {
+            foreach ($data as $i => $d) {
+                if (($d['name'] ?? null) === $g) { $first = $i; break; }
+            }
+        }
+        if ($first === null) {
+            $data[] = $entity;
+        } else {
+            array_splice($data, $first, 0, [$entity]);
+        }
         saveJson($dataFile, $data);
         header("Location: $BASE?action=edit&group=$g&id=$newId");
         exit;
@@ -171,7 +184,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
     if (isset($_POST['delete_instance'])) {
         $data = array_filter($data, fn($d) => !($d['name'] == $_POST['group'] && $d['id'] == $_POST['id']));
         saveJson($dataFile, array_values($data));
-        header("Location: $BASE?action=list&group=" . $_POST['group']);
+        header("Location: $BASE?action=" . (isset($_POST['return_posts']) ? 'posts' : 'list') . '&group=' . urlencode((string) $_POST['group']));
         exit;
     }
     // 6b. Elimina sub-istanza nested (path deve terminare su un sub-id)
@@ -444,9 +457,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         if ($languages === []) {
             $error = 'Seleziona almeno una lingua. Le impostazioni non sono state modificate.';
         } else {
-            saveJson($settingsFile, ['languages' => $languages]);
+            // Le altre impostazioni (per esempio le raccolte in Posts) restano
+            $settings = ['languages' => $languages] + $settings;
+            saveJson($settingsFile, $settings);
             $activeLangs = $languages;
             $msg = 'Impostazioni salvate. Le traduzioni delle lingue disattivate sono conservate.';
+        }
+    }
+    // Una raccolta intera nella sezione Posts: ogni contenuto e un post.
+    if (isset($_POST['toggle_post_collection'])) {
+        $g = (string) ($_POST['group_name'] ?? '');
+        if (!isset($models[$g]) || isReservedCollection($g)) {
+            $error = 'La raccolta non è disponibile.';
+        } else {
+            $names = array_values(array_diff(editorPostCollections($settings, $models), [$g]));
+            if (($_POST['enabled'] ?? '') === '1') $names[] = $g;
+            $settings['post_collections'] = $names;
+            saveJson($settingsFile, $settings);
+            $msg = ($_POST['enabled'] ?? '') === '1' ? 'La raccolta ora compare in Posts.' : 'La raccolta non compare più in Posts.';
         }
     }
     // 8. Elimina Media

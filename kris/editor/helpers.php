@@ -304,10 +304,30 @@ function postsFieldDef(array $models, string $group, string $field): ?array
     return null;
 }
 
-/** Un elenco per ogni contenuto root che ha un campo posts, nell'ordine dei dati. */
-function editorPostSources(array $models, array $data): array
+/**
+ * Raccolte intere mostrate in Posts (cms_settings.json, "post_collections"):
+ * ogni contenuto della raccolta e un post. Solo raccolte del sito esistenti.
+ */
+function editorPostCollections(array $settings, array $models): array
+{
+    $names = is_array($settings['post_collections'] ?? null) ? $settings['post_collections'] : [];
+    return array_values(array_filter(array_unique($names), fn($n) => is_string($n) && isset($models[$n]) && !isReservedCollection($n)));
+}
+
+/**
+ * Le fonti della sezione Posts: le raccolte in Posts, poi un elenco per ogni
+ * contenuto root che ha un campo posts, nell'ordine dei dati. Una raccolta ha
+ * id -1 e field vuoto; i suoi elementi sono i contenuti root.
+ */
+function editorPostSources(array $models, array $data, array $postCollections = []): array
 {
     $sources = [];
+    foreach ($postCollections as $group) {
+        $sources[] = [
+            'group' => $group, 'id' => -1, 'field' => '', 'label' => editorLabel($group), 'owner' => 'Raccolta',
+            'items' => array_values(array_filter($data, fn($e) => ($e['name'] ?? null) === $group)),
+        ];
+    }
     foreach ($data as $entity) {
         $group = (string) ($entity['name'] ?? '');
         foreach ($models[$group] ?? [] as $f) {
@@ -339,6 +359,44 @@ function normalizePostsFlag(array $schema, bool $root = true): array
     }
     unset($f);
     return $schema;
+}
+
+/**
+ * Sezioni dei campi ("section" nello schema): l'editor raccoglie i campi
+ * con la stessa sezione in un pannello a scomparsa. Nome ripulito, al
+ * massimo 60 caratteri; una sezione vuota si toglie. Vale a ogni livello.
+ */
+function normalizeSections(array $schema): array
+{
+    foreach ($schema as &$f) {
+        $section = is_string($f['section'] ?? null) ? trim(preg_replace('/\s+/u', ' ', $f['section'])) : '';
+        if ($section === '') {
+            unset($f['section']);
+        } else {
+            $f['section'] = mb_substr($section, 0, 60);
+        }
+        if (($f['type'] ?? '') === 'array') $f['of'] = normalizeSections($f['of'] ?? []);
+    }
+    unset($f);
+    return $schema;
+}
+
+/**
+ * I campi divisi per sezione, nell'ordine in cui le sezioni compaiono:
+ * [['section' => '' | nome, 'fields' => [indice => campo]]]. I campi senza
+ * sezione stanno in testa, fuori dai pannelli.
+ */
+function schemaSections(array $schema): array
+{
+    $sections = ['' => []];
+    foreach ($schema as $i => $f) {
+        $sections[is_string($f['section'] ?? null) ? $f['section'] : ''][$i] = $f;
+    }
+    $out = [];
+    foreach ($sections as $name => $fields) {
+        if ($fields) $out[] = ['section' => (string) $name, 'fields' => $fields];
+    }
+    return $out;
 }
 
 function findRootIndex(array $data, string $group, int $id): int
@@ -599,9 +657,34 @@ function applyPostToData(array $existing, array $schema, array $post, array $act
     return $out;
 }
 
+/**
+ * Campi di primo livello della schermata Struttura, divisi in sezioni: un
+ * gruppo senza sezione in testa, poi un riquadro per sezione con il nome
+ * modificabile una volta sola. I campi si spostano trascinandoli o con il
+ * menu «Sezione»; al salvataggio ogni campo riceve il nome del suo riquadro.
+ */
+function renderSchemaRoot(array $schema): void
+{
+    $sections = schemaSections($schema);
+    if ($sections === [] || $sections[0]['section'] !== '') array_unshift($sections, ['section' => '', 'fields' => []]);
+    $keys = [];
+    foreach ($sections as $i => $section) $keys[$i] = $section['section'] === '' ? 'none' : 's' . $i;
+    $options = [];
+    foreach ($sections as $i => $section) $options[$keys[$i]] = $section['section'];
+    foreach ($sections as $i => $section):
+        $key = $keys[$i];
+        if ($section['section'] === ''): ?>
+        <div class="sf-group sf-group-none" data-sf-group="<?= $key ?>"><p class="sf-group-label">Campi senza sezione</p><div class="sf-group-fields" data-sf-drop><?php renderSchemaFields($section['fields'], 0, $options, $key); ?></div></div>
+        <?php else: ?>
+        <section class="sf-group sf-section-group" data-sf-group="<?= $key ?>"><div class="sf-group-header"><label>Nome della sezione<input type="text" class="sf-section-name" value="<?= h($section['section']) ?>" maxlength="60" required placeholder="Es. Meta, Contatti"></label><button type="button" class="btn btn-white sf-section-remove">Togli sezione</button></div><div class="sf-group-fields" data-sf-drop><?php renderSchemaFields($section['fields'], 0, $options, $key); ?></div><p class="sf-drop-hint">Trascina qui i campi, oppure scegli questa sezione dal menu «Sezione» di un campo. Una sezione vuota non viene salvata.</p></section>
+        <?php endif;
+    endforeach;
+}
+
 // Render ricorsivo dei campi dello schema nell'editor struttura.
 // $depth controlla l'indentazione visiva (max consigliato: 3-4 livelli).
-function renderSchemaFields(array $schema, int $depth = 0): void
+// Al primo livello: maniglia per trascinare e menu della sezione ($sections: chiave => nome).
+function renderSchemaFields(array $schema, int $depth = 0, array $sections = [], string $current = 'none'): void
 {
     $typeLabels = [
         'text'     => 'Testo Multilingua',
@@ -614,6 +697,7 @@ function renderSchemaFields(array $schema, int $depth = 0): void
         $isArray = ($f['type'] ?? '') === 'array'; ?>
         <div class="sf-row" data-depth="<?= $depth ?>">
             <div class="sf-header">
+                <?php if ($depth === 0): ?><button type="button" class="icon-button sf-drag" aria-label="Trascina per spostare il campo in un'altra sezione" title="Trascina"><span aria-hidden="true">&#x2807;</span></button><?php endif; ?>
                 <input type="text" class="sf-name" value="<?= htmlspecialchars($f['name'] ?? '') ?>" placeholder="Nome campo (es. title)" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+">
                 <select class="sf-type" aria-label="Tipo del campo">
                     <?php foreach ($typeLabels as $val => $label): ?>
@@ -623,6 +707,7 @@ function renderSchemaFields(array $schema, int $depth = 0): void
                 <button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo"><?= uiIcon('trash') ?></button>
             </div>
             <label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" value="<?= h($f['description'] ?? '') ?>" placeholder="Aiuta chi modifica il contenuto"></label>
+            <?php if ($depth === 0): ?><label class="sf-section-label">Sezione<select class="sf-move"><?php foreach ($sections as $key => $name): ?><option value="<?= h($key) ?>" <?= $key === $current ? 'selected' : '' ?>><?= $name === '' ? 'Nessuna sezione' : h($name) ?></option><?php endforeach; ?></select></label><?php endif; ?>
             <?php if ($depth === 0): ?><label class="sf-posts-label" <?= $isArray ? '' : 'hidden' ?>><input type="checkbox" class="sf-posts" <?= ($f['posts'] ?? false) === true ? 'checked' : '' ?>><span><strong>Mostra in Posts</strong><small>Accesso rapido dalla barra laterale; i nuovi elementi vengono aggiunti in cima.</small></span></label><?php endif; ?>
             <div class="sf-nested" <?= $isArray ? '' : 'style="display:none"' ?>>
                 <?php if ($isArray): renderSchemaFields($f['of'] ?? [], $depth + 1); endif; ?>

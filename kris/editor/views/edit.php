@@ -18,7 +18,8 @@ $backPath = array_slice($path, 0, -2);
 $backHref = $path ? $editUrl . ($backPath ? '&path=' . urlencode(pathToString($backPath)) : '') : '?action=list&group=' . urlencode($group);
 $backLabel = $path ? 'Torna al contenuto' : 'Torna alla raccolta';
 if ($inPosts) {
-    $backHref = '?action=posts&group=' . urlencode($group) . '&id=' . $id . '&field=' . urlencode($path[0]);
+    // Un post di un elenco torna al suo elenco, un post di una raccolta alla raccolta
+    $backHref = '?action=posts&group=' . urlencode($group) . ($path ? '&id=' . $id . '&field=' . urlencode($path[0]) : '');
     $backLabel = 'Torna ai post';
 }
 $title = $entity ? editorTitle($entity) : 'Contenuto non disponibile';
@@ -42,7 +43,10 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
     <form method="POST" id="contentForm" data-dirty-form data-async-save>
         <input type="hidden" name="save_entity" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($pathRaw) ?>">
         <div class="language-toolbar"><div><strong>Lingua di modifica</strong><small>I campi non tradotti e le liste sono condivisi.</small></div><div class="language-switch" role="group" aria-label="Lingua di modifica"><?php foreach ($activeLangs as $i => $lang): ?><button type="button" data-editor-language="<?= h($lang) ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>" class="<?= $i === 0 ? 'active' : '' ?>"><?= h($DEFAULT_LANGS[$lang] ?? strtoupper($lang)) ?></button><?php endforeach; ?></div></div>
-        <?php foreach ($schema as $fieldIndex => $f):
+        <?php $sections = schemaSections($schema); $openSection = $sections[0]['section'] !== '' ? 0 : 1; // il primo pannello e aperto
+        foreach ($sections as $sectionIndex => $section): if ($section['section'] !== ''): ?>
+        <details class="field-section" id="section-<?= $sectionIndex ?>" <?= $sectionIndex === $openSection ? 'open' : '' ?>><summary><span class="field-section-title"><?= h($section['section']) ?></span><span class="badge"><?= count($section['fields']) ?> <?= count($section['fields']) === 1 ? 'campo' : 'campi' ?></span></summary><div class="field-section-body">
+        <?php endif; foreach ($section['fields'] as $fieldIndex => $f):
             $n = $f['name']; $t = $f['type']; $saved = $values[$n] ?? null;
             $label = $f['label'] ?? $f['description'] ?? editorLabel($n);
             $fieldId = 'field-' . $fieldIndex;
@@ -70,7 +74,7 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
             </div>
         <?php endforeach; endif; ?>
         </div></section>
-        <?php endforeach; ?>
+        <?php endforeach; if ($section['section'] !== ''): ?></div></details><?php endif; endforeach; ?>
         <?php if (!$schema): ?><div class="empty-state"><h2>Non ci sono campi da compilare.</h2><a href="?action=structure&amp;group=<?= urlencode($group) ?>" class="btn btn-primary">Configura la struttura</a></div><?php endif; ?>
         <?php require __DIR__ . '/../partials/save_bar.php'; ?>
     </form>
@@ -82,6 +86,6 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
     <form method="POST" action="<?= h($BASE) ?>" id="reorder_nested_<?= h($n) ?>" hidden><input type="hidden" name="reorder_nested" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix) ?>"><input type="hidden" name="order" value=""></form>
     <?php foreach ($children as $ch): $chId=(int) $ch['id']; ?><?= visibilityForm('vis_' . $n . '_' . $chId, $group, $id, $prefix . '/' . $chId) ?><form method="POST" id="del_nested_<?= h($n) ?>_<?= $chId ?>" hidden data-confirm-title="Eliminare questo elemento?" data-confirm="&ldquo;<?= h(editorTitle($ch)) ?>&rdquo; e i suoi sotto-elementi verranno eliminati subito. Non puoi annullare dall’editor." data-confirm-label="Elimina elemento"><input type="hidden" name="delete_nested" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix . '/' . $chId) ?>"></form><?php endforeach; ?>
     <?php endforeach; ?>
-    </div><aside class="context-panel"><p class="eyebrow">IN QUESTA PAGINA</p><nav aria-label="Campi del contenuto"><?php foreach ($schema as $i => $f): ?><a href="#field-<?= $i ?>"><span><?= str_pad((string) ($i+1),2,'0',STR_PAD_LEFT) ?></span><?= h($f['label'] ?? $f['description'] ?? editorLabel($f['name'])) ?></a><?php endforeach; ?></nav><div class="context-note"><strong>Salva quando sei pronto.</strong><p><?= $stagingMode ? 'Le modifiche salvate restano in attesa: “Apri l’anteprima” le mostra, il sito pubblico cambia quando le pubblichi.' : 'I contenuti salvati sono subito visibili sul sito. “Apri il sito” mostra la versione salvata.' ?></p></div><?php if (!isReservedCollection($group) && !$stagingMode): ?><a class="text-link" href="?action=structure&amp;group=<?= urlencode($group) ?>"><?= uiIcon('structure') ?>Configura i campi</a><?php endif; ?></aside>
+    </div><aside class="context-panel"><p class="eyebrow">IN QUESTA PAGINA</p><nav aria-label="Campi del contenuto"><?php foreach ($sections ?? [] as $section): ?><?php if ($section['section'] !== ''): ?><p class="context-section"><?= h($section['section']) ?></p><?php endif; ?><?php foreach ($section['fields'] as $i => $f): ?><a href="#field-<?= $i ?>"><span><?= str_pad((string) ($i+1),2,'0',STR_PAD_LEFT) ?></span><?= h($f['label'] ?? $f['description'] ?? editorLabel($f['name'])) ?></a><?php endforeach; ?><?php endforeach; ?></nav><div class="context-note"><strong>Salva quando sei pronto.</strong><p><?= $stagingMode ? 'Le modifiche salvate restano in attesa: “Apri l’anteprima” le mostra, il sito pubblico cambia quando le pubblichi.' : 'I contenuti salvati sono subito visibili sul sito. “Apri il sito” mostra la versione salvata.' ?></p></div><?php if (!isReservedCollection($group) && !$stagingMode): ?><a class="text-link" href="?action=structure&amp;group=<?= urlencode($group) ?>"><?= uiIcon('structure') ?>Configura i campi</a><?php endif; ?></aside>
     </div><?php endif; ?>
 </div>
