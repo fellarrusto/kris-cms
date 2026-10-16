@@ -283,11 +283,13 @@ if ($stagingMode) {
     // I file in attesa vengono prima: sono quelli appena caricati
     $images = array_merge($stagingNav->uploadFiles(), $images);
 }
-$postSources = editorPostSources($models, $data);
+$postCollections = editorPostCollections($settings, $models);
+$postSources = editorPostSources($models, $data, $postCollections);
 // Un elemento di un elenco posts si apre dalla sezione Posts e vi ritorna.
 $editPath = parsePath(is_string($_GET['path'] ?? null) ? $_GET['path'] : '');
 $inPosts = $action === 'posts' || ($action === 'edit' && is_string($group) && count($editPath) === 2
-    && postsFieldDef($models, $group, $editPath[0]) !== null);
+    && postsFieldDef($models, $group, $editPath[0]) !== null)
+    || ($action === 'edit' && $editPath === [] && in_array($group, $postCollections, true));
 if (isset($_GET['upload_error']) && is_string($_GET['upload_error'])) $error = $_GET['upload_error'];
 if (in_array($action, ['edit', 'list', 'structure'], true) && (!is_string($group) || !isset($models[$group]))) {
     $action = 'dashboard';

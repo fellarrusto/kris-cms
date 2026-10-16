@@ -101,6 +101,20 @@ label { display:block; margin-bottom:7px; font-size:13px; font-weight:600; }
 .card-header h2 { font-size:14px; }
 .card-header p { font-size:11px; color:var(--muted); margin-top:4px; overflow-wrap:anywhere; }
 .card-body { padding:23px 24px; }
+/* Sezioni di campi nella modifica di un contenuto: pannelli a scomparsa */
+.field-section { margin-bottom:22px; border:1px solid var(--border); border-radius:12px; background:#fafbf8; }
+.field-section > summary { display:flex; align-items:center; gap:12px; padding:17px 22px; cursor:pointer; list-style:none; border-radius:12px; }
+.field-section > summary::-webkit-details-marker { display:none; }
+.field-section > summary::before { content:''; width:7px; height:7px; border-right:2px solid var(--muted); border-bottom:2px solid var(--muted); transform:rotate(-45deg); transition:transform .15s; flex:none; }
+.field-section[open] > summary::before { transform:rotate(45deg); }
+.field-section > summary:hover { background:var(--mint); }
+.field-section > summary:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+.field-section-title { font-size:14px; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere; }
+.field-section-body { padding:4px 16px 0; }
+.context-panel .context-section { margin:10px 5px 2px; font-size:9px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.posts-collection .card-body { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; }
+.posts-collection h2 { font-size:14px; }
+.posts-collection p { font-size:12px; color:var(--muted); margin-top:4px; max-width:620px; }
 .section-number { display:grid; place-items:center; width:27px; min-width:27px; height:27px; font-size:10px; border:1px solid var(--border); border-radius:7px; color:var(--muted); }
 .edit-layout { display:grid; grid-template-columns:minmax(0,1fr) 220px; gap:28px; align-items:start; }
 .edit-content { min-width:0; }
@@ -243,6 +257,8 @@ dialog::backdrop { background:#122a2255; backdrop-filter:blur(3px); }
 .sf-header .sf-type { width:190px; }
 .sf-description-label { font-size:11px; color:var(--muted); margin:12px 0 0; }
 .sf-description { margin-top:5px; font-size:12px; font-weight:400; }
+.sf-section-label { display:block; font-size:11px; color:var(--muted); margin:12px 0 0; }
+.sf-section { margin-top:5px; font-size:12px; font-weight:400; }
 .sf-posts-label { display:flex; align-items:flex-start; gap:10px; margin:12px 0 0; font-size:12px; cursor:pointer; }
 .sf-posts-label[hidden] { display:none; }
 .sf-posts-label input { accent-color:var(--primary); width:16px; height:16px; margin-top:1px; flex:none; }

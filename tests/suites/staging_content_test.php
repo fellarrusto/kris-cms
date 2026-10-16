@@ -273,3 +273,18 @@ test('la favicon (kris_site) si prepara con set_field; il resto delle raccolte k
     assertSame($url, siteValue("{$root}/data/k_data.json", 'kris_site', 0, 'favicon')['it']);
     assertTrue(is_file("{$root}/" . $url));
 });
+
+test('la sezione di un campo si imposta con add_field e describe_field, e vuota si toglie', function () {
+    $s = new Staging(contentSite());
+    $s->operate(['op' => 'add_field', 'collection' => 'homepage', 'field' => ['name' => 'seo_note', 'type' => 'text', 'section' => ' Meta ']], 'a');
+    $s->operate(['op' => 'describe_field', 'collection' => 'homepage', 'name' => 'page_title', 'section' => 'Intestazione'], 'a');
+    $model = $s->state()['model']['homepage'];
+    $byName = array_column($model, null, 'name');
+    assertSame('Meta', $byName['seo_note']['section']);
+    assertSame('Intestazione', $byName['page_title']['section']);
+    // Cambiare solo la sezione non tocca la descrizione
+    $description = (new Staging(contentSite()))->state()['model']['homepage'];
+    assertSame(array_column($description, 'description', 'name')['page_title'] ?? null, $byName['page_title']['description'] ?? null);
+    $s->operate(['op' => 'describe_field', 'collection' => 'homepage', 'name' => 'page_title', 'section' => ''], 'a');
+    assertTrue(!array_key_exists('section', array_column($s->state()['model']['homepage'], null, 'name')['page_title']));
+});

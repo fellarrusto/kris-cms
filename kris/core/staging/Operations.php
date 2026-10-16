@@ -73,7 +73,7 @@ final class Operations
             'add_field' => "Nuovo campo «{$op['field']['name']}» ({$op['field']['type']}) in " . self::schemaWhere($op),
             'remove_field' => "Elimina il campo «{$op['name']}» da " . self::schemaWhere($op) . ', con i suoi valori',
             'rename_field' => "Rinomina il campo «{$op['from']}» in «{$op['to']}» in " . self::schemaWhere($op),
-            'describe_field' => "Nuova descrizione del campo «{$op['name']}» in " . self::schemaWhere($op),
+            'describe_field' => (array_key_exists('description', $op) ? 'Nuova descrizione' : 'Nuova sezione') . " del campo «{$op['name']}» in " . self::schemaWhere($op),
             'create_collection' => "Nuova raccolta «{$op['name']}»",
             'register_page' => "Nuova pagina pubblica «{$op['page']}»" . (isset($op['sitemap']) ? ', aggiunta alla sitemap' : ''),
             default => (string) ($op['op'] ?? 'operazione'),
@@ -349,7 +349,18 @@ final class Operations
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "il campo «{$op['name']}» non esiste"));
         }
-        $schema[$pos]['description'] = mb_substr((string) ($op['description'] ?? ''), 0, 300);
+        if (array_key_exists('description', $op)) {
+            $schema[$pos]['description'] = mb_substr((string) $op['description'], 0, 300);
+        }
+        // La sezione raggruppa i campi nell'editor; vuota la toglie
+        if (array_key_exists('section', $op)) {
+            $section = self::section($op['section']);
+            if ($section === '') {
+                unset($schema[$pos]['section']);
+            } else {
+                $schema[$pos]['section'] = $section;
+            }
+        }
         return [$state, $op];
     }
 
@@ -484,6 +495,8 @@ final class Operations
         }
         $out = ['name' => $name, 'type' => $type];
         if (isset($def['description'])) $out['description'] = mb_substr((string) $def['description'], 0, 300);
+        $section = self::section($def['section'] ?? null);
+        if ($section !== '') $out['section'] = $section;
         if ($type === 'array') {
             $of = [];
             foreach ((array) ($def['of'] ?? []) as $child) {
@@ -506,6 +519,12 @@ final class Operations
         if (in_array($name, self::RESERVED_NAMES, true)) {
             throw new StagingException("«{$name}» è un nome riservato da Kris: scegline un altro.");
         }
+    }
+
+    /** Nome di una sezione dell'editor: spazi compattati, al massimo 60 caratteri. */
+    private static function section(mixed $value): string
+    {
+        return is_string($value) ? mb_substr(trim((string) preg_replace('/\s+/u', ' ', $value)), 0, 60) : '';
     }
 
     private static function assertUserCollection(string $collection): void

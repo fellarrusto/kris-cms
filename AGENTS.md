@@ -88,6 +88,10 @@ Gli unici tipi implementati sono `plain`, `text`, `richtext`, `image`, `array`. 
 
 Un campo `array` di primo livello può avere `"posts": true` (in Struttura: “Mostra in Posts”). Rendering e dati non cambiano: l'elenco compare nella sezione **Posts** dell'editor, con un accesso rapido per ogni entità della raccolta, e i nuovi elementi vengono inseriti in cima. Usalo per blog, news o eventi aggiornati spesso; negli elenchi annidati il flag viene rimosso al salvataggio. Il sito demo lo mostra con `homepage.posts`, `template/post-card.html` e la pagina `post`.
 
+Anche una raccolta intera può stare in **Posts** (Struttura della raccolta › “Mostra in Posts”): ogni suo contenuto è un post e i nuovi vanno in cima. L'elenco delle raccolte è in `data/cms_settings.json`, chiave `post_collections`; rendering e dati non cambiano. Per articoli o progetti con pagina di dettaglio è l'alternativa all'elenco `posts`.
+
+Ogni campo, a qualunque livello, può avere `"section": "Meta"` (in Struttura: “Sezione”, al massimo 60 caratteri). Nell'editor i campi con la stessa sezione stanno in un pannello a scomparsa, nell'ordine in cui le sezioni compaiono; i campi senza sezione restano in testa. Serve solo a ordinare l'editor: dati, template e nomi dei campi non cambiano. Su una pagina con molti campi raggruppa per area (Meta, Intestazione, Contatti, Progetti…). Lo staging la imposta con `add_field` o `describe_field` (`section`, vuota per toglierla).
+
 ## Esempio completo: pagina con servizi
 
 In un sito nuovo, questo è un esempio minimo di `data/k_model.json`. Su un sito esistente integra le raccolte senza sostituire l'intero archivio.

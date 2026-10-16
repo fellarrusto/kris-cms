@@ -12,13 +12,13 @@ function sfTypeChange(select) {
 }
 function sfAddField(container) {
     const row=document.createElement('div');row.className='sf-row';
-    row.innerHTML=`<div class="sf-header"><input type="text" class="sf-name" placeholder="Nome tecnico" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+"><select class="sf-type" aria-label="Tipo del campo">${SF_TYPES.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select><button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo">&times;</button></div><label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" placeholder="Aiuta chi modifica il contenuto"></label>${container.id==='root-schema'?SF_POSTS:''}<div class="sf-nested" style="display:none"><button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button></div>`;
+    row.innerHTML=`<div class="sf-header"><input type="text" class="sf-name" placeholder="Nome tecnico" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+"><select class="sf-type" aria-label="Tipo del campo">${SF_TYPES.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select><button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo">&times;</button></div><label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" placeholder="Aiuta chi modifica il contenuto"></label><label class="sf-section-label">Sezione<input type="text" class="sf-section" placeholder="Es. Meta, Contatti: i campi con la stessa sezione stanno in un pannello" maxlength="60" list="sf-sections"></label>${container.id==='root-schema'?SF_POSTS:''}<div class="sf-nested" style="display:none"><button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button></div>`;
     const add=[...container.children].find(child=>child.classList.contains('sf-add-child'));
     container.insertBefore(row,add||null);q('.sf-name',row).focus();markAsDirty();
 }
 function sfSerialize(container) {
     return [...container.children].filter(c=>c.classList.contains('sf-row')).map(row=>{
-        const entry={name:q('.sf-name',row).value.trim(),type:q('.sf-type',row).value,description:q('.sf-description',row).value};
+        const entry={name:q('.sf-name',row).value.trim(),type:q('.sf-type',row).value,description:q('.sf-description',row).value,section:q('.sf-section',row).value.trim()};
         if(entry.type==='array')entry.of=sfSerialize(q('.sf-nested',row));
         const posts=row.querySelector(':scope > .sf-posts-label .sf-posts');if(posts)entry.posts=entry.type==='array'&&posts.checked;
         return entry;
