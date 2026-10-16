@@ -3,134 +3,62 @@
         {
             "name": "meta_title",
             "type": "text",
-            "description": "Titolo della pagina per i motori di ricerca"
+            "description": "Titolo della pagina per i motori di ricerca",
+            "section": "Meta"
         },
         {
             "name": "page_title",
             "type": "text",
-            "description": "Titolo principale visibile nell'hero"
+            "description": "Titolo principale visibile nell'hero",
+            "section": "Intestazione"
         },
         {
             "name": "page_subtitle",
             "type": "text",
-            "description": "Sottotitolo dell'hero"
+            "description": "Sottotitolo dell'hero",
+            "section": "Intestazione"
         },
         {
             "name": "hero_description",
             "type": "richtext",
-            "description": "Testo descrittivo nella sezione hero"
-        },
-        {
-            "name": "logo",
-            "type": "image",
-            "description": "Logo principale del sito"
+            "description": "Testo descrittivo nella sezione hero",
+            "section": "Intestazione"
         },
         {
             "name": "btn_get_started",
             "type": "text",
-            "description": "Testo del pulsante di avvio rapido"
+            "description": "Testo del pulsante di avvio rapido",
+            "section": "Intestazione"
         },
         {
             "name": "btn_why_kris",
             "type": "text",
-            "description": "Testo del pulsante 'Perché Kris'"
+            "description": "Testo del pulsante 'Perché Kris'",
+            "section": "Intestazione"
         },
         {
             "name": "code_title",
             "type": "text",
-            "description": "Titolo della sezione con esempio di codice"
+            "description": "Titolo della sezione con esempio di codice",
+            "section": "Esempio di codice"
         },
         {
             "name": "code_example",
             "type": "plain",
-            "description": "Snippet di codice mostrato nella homepage"
+            "description": "Snippet di codice mostrato nella homepage",
+            "section": "Esempio di codice"
         },
         {
             "name": "features_title",
             "type": "text",
-            "description": "Titolo della sezione funzionalità"
-        },
-        {
-            "name": "cta_title",
-            "type": "text",
-            "description": "Titolo della call to action"
-        },
-        {
-            "name": "cta_subtitle",
-            "type": "text",
-            "description": "Sottotitolo della call to action"
-        },
-        {
-            "name": "footer_copyright",
-            "type": "text",
-            "description": "Testo di copyright nel footer"
-        },
-        {
-            "name": "how_it_works_title",
-            "type": "text",
-            "description": "Titolo della sezione 'Come funziona'"
-        },
-        {
-            "name": "steps",
-            "type": "array",
-            "description": "Passaggi della sezione 'Come funziona'",
-            "of": [
-                {
-                    "name": "title",
-                    "type": "text",
-                    "description": "Titolo del passaggio"
-                },
-                {
-                    "name": "description",
-                    "type": "text",
-                    "description": "Descrizione del passaggio"
-                }
-            ]
-        },
-        {
-            "name": "btn_download",
-            "type": "text",
-            "description": "Testo del pulsante di download"
-        },
-        {
-            "name": "btn_docs",
-            "type": "text",
-            "description": "Testo del pulsante per la documentazione"
-        },
-        {
-            "name": "footer_logo_text",
-            "type": "text",
-            "description": "Nome\/testo del logo nel footer"
-        },
-        {
-            "name": "footer_tagline",
-            "type": "text",
-            "description": "Tagline breve nel footer"
-        },
-        {
-            "name": "footer_resources_title",
-            "type": "text",
-            "description": "Titolo della colonna risorse nel footer"
-        },
-        {
-            "name": "footer_docs",
-            "type": "text",
-            "description": "Link alla documentazione nel footer"
-        },
-        {
-            "name": "footer_community_title",
-            "type": "text",
-            "description": "Titolo della colonna community nel footer"
-        },
-        {
-            "name": "footer_github",
-            "type": "text",
-            "description": "Link GitHub nel footer"
+            "description": "Titolo della sezione funzionalità",
+            "section": "Funzionalità"
         },
         {
             "name": "features",
             "type": "array",
             "description": "Lista delle funzionalità principali",
+            "section": "Funzionalità",
             "of": [
                 {
                     "name": "category",
@@ -177,15 +105,41 @@
             ]
         },
         {
+            "name": "how_it_works_title",
+            "type": "text",
+            "description": "Titolo della sezione 'Come funziona'",
+            "section": "Come funziona"
+        },
+        {
+            "name": "steps",
+            "type": "array",
+            "description": "Passaggi della sezione 'Come funziona'",
+            "section": "Come funziona",
+            "of": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "description": "Titolo del passaggio"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "description": "Descrizione del passaggio"
+                }
+            ]
+        },
+        {
             "name": "blog_title",
             "type": "text",
-            "description": "Titolo della sezione blog"
+            "description": "Titolo della sezione blog",
+            "section": "Blog"
         },
         {
             "name": "posts",
             "type": "array",
             "posts": true,
             "description": "Articoli del blog",
+            "section": "Blog",
             "of": [
                 {
                     "name": "title",
@@ -220,24 +174,100 @@
             ]
         },
         {
+            "name": "cta_title",
+            "type": "text",
+            "description": "Titolo della call to action",
+            "section": "Call to action"
+        },
+        {
+            "name": "cta_subtitle",
+            "type": "text",
+            "description": "Sottotitolo della call to action",
+            "section": "Call to action"
+        },
+        {
+            "name": "btn_download",
+            "type": "text",
+            "description": "Testo del pulsante di download",
+            "section": "Call to action"
+        },
+        {
+            "name": "btn_docs",
+            "type": "text",
+            "description": "Testo del pulsante per la documentazione",
+            "section": "Call to action"
+        },
+        {
+            "name": "logo",
+            "type": "image",
+            "description": "Logo principale del sito",
+            "section": "Footer"
+        },
+        {
+            "name": "footer_logo_text",
+            "type": "text",
+            "description": "Nome\/testo del logo nel footer",
+            "section": "Footer"
+        },
+        {
+            "name": "footer_tagline",
+            "type": "text",
+            "description": "Tagline breve nel footer",
+            "section": "Footer"
+        },
+        {
+            "name": "footer_resources_title",
+            "type": "text",
+            "description": "Titolo della colonna risorse nel footer",
+            "section": "Footer"
+        },
+        {
+            "name": "footer_docs",
+            "type": "text",
+            "description": "Link alla documentazione nel footer",
+            "section": "Footer"
+        },
+        {
+            "name": "footer_community_title",
+            "type": "text",
+            "description": "Titolo della colonna community nel footer",
+            "section": "Footer"
+        },
+        {
+            "name": "footer_github",
+            "type": "text",
+            "description": "Link GitHub nel footer",
+            "section": "Footer"
+        },
+        {
             "name": "footer_legal_title",
             "type": "text",
-            "description": "Titolo della colonna legale nel footer"
+            "description": "Titolo della colonna legale nel footer",
+            "section": "Footer"
         },
         {
             "name": "footer_privacy",
             "type": "text",
-            "description": "Link alla privacy policy nel footer"
+            "description": "Link alla privacy policy nel footer",
+            "section": "Footer"
         },
         {
             "name": "footer_cookies",
             "type": "text",
-            "description": "Link alla cookie policy nel footer"
+            "description": "Link alla cookie policy nel footer",
+            "section": "Footer"
         },
         {
             "name": "footer_cookie_settings",
             "type": "text",
-            "description": "Link per riaprire il banner cookie"
+            "description": "Link per riaprire il banner cookie",
+            "section": "Footer"
+        },
+        {
+            "name": "footer_copyright",
+            "type": "text",
+            "description": "Testo di copyright nel footer",
+            "section": "Footer"
         }
     ],
     "navbar": [
