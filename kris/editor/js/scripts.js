@@ -381,6 +381,9 @@ document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&e
 baseline=snapshot();initDnd();
 if(currentForm)updateSaveState();
 try { const lang=sessionStorage.getItem('kris-editor-language');qa('[data-editor-language]').find(b=>b.dataset.editorLanguage===lang)?.click(); } catch {}
+// Impostazioni: i vecchi link con l'ancora (#versione, #account, #kris-agent) aprono la sotto-pagina giusta.
+{const params=new URLSearchParams(location.search);const tabs={'#versione':'versione','#account':'account','#kris-agent':'agent'};
+if(params.get('action')==='settings'&&!params.has('tab')&&tabs[location.hash]){params.set('tab',tabs[location.hash]);location.replace('?'+params.toString());}}
 if(q('.richtext')){
     if(window.tinymce){
         tinymce.init({selector:'.richtext',height:300,menubar:false,plugins:'image link lists code fullscreen',toolbar:'undo redo | blocks | bold italic | bullist numlist | link image | code fullscreen',file_picker_callback:openCmsMediaPicker,
