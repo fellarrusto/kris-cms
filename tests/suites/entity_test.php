@@ -99,3 +99,30 @@ test('con GD le foto JPEG si raddrizzano, perdono i metadati e si riducono', fun
     assertSame([800, 2400], [$w, $h], 'raddrizzata (1000x3000) e ridotta a 800 di larghezza');
     assertTrue(!str_contains($out, 'GPSDATA') && !str_contains($out, "Exif\0\0"), 'metadati tolti');
 });
+
+test('i video MP4 e WebM si caricano fino a 50 MB, i .mov no', function () {
+    $dir = sys_get_temp_dir() . '/kris-video-' . bin2hex(random_bytes(3)) . '/';
+    mkdir($dir);
+    register_shutdown_function(fn() => rrmdir($dir));
+    $store = new \Kris\Entity\MediaStore($dir, 'assets/uploads/', []);
+    file_put_contents($dir . 'a.mp4', "\0\0\0\x18ftypmp42" . str_repeat("\0", 32));
+    assertTrue(preg_match('#^assets/uploads/sfondo-[0-9a-f]{8}\.mp4$#', $store->storeLocal($dir . 'a.mp4', 'sfondo.mp4')) === 1);
+    file_put_contents($dir . 'b.webm', "\x1A\x45\xDF\xA3" . str_repeat("\0", 32));
+    assertTrue(str_ends_with($store->storeLocal($dir . 'b.webm', 'loop.webm'), '.webm'));
+    file_put_contents($dir . 'finto.mp4', '<?php echo 1;');
+    expectStorage(fn() => $store->storeLocal($dir . 'finto.mp4', 'finto.mp4'), 'non corrisponde');
+    expectStorage(fn() => $store->storeLocal($dir . 'a.mp4', 'clip.mov'), 'MP4');
+    assertSame(50 * 1024 * 1024, \Kris\Entity\MediaStore::maxBytesFor('mp4'));
+    assertSame(8 * 1024 * 1024, \Kris\Entity\MediaStore::maxBytesFor('jpg'));
+});
+
+function expectStorage(callable $fn, string $contains): void
+{
+    try {
+        $fn();
+    } catch (\Kris\Entity\StorageException $e) {
+        assertContains($contains, $e->getMessage());
+        return;
+    }
+    fail('era attesa una StorageException');
+}

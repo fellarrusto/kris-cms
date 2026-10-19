@@ -21,9 +21,15 @@ final class MediaStore
         'webp' => 'image/webp',
         'avif' => 'image/avif',
         'pdf'  => 'application/pdf',
+        'mp4'  => 'video/mp4',
+        'webm' => 'video/webm',
     ];
 
     private const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
+
+    /** I video (sfondi e sezioni in loop) possono essere piu pesanti: fino a 50 MB. */
+    private const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
+    public const VIDEO_EXTENSIONS = ['mp4', 'webm'];
 
     /** Larghezza massima predefinita delle foto, in pixel. */
     public const DEFAULT_MAX_WIDTH = 2560;
@@ -78,6 +84,23 @@ final class MediaStore
     public static function maxBytes(): int
     {
         return self::MAX_BYTES;
+    }
+
+    /** Il limite per un'estensione: i video hanno il loro. */
+    public static function maxBytesFor(string $ext): int
+    {
+        return in_array(strtolower($ext), self::VIDEO_EXTENSIONS, true) ? self::VIDEO_MAX_BYTES : self::MAX_BYTES;
+    }
+
+    /** Il limite dei video, ridotto a quello che PHP accetta su questo hosting (upload_max_filesize, post_max_size). */
+    public static function videoMaxBytes(): int
+    {
+        $limits = [self::VIDEO_MAX_BYTES];
+        foreach (['upload_max_filesize', 'post_max_size'] as $key) {
+            $bytes = self::bytes((string) ini_get($key));
+            if ($bytes > 0) $limits[] = $bytes;
+        }
+        return min($limits);
     }
 
     /**
@@ -136,14 +159,17 @@ final class MediaStore
         if ($size <= 0) {
             throw new StorageException('Il file e vuoto.');
         }
-        if ($size > self::MAX_BYTES) {
+        $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+        if ($ext === 'mov') {
+            throw new StorageException('I video .mov non si vedono in tutti i browser: esportalo in MP4 (H.264) o WebM e caricalo di nuovo.');
+        }
+        if ($size > self::maxBytesFor($ext)) {
             throw new StorageException(sprintf(
                 'Il file supera il limite di %d MB.',
-                (int) (self::MAX_BYTES / 1024 / 1024)
+                (int) (self::maxBytesFor($ext) / 1024 / 1024)
             ));
         }
 
-        $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
         if (!isset(self::ALLOWED[$ext])) {
             throw new StorageException(sprintf(
                 'Formato non ammesso. Sono accettati: %s.',
@@ -325,6 +351,13 @@ final class MediaStore
     {
         if ($ext === 'pdf') {
             return str_starts_with((string) @file_get_contents($path, false, null, 0, 5), '%PDF-');
+        }
+        // MP4: il primo box e "ftyp"; WebM: un contenitore EBML
+        if ($ext === 'mp4') {
+            return substr((string) @file_get_contents($path, false, null, 0, 12), 4, 4) === 'ftyp';
+        }
+        if ($ext === 'webm') {
+            return (string) @file_get_contents($path, false, null, 0, 4) === "\x1A\x45\xDF\xA3";
         }
 
         $expected = match ($ext) {

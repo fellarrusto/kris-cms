@@ -62,6 +62,7 @@ final class Preview
     private const UPLOAD_TYPES = [
         'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif',
         'webp' => 'image/webp', 'avif' => 'image/avif', 'pdf' => 'application/pdf',
+        'mp4' => 'video/mp4', 'webm' => 'video/webm',
     ];
 
     /** Invia un file del tema o un'immagine dello staging, oppure risponde 404. */

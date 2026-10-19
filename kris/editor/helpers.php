@@ -179,6 +179,23 @@ function editorTitle(array $entity): string
     return 'Contenuto #' . ($entity['id'] ?? '');
 }
 
+/** Che cosa e un file della libreria, dall'estensione: image, video o pdf. */
+function editorMediaKind(string $name): string
+{
+    $ext = strtolower(pathinfo((string) parse_url($name, PHP_URL_PATH), PATHINFO_EXTENSION));
+    return $ext === 'pdf' ? 'pdf' : (in_array($ext, \Kris\Entity\MediaStore::VIDEO_EXTENSIONS, true) ? 'video' : 'image');
+}
+
+/** Anteprima di un file della libreria: immagine, video senza audio o segnaposto del PDF. */
+function editorMediaThumb(string $src, string $name, string $alt = ''): string
+{
+    return match (editorMediaKind($name)) {
+        'pdf' => '<span class="file-placeholder">PDF</span>',
+        'video' => '<video src="' . h($src) . '" muted playsinline preload="metadata" aria-label="' . h($alt !== '' ? $alt : $name) . '"></video>',
+        default => '<img src="' . h($src) . '" alt="' . h($alt) . '" loading="lazy">',
+    };
+}
+
 function editorMediaFiles(string $directory): array
 {
     $extensions = [...\Kris\Entity\MediaStore::allowedExtensions(), 'svg'];

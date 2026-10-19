@@ -49,10 +49,10 @@ $codeApproved = $staging->codeApproved();
     <?php endif; ?>
 
     <?php if ($uploads): ?>
-    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('media') ?></span><div><h2>Immagini caricate</h2><p>Finiranno nella libreria media con la pubblicazione.</p></div></header>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('media') ?></span><div><h2>File caricati</h2><p>Finiranno nella libreria media con la pubblicazione.</p></div></header>
     <div class="card-body staging-uploads">
-        <?php foreach ($uploads as $name => $info): $isPdf = str_ends_with((string) $name, '.pdf'); ?>
-            <figure><?php if ($isPdf): ?><span class="file-placeholder">PDF</span><?php else: ?><img src="<?= h($siteRoot . '/' . \Kris\Staging\Preview::assetUrl('uploads/' . rawurlencode((string) $name))) ?>" alt="" loading="lazy"><?php endif; ?>
+        <?php foreach ($uploads as $name => $info): ?>
+            <figure><?= editorMediaThumb($siteRoot . '/' . \Kris\Staging\Preview::assetUrl('uploads/' . rawurlencode((string) $name)), (string) $name) ?>
             <figcaption><?= h((string) ($info['original'] ?? $name)) ?></figcaption></figure>
         <?php endforeach; ?>
     </div></section>
