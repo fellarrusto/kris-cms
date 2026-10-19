@@ -179,6 +179,9 @@ final class Server
             'languages' => $languages,
             'pages' => $state['pages'],
             'model' => $state['model'],
+            // Nome visibile, descrizione, contenuto unico e ordine delle raccolte nell'editor
+            'collections' => is_array($state['settings']['collections'] ?? null) ? $state['settings']['collections'] : (object) [],
+            'collection_order' => is_array($state['settings']['collection_order'] ?? null) ? $state['settings']['collection_order'] : [],
             'entities' => $entities,
             'templates' => $files('template/*.html'),
             'stylesheets' => $files('assets/css/*.css'),

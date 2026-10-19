@@ -15,7 +15,7 @@ foreach ($postSources as $s) {
     <?php if ($group !== null || $field !== ''): ?><div class="alert alert-error" role="alert">Questo elenco non è più disponibile. Scegline uno qui sotto.</div><?php endif; ?>
     <div class="collection-grid">
     <?php foreach ($postSources as $s): $href = '?action=posts&group=' . urlencode($s['group']) . ($s['field'] === '' ? '' : '&id=' . $s['id'] . '&field=' . urlencode($s['field'])); ?>
-        <article class="collection-card"><div class="collection-card-top"><span class="collection-icon"><?= uiIcon('posts') ?></span><span class="badge"><?= count($s['items']) ?> post</span></div><h2><a href="<?= h($href) ?>"><?= h($s['label']) ?></a></h2><p><?= h(editorLabel($s['group'])) ?> &middot; <?= h($s['owner']) ?></p><div class="collection-card-bottom"><a class="text-link" href="<?= h($href) ?>">Apri elenco <?= uiIcon('arrow') ?></a></div></article>
+        <article class="collection-card"><div class="collection-card-top"><span class="collection-icon"><?= uiIcon('posts') ?></span><span class="badge"><?= count($s['items']) ?> post</span></div><h2><a href="<?= h($href) ?>"><?= h($s['label']) ?></a></h2><p><?= h(collectionLabel($s['group'])) ?> &middot; <?= h($s['owner']) ?></p><div class="collection-card-bottom"><a class="text-link" href="<?= h($href) ?>">Apri elenco <?= uiIcon('arrow') ?></a></div></article>
     <?php endforeach; ?>
     </div>
     <?php if (!$postSources): ?><div class="empty-state"><h2>Nessun elenco in Posts.</h2><p>In Struttura, attiva “Mostra in Posts” su una raccolta o su un elenco di primo livello.</p></div><?php endif; ?>
@@ -24,7 +24,7 @@ foreach ($postSources as $s) {
     $isCollection = $source['field'] === '';
     $editUrl = '?action=edit&group=' . urlencode($g) . '&id=' . $id;
 ?>
-    <header class="page-heading"><div><p class="eyebrow">POSTS &middot; <?= $isCollection ? 'Raccolta' : h(editorLabel($g)) . ' / ' . h($source['owner']) ?></p><h1><?= h($source['label']) ?></h1><p>I nuovi post vengono aggiunti in cima. L’ordine qui è quello del sito.</p></div><div class="actions"><a class="btn btn-white" href="?action=posts"><?= uiIcon('back') ?>Tutti gli elenchi</a><button type="submit" form="create_post" class="btn btn-primary"><?= uiIcon('plus') ?>Nuovo post</button></div></header>
+    <header class="page-heading"><div><p class="eyebrow">POSTS &middot; <?= $isCollection ? 'Raccolta' : h(collectionLabel($g)) . ' / ' . h($source['owner']) ?></p><h1><?= h($source['label']) ?></h1><p>I nuovi post vengono aggiunti in cima. L’ordine qui è quello del sito.</p></div><div class="actions"><a class="btn btn-white" href="?action=posts"><?= uiIcon('back') ?>Tutti gli elenchi</a><button type="submit" form="create_post" class="btn btn-primary"><?= uiIcon('plus') ?>Nuovo post</button></div></header>
     <?php if (!$items): ?><div class="empty-state"><h2>Ancora nessun post.</h2><p>Usa “Nuovo post” per scrivere il primo.</p></div>
     <?php else: ?>
     <div class="toolbar"><label class="search-box"><?= uiIcon('search') ?><input type="search" data-filter="posts" placeholder="Cerca un post..." aria-label="Cerca un post"></label><span class="badge"><?= count($items) ?> post</span></div>

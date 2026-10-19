@@ -57,7 +57,7 @@ function isReservedCollection(mixed $name): bool
  */
 function isReservedStructuralPost(array $post): bool
 {
-    $structural = ['create_collection', 'save_structure', 'delete_collection', 'create_instance', 'delete_instance', 'reorder_root'];
+    $structural = ['create_collection', 'save_structure', 'delete_collection', 'save_collection_info', 'create_instance', 'delete_instance', 'reorder_root'];
     if (!array_intersect($structural, array_keys($post))) {
         return false;
     }
@@ -96,6 +96,70 @@ function editorStagedUploads(?array $names = null): array
 function editorLabel(string $name): string
 {
     return ucfirst(str_replace('_', ' ', $name));
+}
+
+// --- RACCOLTE: NOME, DESCRIZIONE, CONTENUTO UNICO, ORDINE ---
+// In cms_settings.json, separati dal nome tecnico:
+//   "collections": {"site": {"label": "Elementi comuni", "description": "...", "single": true}}
+//   "collection_order": ["homepage", "logopedia", "site"]
+
+/** Le informazioni delle raccolte; con $settings le registra (index.php, una volta). */
+function editorCollectionInfo(?array $settings = null): array
+{
+    static $info = [];
+    if ($settings !== null) {
+        $info = [
+            'collections' => is_array($settings['collections'] ?? null) ? $settings['collections'] : [],
+            'order' => is_array($settings['collection_order'] ?? null) ? array_values(array_filter($settings['collection_order'], 'is_string')) : [],
+        ];
+    }
+    return $info + ['collections' => [], 'order' => []];
+}
+
+/** Nome visibile della raccolta, o quello ricavato dal nome tecnico. */
+function collectionLabel(string $name): string
+{
+    $label = editorCollectionInfo()['collections'][$name]['label'] ?? '';
+    return is_string($label) && trim($label) !== '' ? trim($label) : editorLabel($name);
+}
+
+function collectionDescription(string $name): string
+{
+    $description = editorCollectionInfo()['collections'][$name]['description'] ?? '';
+    return is_string($description) ? trim($description) : '';
+}
+
+/** Raccolta con un solo contenuto (una pagina, gli elementi comuni): si apre direttamente la modifica. */
+function isSingleCollection(string $name): bool
+{
+    return (editorCollectionInfo()['collections'][$name]['single'] ?? false) === true;
+}
+
+/**
+ * Una raccolta a contenuto unico non riceve un secondo contenuto e non perde
+ * il suo: eliminarlo svuoterebbe la pagina. null se la richiesta va bene.
+ */
+function singleCollectionViolation(array $post, array $data): ?string
+{
+    $group = is_string($post['group'] ?? null) ? $post['group'] : '';
+    if ($group === '' || !isSingleCollection($group)) return null;
+    if (isset($post['delete_instance'])) {
+        return '«' . collectionLabel($group) . '» ha un contenuto unico: non si elimina. Nulla è stato modificato.';
+    }
+    if (isset($post['create_instance']) && array_filter($data, fn($e) => ($e['name'] ?? null) === $group)) {
+        return '«' . collectionLabel($group) . '» ha già il suo contenuto unico. Nulla è stato modificato.';
+    }
+    return null;
+}
+
+/** Le raccolte nell'ordine scelto; quelle non ordinate seguono, nell'ordine dello schema. */
+function orderCollections(array $models): array
+{
+    $out = [];
+    foreach (editorCollectionInfo()['order'] as $name) {
+        if (array_key_exists($name, $models)) $out[$name] = $models[$name];
+    }
+    return $out + $models;
 }
 
 function editorTitle(array $entity): string
@@ -324,7 +388,7 @@ function editorPostSources(array $models, array $data, array $postCollections = 
     $sources = [];
     foreach ($postCollections as $group) {
         $sources[] = [
-            'group' => $group, 'id' => -1, 'field' => '', 'label' => editorLabel($group), 'owner' => 'Raccolta',
+            'group' => $group, 'id' => -1, 'field' => '', 'label' => collectionLabel($group), 'owner' => 'Raccolta',
             'items' => array_values(array_filter($data, fn($e) => ($e['name'] ?? null) === $group)),
         ];
     }

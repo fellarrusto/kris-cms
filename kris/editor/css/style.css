@@ -150,6 +150,11 @@ label { display:block; margin-bottom:7px; font-size:13px; font-weight:600; }
 .field-section-title { font-size:14px; font-weight:600; flex:1; min-width:0; overflow-wrap:anywhere; }
 .field-section-body { padding:4px 16px 0; }
 .context-panel .context-section { margin:10px 5px 2px; font-size:9px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.collection-info-form { display:grid; gap:6px; max-width:560px; }
+.collection-info-form label:not(.setting-row) { font-size:12px; color:var(--muted); margin-top:8px; }
+.collection-info-form select { max-width:160px; }
+.collection-info-form .setting-row { margin-top:10px; }
+.collection-info-form .btn { justify-self:start; margin-top:10px; }
 .posts-collection .card-body { display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; }
 .posts-collection h2 { font-size:14px; }
 .posts-collection p { font-size:12px; color:var(--muted); margin-top:4px; max-width:620px; }

@@ -352,3 +352,34 @@ test('move_field, set_posts, set_post_collection e unregister_page', function ()
     assertTrue(!in_array($page, $s->state()['pages'], true));
     expectStaging(fn() => $s->operate(['op' => 'unregister_page', 'page' => 'homepage'], 'a'), 'homepage');
 });
+
+
+// --- raccolte: nome visibile, descrizione, contenuto unico, ordine ----------
+
+test('set_collection_info e move_collection; il contenuto unico protegge la pagina', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'set_collection_info', 'collection' => 'navbar', 'label' => ' Elementi comuni ', 'description' => 'Menu e footer', 'single' => true], 'a');
+    $info = $s->state()['settings']['collections']['navbar'];
+    assertSame(['label' => 'Elementi comuni', 'description' => 'Menu e footer', 'single' => true], $info);
+    expectStaging(fn() => $s->operate(['op' => 'create_entity', 'key' => 'navbar'], 'a'), 'contenuto unico');
+    expectStaging(fn() => $s->operate(['op' => 'remove_entity', 'key' => 'navbar', 'id' => 0], 'a'), 'contenuto unico');
+
+    $s->operate(['op' => 'set_collection_info', 'collection' => 'navbar', 'description' => ''], 'a');
+    assertSame(['label' => 'Elementi comuni', 'single' => true], $s->state()['settings']['collections']['navbar']);
+
+    $s->operate(['op' => 'move_collection', 'collection' => 'navbar', 'to' => 0], 'a');
+    assertSame(['navbar', 'homepage'], $s->state()['settings']['collection_order']);
+
+    $s->operate(['op' => 'rename_collection', 'from' => 'navbar', 'to' => 'comuni'], 'a');
+    $settings = $s->state()['settings'];
+    assertSame('Elementi comuni', $settings['collections']['comuni']['label']);
+    assertSame(['comuni', 'homepage'], $settings['collection_order']);
+});
+
+test('il contenuto unico si rifiuta su una raccolta con piu contenuti', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'create_entity', 'key' => 'navbar'], 'a');
+    expectStaging(fn() => $s->operate(['op' => 'set_collection_info', 'collection' => 'navbar', 'single' => true], 'a'), 'contenuti');
+});

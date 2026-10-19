@@ -45,7 +45,7 @@ final class Staging
 
     /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
     private const PAGE_OPS = ['register_page', 'unregister_page', 'remove_collection', 'rename_collection'];
-    private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection'];
+    private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection', 'set_collection_info', 'move_collection'];
 
     private string $root;
     private string $dir;
