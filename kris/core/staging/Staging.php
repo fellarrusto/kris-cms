@@ -281,7 +281,8 @@ final class Staging
             $list = self::append($list, $completed + ['by' => $by, 'at' => gmdate('c')]);
         }
         (new JsonStore($this->dir . '/operations.json'))->write($list);
-        $this->rebuild();
+        // Lo stato e gia quello dell'anteprima: niente secondo replay (sui siti grandi raddoppiava i tempi)
+        $this->writePreview($state, $list);
         return $done;
     }
 
@@ -345,12 +346,43 @@ final class Staging
     public function rebuild(): array
     {
         $ops = $this->operations();
+        if (!$ops) {
+            $this->writePreview([], []);
+            return [];
+        }
+        [$state, $report] = $this->replay($ops, false);
+        $this->writePreview($state, $ops);
+        return $report;
+    }
+
+    /**
+     * Le operazioni con il loro esito sui dati attuali del sito, senza
+     * riscrivere i file dell'anteprima: per chi deve solo leggere lo stato.
+     *
+     * @return list<array{op: array, description: string, conflict: ?string}>
+     */
+    public function report(): array
+    {
+        return $this->stateAndReport()[1];
+    }
+
+    /**
+     * Stato dell'anteprima ed esito delle operazioni con un solo replay.
+     *
+     * @return array{0: array, 1: list<array{op: array, description: string, conflict: ?string}>}
+     */
+    public function stateAndReport(): array
+    {
+        return $this->replay($this->operations(), false);
+    }
+
+    /** Scrive le copie dei contenuti lette dall'anteprima; senza operazioni le toglie. */
+    private function writePreview(array $state, array $ops): void
+    {
         foreach (self::STATE_FILES as $relative) {
             @unlink("{$this->dir}/{$relative}");
         }
-        if (!$ops) return [];
-
-        [$state, $report] = $this->replay($ops, false);
+        if (!$ops) return;
         self::writeJson("{$this->dir}/data/k_data.json", $state['data']);
         self::writeJson("{$this->dir}/data/k_model.json", $state['model']);
         if (self::touches($ops, self::PAGE_OPS)) {
@@ -360,7 +392,6 @@ final class Staging
         if (self::touches($ops, self::SETTINGS_OPS)) {
             self::writeJson("{$this->dir}/data/cms_settings.json", $state['settings']);
         }
-        return $report;
     }
 
     /**

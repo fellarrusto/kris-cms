@@ -130,7 +130,7 @@ function editorMediaSource(string $url): string
         return preg_match('~^https?://~i', $url) ? $url : '';
     }
     if (preg_match('~^assets/uploads/([A-Za-z0-9._-]+)$~', $url, $m) && isset(editorStagedUploads()[$m[1]])) {
-        return '../index.php?kris_preview_asset=uploads/' . rawurlencode($m[1]);
+        return '../' . \Kris\Staging\Preview::assetUrl('uploads/' . rawurlencode($m[1]));
     }
     return str_starts_with($url, '/') || str_starts_with($url, '../') ? $url : '../' . $url;
 }

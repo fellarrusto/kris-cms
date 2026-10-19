@@ -41,6 +41,18 @@ final class Preview
         return ($_SESSION['kris_auth'] ?? false) === true;
     }
 
+    /**
+     * Indirizzo di un file dell'anteprima. Finisce con &kris_preview=1 e non
+     * con l'estensione del file: alcuni proxy degli hosting (per esempio
+     * quello di Aruba) trattano come statici gli indirizzi che finiscono in
+     * .png o .css, e la richiesta potrebbe arrivare senza la sessione.
+     * $html: con &amp; per un attributo HTML.
+     */
+    public static function assetUrl(string $asset, bool $html = false): string
+    {
+        return 'index.php?kris_preview_asset=' . $asset . ($html ? '&amp;' : '&') . 'kris_preview=1';
+    }
+
     /** Nonce degli script di Kris nella pagina in anteprima, uno per richiesta. */
     public static function nonce(): string
     {
@@ -84,7 +96,53 @@ final class Preview
         header('Cache-Control: no-store');
         header('X-Robots-Tag: noindex');
         foreach ($headers as $header) header($header);
+        if (str_starts_with($asset, 'css/')) {
+            echo self::rebaseCss((string) file_get_contents($file), $staging);
+            return;
+        }
         readfile($file);
+    }
+
+    /**
+     * Un foglio di stile dello staging si serve da index.php, non da
+     * assets/css/: i suoi url() e @import relativi ("../images/x.svg")
+     * finirebbero fuori posto. Si riscrivono come percorsi dalla root del
+     * sito, e quelli dei file del tema o delle immagini in attesa puntano
+     * all'anteprima.
+     */
+    public static function rebaseCss(string $css, Staging $staging): string
+    {
+        $resolve = function (string $url) use ($staging): string {
+            if ($url === '' || preg_match('#^(?:[a-z][a-z0-9+.-]*:|/|\#)#i', $url) === 1) {
+                return $url; // assoluto, dalla radice del dominio, data:, frammento
+            }
+            [$path, $suffix] = array_pad(preg_split('/(?=[?#])/', $url, 2), 2, '');
+            $parts = [];
+            foreach (explode('/', 'assets/css/' . $path) as $segment) {
+                if ($segment === '' || $segment === '.') continue;
+                if ($segment === '..') { array_pop($parts); continue; }
+                $parts[] = $segment;
+            }
+            $relative = implode('/', $parts);
+            if (preg_match('#^assets/((?:css/[a-z0-9][a-z0-9_-]*\.css)|(?:images/[a-z0-9][a-z0-9_-]*\.svg))$#', $relative, $m) === 1
+                && is_file($staging->dir() . '/' . $relative)) {
+                return self::assetUrl($m[1]);
+            }
+            if (preg_match('#^assets/uploads/([A-Za-z0-9][A-Za-z0-9._-]*)$#', $relative, $m) === 1 && is_file($staging->dir() . '/uploads/' . $m[1])) {
+                return self::assetUrl('uploads/' . $m[1]);
+            }
+            return $relative . $suffix;
+        };
+        $css = (string) preg_replace_callback(
+            '/url\(\s*([\'"]?)([^\'")]*)\1\s*\)/i',
+            fn(array $m): string => 'url(' . $m[1] . $resolve(trim($m[2])) . $m[1] . ')',
+            $css
+        );
+        return (string) preg_replace_callback(
+            '/@import\s+([\'"])([^\'"]+)\1/i',
+            fn(array $m): string => '@import ' . $m[1] . $resolve($m[2]) . $m[1],
+            $css
+        );
     }
 
     /**
@@ -117,7 +175,7 @@ final class Preview
             '#(["\'])(?:\./)?assets/((?:css/[a-z0-9][a-z0-9_-]*\.css)|(?:js/[a-z0-9][a-z0-9_-]*\.js)|(?:images/[a-z0-9][a-z0-9_-]*\.svg))(?:\?[^"\']*)?\1#i',
             function (array $m) use ($staging): string {
                 return is_file($staging->dir() . '/assets/' . $m[2])
-                    ? $m[1] . 'index.php?kris_preview_asset=' . $m[2] . $m[1]
+                    ? $m[1] . self::assetUrl($m[2]) . $m[1]
                     : $m[0];
             },
             $html
@@ -128,7 +186,7 @@ final class Preview
             '#(["\'\s,(])(?:\./)?assets/uploads/([A-Za-z0-9][A-Za-z0-9._-]*)#',
             function (array $m) use ($staging): string {
                 return is_file($staging->dir() . '/uploads/' . $m[2])
-                    ? $m[1] . 'index.php?kris_preview_asset=uploads/' . $m[2]
+                    ? $m[1] . self::assetUrl('uploads/' . $m[2])
                     : $m[0];
             },
             $html

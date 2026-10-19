@@ -447,6 +447,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             } elseif (isset($_POST['staging_discard'])) {
                 $staging->discard();
                 $msg = 'Modifiche scartate. Il sito non è cambiato.';
+            }
+            if (!isset($_POST['staging_undo'])) {
+                // Non c'e piu niente in attesa: l'editor torna al sito pubblico,
+                // altrimenti resterebbe l'avviso «Stai preparando modifiche in attesa»
+                $_SESSION['kris_editing'] = 'live';
+                $stagingMode = false;
             } else {
                 $restored = $staging->undoLastPromotion();
                 $msg = 'Pubblicazione annullata: ' . count($restored) . ' file sono tornati com\'erano.';

@@ -30,7 +30,7 @@ function kris_not_found(string $lang): string
                 // Il template puo non avere testi propri: entita vuota
                 $entity = new Entity('k_data', 'not_found', 0, ['name' => 'not_found', 'id' => 0, 'data' => []]);
             }
-            return kris_with_favicon((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $lang);
+            return kris_finish_page((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $lang);
         } catch (Throwable $e) {
             // Un template rotto non deve trasformare la 404 in un errore: si usa quella di riserva
         }
@@ -39,7 +39,13 @@ function kris_not_found(string $lang): string
     ob_start();
     require is_file($site) ? $site : KRIS_DIR . '/404.php';
     http_response_code(404);
-    return kris_with_favicon((string) ob_get_clean(), $lang);
+    return kris_finish_page((string) ob_get_clean(), $lang);
+}
+
+/** Ultimi ritocchi di ogni pagina, 404 compresa: favicon e versione dei file del tema. */
+function kris_finish_page(string $html, string $lang): string
+{
+    return \Kris\Template\Assets::version(kris_with_favicon($html, $lang), KRIS_ROOT);
 }
 
 /** La favicon scelta nell'editor (raccolta kris_site), se c'e. */
@@ -148,7 +154,7 @@ if ($seo['head']) {
     $base = Seo::baseUrl($seo, $_SERVER);
     $output = Seo::inject($output, Seo::headTags($base, (string) $requestedPage, (string) $key, $index, $path, (string) $lang, $allowedLangs));
 }
-$output = kris_with_favicon($output, (string) $lang);
+$output = kris_finish_page($output, (string) $lang);
 if ($preview !== null) {
     $output = Preview::decorate($output, $preview, 'editor/index.php?action=staging', Preview::exitUrl($_GET));
 }

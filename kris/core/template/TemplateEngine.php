@@ -26,6 +26,6 @@ class TemplateEngine {
         $this->arrayProcessor->process($dom, $entity);
         $this->componentProcessor->process($dom);
 
-        return $dom->saveHTML();
+        return DomHelper::saveHtml($dom);
     }
 }

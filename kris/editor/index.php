@@ -250,8 +250,9 @@ try {
         $models = $stagingState['model'];
         // Le raccolte in Posts possono cambiare in attesa; le lingue si cambiano solo sul sito pubblico
         if (array_key_exists('post_collections', $stagingState['settings'])) $settings['post_collections'] = $stagingState['settings']['post_collections'];
-        editorStagedUploads(array_map('basename', $stagingNav->uploadFiles()));
     }
+    // Le immagini caricate e non ancora pubblicate si vedono attraverso l'anteprima, in entrambe le modalita
+    editorStagedUploads(array_map('basename', array_filter($stagingNav->uploadFiles(), fn($f) => !is_file($uploadDir . basename($f)))));
 } catch (StorageException $e) {
     renderStorageError($e->getMessage());
 }
