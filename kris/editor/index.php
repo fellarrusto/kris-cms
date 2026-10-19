@@ -248,6 +248,8 @@ try {
         $stagingState = $stagingNav->state();
         $data = $stagingState['data'];
         $models = $stagingState['model'];
+        // Le raccolte in Posts possono cambiare in attesa; le lingue si cambiano solo sul sito pubblico
+        if (array_key_exists('post_collections', $stagingState['settings'])) $settings['post_collections'] = $stagingState['settings']['post_collections'];
         editorStagedUploads(array_map('basename', $stagingNav->uploadFiles()));
     }
 } catch (StorageException $e) {

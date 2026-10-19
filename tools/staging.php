@@ -9,6 +9,8 @@ declare(strict_types=1);
  *   php tools/staging.php read  template/homepage.html
  *   php tools/staging.php edit  template/homepage.html --old="Chi siamo" --new="Il team"
  *   php tools/staging.php write assets/css/extra.css < extra.css     (file nuovo o sostituito)
+ *   php tools/staging.php delete assets/js/vecchio.js                 (eliminato alla pubblicazione)
+ *   php tools/staging.php approve                                     (script nuovi eseguiti nell'anteprima)
  *   php tools/staging.php op    '{"op":"set_field","key":"homepage","id":0,"field":"page_title","lang":"it","value":"Ciao"}'
  *   php tools/staging.php upload foto.jpg
  *   php tools/staging.php promote [--force]
@@ -89,6 +91,19 @@ try {
             $current = $staging->read((string) $file);
             $staging->write((string) $file, (string) stream_get_contents(STDIN), $current['hash'], $by);
             out("Scritto nello staging: {$file}");
+            break;
+
+        case 'delete':
+            $current = $staging->read((string) $file);
+            $staging->delete((string) $file, (string) $current['hash'], $by);
+            out("Da eliminare alla pubblicazione: {$file}");
+            break;
+
+        case 'approve':
+            $fingerprint = $staging->codeFingerprint();
+            if ($fingerprint === null) throw new StagingException('Non ci sono script in attesa.');
+            $staging->approveCode($fingerprint, $by);
+            out('Script approvati: ' . implode(', ', $staging->codeFiles()));
             break;
 
         case 'op':

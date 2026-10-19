@@ -14,6 +14,8 @@ $hasChanges = $changes || $operations || $uploads;
 $siteRoot = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
 $previewUrl = $siteRoot . '/index.php?kris_preview=1';
 $when = fn(string $iso): string => $iso === '' ? '' : date('d/m/Y H:i', strtotime($iso));
+$codeFiles = $staging->codeFiles();
+$codeApproved = $staging->codeApproved();
 ?>
 <div class="container"><header class="page-heading"><div><h1>Modifiche in attesa</h1><p>Modifiche preparate e non ancora pubblicate. I visitatori vedono ancora il sito attuale.</p></div>
 <?php if ($hasChanges): ?><div class="actions"><a class="btn btn-white" href="<?= h($previewUrl) ?>" target="_blank" rel="noopener">Apri l'anteprima</a></div><?php endif; ?></header>
@@ -55,14 +57,27 @@ $when = fn(string $iso): string => $iso === '' ? '' : date('d/m/Y H:i', strtotim
     </div></section>
     <?php endif; ?>
 
+    <?php if ($codeFiles): ?>
+    <section class="card code-approval"><div class="card-body">
+    <?php if ($codeApproved): ?>
+        <div class="notice"><strong>Script approvati.</strong><p>L'anteprima esegue il codice nuovo di <?= h(implode(', ', $codeFiles)) ?>. Se cambia, l'approvazione va rinnovata.</p></div>
+    <?php else: ?>
+        <div class="notice notice-warning"><strong>Script in attesa di approvazione</strong><p>Queste modifiche aggiungono codice che il browser esegue: <?= h(implode(', ', $codeFiles)) ?>. Gira con il tuo accesso all'editor aperto e potrebbe agire a tuo nome: finché non lo approvi, l'anteprima non esegue gli script. Controlla il codice qui sotto prima di approvarlo.</p></div>
+        <form method="POST" action="?action=staging" class="code-approval-form"><input type="hidden" name="approve_code" value="<?= h((string) $staging->codeFingerprint()) ?>">
+            <label class="setting-row"><input type="checkbox" required><span><strong>Mi assumo la responsabilità del codice e delle azioni che esegue.</strong><small>Ho controllato questi file.</small></span></label>
+            <button class="btn btn-primary">Approva gli script</button>
+        </form>
+    <?php endif; ?>
+    </div></section>
+    <?php endif; ?>
     <?php if ($changes): ?>
-    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><h2>File del tema</h2><p><?= count($changes) ?> file da sostituire o aggiungere.</p></div></header>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><h2>File del tema</h2><p><?= count($changes) ?> file da sostituire, aggiungere o eliminare.</p></div></header>
     <div class="card-body staging-files">
     <?php foreach ($changes as $change): ?>
         <article class="staging-file">
             <header class="staging-file-head">
                 <code><?= h($change['file']) ?></code>
-                <span class="badge"><?= $change['kind'] === 'new' ? 'Nuovo' : 'Modificato' ?></span>
+                <span class="badge <?= $change['kind'] === 'deleted' ? 'badge-danger' : '' ?>"><?= ['new' => 'Nuovo', 'modified' => 'Modificato', 'deleted' => 'Da eliminare'][$change['kind']] ?></span>
                 <?php if ($change['conflict']): ?><span class="badge badge-danger">Cambiato anche sul sito</span><?php endif; ?>
                 <small><?= h($change['changed_by']) ?> · <?= h($when($change['changed_at'])) ?></small>
             </header>

@@ -14,6 +14,8 @@ final class FilePolicy
     private const EDITABLE = [
         '#^template/[a-z0-9][a-z0-9_-]*\.html$#',
         '#^assets/css/[a-z0-9][a-z0-9_-]*\.css$#',
+        '#^assets/js/[a-z0-9][a-z0-9_-]*\.js$#',
+        '#^assets/images/[a-z0-9][a-z0-9_-]*\.svg$#',
     ];
 
     public const MAX_BYTES = 512 * 1024;
@@ -27,7 +29,8 @@ final class FilePolicy
             }
         }
         throw new StagingException(
-            "Il file '{$relative}' non si può modificare: sono ammessi solo template/<nome>.html e assets/css/<nome>.css, "
+            "Il file '{$relative}' non si può modificare: sono ammessi solo template/<nome>.html, assets/css/<nome>.css, "
+            . 'assets/js/<nome>.js e assets/images/<nome>.svg, '
             . 'con nomi in minuscolo, cifre, - e _.'
         );
     }
@@ -41,7 +44,7 @@ final class FilePolicy
      */
     public static function assertRestorable(string $relative): void
     {
-        $fixed = ['data/k_data.json', 'data/k_model.json', 'config/allowed_pages.json', 'config/seo.json'];
+        $fixed = ['data/k_data.json', 'data/k_model.json', 'data/cms_settings.json', 'config/allowed_pages.json', 'config/seo.json'];
         if (in_array($relative, $fixed, true) || preg_match('#^assets/uploads/[A-Za-z0-9][A-Za-z0-9._-]*$#', $relative) === 1) {
             return;
         }
@@ -57,10 +60,28 @@ final class FilePolicy
         if (!mb_check_encoding($content, 'UTF-8')) {
             throw new StagingException('Il contenuto non è testo UTF-8 valido.');
         }
-        // I template si leggono e non si eseguono, ma codice PHP in un file del tema non ha mai senso
+        // I template si leggono e non si eseguono, ma codice PHP in un file del tema non ha mai senso.
+        // Il JavaScript non passa mai da PHP; un SVG puo aprirsi con la dichiarazione XML.
+        if (str_ends_with($relative, '.js')) return;
+        if (str_ends_with($relative, '.svg')) $content = (string) preg_replace('/^\s*<\?xml\b[^?]*\?>/i', '', $content);
         if (preg_match('/<\?(php|=)?/i', $content) === 1) {
             throw new StagingException('Il contenuto contiene un tag PHP: non è ammesso nei file del tema.');
         }
+    }
+
+    /** JavaScript e SVG sono codice che il browser esegue, qualunque cosa contengano. */
+    public static function isCode(string $relative): bool
+    {
+        return str_ends_with($relative, '.js') || str_ends_with($relative, '.svg');
+    }
+
+    /** Vero se fra gli elementi segnalati da sensitive() c'e codice eseguibile (non solo domini esterni). */
+    public static function hasCodeSignal(array $sensitive): bool
+    {
+        foreach ($sensitive as $item) {
+            if (!str_starts_with((string) $item, 'dominio esterno:')) return true;
+        }
+        return false;
     }
 
     /**

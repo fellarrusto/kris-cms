@@ -49,6 +49,9 @@ final class Operations
             'add_field' => 'addField', 'remove_field' => 'removeField', 'rename_field' => 'renameField',
             'describe_field' => 'describeField', 'create_collection' => 'createCollection',
             'register_page' => 'registerPage',
+            'remove_collection' => 'removeCollection', 'rename_collection' => 'renameCollection',
+            'change_type' => 'changeType', 'move_field' => 'moveField', 'set_posts' => 'setPosts',
+            'set_post_collection' => 'setPostCollection', 'unregister_page' => 'unregisterPage',
         ][$type] ?? null;
         if ($method === null) {
             throw new StagingException("Operazione sconosciuta: '{$type}'.");
@@ -76,7 +79,24 @@ final class Operations
             'describe_field' => (array_key_exists('description', $op) ? 'Nuova descrizione' : 'Nuova sezione') . " del campo «{$op['name']}» in " . self::schemaWhere($op),
             'create_collection' => "Nuova raccolta «{$op['name']}»",
             'register_page' => "Nuova pagina pubblica «{$op['page']}»" . (isset($op['sitemap']) ? ', aggiunta alla sitemap' : ''),
+            'remove_collection' => "Elimina la raccolta «{$op['name']}», con tutti i suoi contenuti",
+            'rename_collection' => "Rinomina la raccolta «{$op['from']}» in «{$op['to']}»",
+            'change_type' => "Cambia il tipo del campo «{$op['name']}» in {$op['type']} in " . self::schemaWhere($op),
+            'move_field' => "Sposta il campo «{$op['name']}» in posizione " . ((int) ($op['to'] ?? 0) + 1) . ' in ' . self::schemaWhere($op),
+            'set_posts' => (!empty($op['posts']) ? 'Mostra in Posts' : 'Toglie da Posts') . " l'elenco «{$op['name']}» di «{$op['collection']}»",
+            'set_post_collection' => (!empty($op['enabled']) ? 'Mostra in Posts' : 'Toglie da Posts') . " la raccolta «{$op['collection']}»",
+            'unregister_page' => "Toglie la pagina pubblica «{$op['page']}», anche dalla sitemap",
             default => (string) ($op['op'] ?? 'operazione'),
+        };
+    }
+
+    /** Raccolte tolte o rinominate: i template che le usano ancora vanno aggiornati. */
+    public static function retiredCollections(array $op): array
+    {
+        return match ($op['op'] ?? '') {
+            'remove_collection' => [(string) $op['name']],
+            'rename_collection' => [(string) $op['from']],
+            default => [],
         };
     }
 
@@ -385,7 +405,240 @@ final class Operations
         return [$state, $op];
     }
 
+    /** Elimina una raccolta: schema, contenuti, posto in Posts e regole della sitemap. */
+    private static function removeCollection(array $state, array $op, array $ctx): array
+    {
+        $name = (string) ($op['name'] ?? '');
+        self::assertUserCollection($name);
+        if (!isset($state['model'][$name])) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "la raccolta «{$name}» non esiste"));
+        }
+        unset($state['model'][$name]);
+        $state['data'] = array_values(array_filter($state['data'], fn($e) => ($e['name'] ?? null) !== $name));
+        $state['settings']['post_collections'] = self::withoutValue($state['settings']['post_collections'] ?? [], $name);
+        if (is_array($state['seo']['sitemap'] ?? null)) {
+            $state['seo']['sitemap'] = array_values(array_filter($state['seo']['sitemap'], fn($r) => !is_array($r) || ($r['key'] ?? 'homepage') !== $name));
+        }
+        return [$state, $op];
+    }
+
+    /** Rinomina una raccolta: schema, contenuti, Posts e sitemap. I template li aggiorna chi la rinomina. */
+    private static function renameCollection(array $state, array $op, array $ctx): array
+    {
+        $from = (string) ($op['from'] ?? '');
+        $to = (string) ($op['to'] ?? '');
+        self::assertUserCollection($from);
+        self::assertFieldName($to);
+        self::assertUserCollection($to);
+        if (!isset($state['model'][$from]) || isset($state['model'][$to])) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, !isset($state['model'][$from]) ? "la raccolta «{$from}» non esiste" : "esiste già una raccolta «{$to}»"));
+        }
+        $model = [];
+        foreach ($state['model'] as $key => $schema) $model[$key === $from ? $to : $key] = $schema;
+        $state['model'] = $model;
+        foreach ($state['data'] as &$entity) {
+            if (($entity['name'] ?? null) === $from) $entity['name'] = $to;
+        }
+        unset($entity);
+        $posts = $state['settings']['post_collections'] ?? [];
+        if (is_array($posts) && in_array($from, $posts, true)) {
+            $state['settings']['post_collections'] = array_values(array_map(fn($n) => $n === $from ? $to : $n, $posts));
+        }
+        if (is_array($state['seo']['sitemap'] ?? null)) {
+            foreach ($state['seo']['sitemap'] as &$rule) {
+                if (is_array($rule) && ($rule['key'] ?? null) === $from) $rule['key'] = $to;
+            }
+            unset($rule);
+        }
+        return [$state, $op];
+    }
+
+    /**
+     * Cambia il tipo di un campo e converte i valori: plain diventa lo stesso
+     * testo in ogni lingua, un testo per lingua diventa plain con la prima
+     * lingua non vuota, text e richtext si convertono (escape o testo senza
+     * tag). Da o verso array solo se il campo e vuoto in tutti i contenuti.
+     */
+    private static function changeType(array $state, array $op, array $ctx): array
+    {
+        $collection = (string) ($op['collection'] ?? '');
+        $names = array_map('strval', (array) ($op['path'] ?? []));
+        $name = (string) ($op['name'] ?? '');
+        $type = (string) ($op['type'] ?? '');
+        self::assertUserCollection($collection);
+        if (!in_array($type, self::TYPES, true)) {
+            throw new StagingException("Tipo di campo non valido: '{$type}'. Tipi ammessi: " . implode(', ', self::TYPES) . '.');
+        }
+        $schema = &self::schemaRef($state['model'], $collection, $names);
+        $pos = self::defPosition($schema, $name);
+        if ($pos === null) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "il campo «{$name}» non esiste"));
+        }
+        $from = (string) $schema[$pos]['type'];
+        if ($ctx['replay']) {
+            if (!$ctx['force'] && ($op['from'] ?? null) !== $from) {
+                throw new StagingException(self::conflict($op, 'il tipo del campo è stato cambiato sul sito nel frattempo'));
+            }
+        } else {
+            $op['from'] = $from;
+        }
+        if ($from === $type) return [$state, $op];
+        if ($from === 'array' || $type === 'array') {
+            $filled = false;
+            self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($name, &$filled): void {
+                $i = self::fieldIndex($entity, $name);
+                if ($i !== null && !self::isEmptyValue($entity['data'][$i]['value'] ?? null)) $filled = true;
+            });
+            if ($filled) {
+                throw new StagingException("«{$name}» contiene valori: un campo si converte da o verso un elenco solo quando è vuoto in tutti i contenuti.");
+            }
+        }
+        $schema[$pos]['type'] = $type;
+        if ($type === 'array') {
+            $schema[$pos]['of'] = [];
+        } else {
+            unset($schema[$pos]['of'], $schema[$pos]['posts']);
+        }
+        unset($schema);
+        $languages = $ctx['languages'];
+        self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($name, $from, $type, $languages): void {
+            $i = self::fieldIndex($entity, $name);
+            if ($i === null) return;
+            $entity['data'][$i]['type'] = $type;
+            $entity['data'][$i]['value'] = self::convertValue($entity['data'][$i]['value'] ?? null, $from, $type, $languages);
+        });
+        return [$state, $op];
+    }
+
+    private static function convertValue(mixed $value, string $from, string $to, array $languages): mixed
+    {
+        if ($to === 'array') return [];
+        if ($from === 'array') return $to === 'plain' ? '' : array_fill_keys($languages, '');
+        $convert = function (string $text) use ($from, $to): string {
+            if ($from === 'richtext' && $to !== 'richtext') {
+                $text = str_ireplace(['<br>', '<br/>', '<br />', '</p>'], "\n", $text);
+                return trim(html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            }
+            if ($to === 'richtext' && $from !== 'richtext') {
+                return $text === '' ? '' : nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8'), false);
+            }
+            return $text;
+        };
+        if ($to === 'plain') {
+            if (!is_array($value)) return $convert((string) $value);
+            foreach ($languages as $lang) {
+                if (isset($value[$lang]) && $value[$lang] !== '') return $convert((string) $value[$lang]);
+            }
+            foreach ($value as $text) {
+                if (is_string($text) && $text !== '') return $convert($text);
+            }
+            return '';
+        }
+        $out = [];
+        foreach ($languages as $lang) {
+            $text = is_array($value) ? (string) ($value[$lang] ?? '') : (string) $value;
+            $out[$lang] = $convert($text);
+        }
+        if (is_array($value)) {
+            // Le lingue disattivate conservano i loro valori, come nell'editor
+            foreach ($value as $lang => $text) {
+                if (!array_key_exists($lang, $out) && is_string($text)) $out[$lang] = $convert($text);
+            }
+        }
+        return $out;
+    }
+
+    private static function isEmptyValue(mixed $value): bool
+    {
+        if (is_array($value)) {
+            foreach ($value as $v) {
+                if (!self::isEmptyValue($v)) return false;
+            }
+            return true;
+        }
+        return $value === null || $value === '';
+    }
+
+    /** Sposta un campo nello schema: cambia solo l'ordine nell'editor. */
+    private static function moveField(array $state, array $op, array $ctx): array
+    {
+        $collection = (string) ($op['collection'] ?? '');
+        self::assertUserCollection($collection);
+        $schema = &self::schemaRef($state['model'], $collection, array_map('strval', (array) ($op['path'] ?? [])));
+        $pos = self::defPosition($schema, (string) ($op['name'] ?? ''));
+        if ($pos === null) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "il campo «{$op['name']}» non esiste"));
+        }
+        $list = array_values($schema);
+        $field = $list[$pos];
+        array_splice($list, $pos, 1);
+        array_splice($list, max(0, min((int) ($op['to'] ?? 0), count($list))), 0, [$field]);
+        $schema = $list;
+        return [$state, $op];
+    }
+
+    /** "Mostra in Posts" su un elenco di primo livello. */
+    private static function setPosts(array $state, array $op, array $ctx): array
+    {
+        $collection = (string) ($op['collection'] ?? '');
+        self::assertUserCollection($collection);
+        $schema = &self::schemaRef($state['model'], $collection, []);
+        $pos = self::defPosition($schema, (string) ($op['name'] ?? ''));
+        if ($pos === null || ($schema[$pos]['type'] ?? null) !== 'array') {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "«{$op['name']}» non è un elenco di primo livello"));
+        }
+        if (!empty($op['posts'])) {
+            $schema[$pos]['posts'] = true;
+        } else {
+            unset($schema[$pos]['posts']);
+        }
+        return [$state, $op];
+    }
+
+    /** Una raccolta intera in Posts (cms_settings.json, post_collections). */
+    private static function setPostCollection(array $state, array $op, array $ctx): array
+    {
+        $collection = (string) ($op['collection'] ?? '');
+        self::assertUserCollection($collection);
+        if (!isset($state['model'][$collection])) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "la raccolta «{$collection}» non esiste"));
+        }
+        $names = self::withoutValue($state['settings']['post_collections'] ?? [], $collection);
+        if (!empty($op['enabled'])) $names[] = $collection;
+        $state['settings']['post_collections'] = $names;
+        return [$state, $op];
+    }
+
+    private static function withoutValue(mixed $list, string $value): array
+    {
+        return is_array($list) ? array_values(array_filter($list, fn($v) => $v !== $value)) : [];
+    }
+
     // --- pagine --------------------------------------------------------------
+
+    /** Toglie una pagina dalle pagine pubbliche e le sue regole dalla sitemap. Il template resta. */
+    private static function unregisterPage(array $state, array $op, array $ctx): array
+    {
+        $page = (string) ($op['page'] ?? '');
+        if ($page === 'homepage') {
+            throw new StagingException('La homepage è la pagina predefinita del sito: non si può togliere.');
+        }
+        if (!in_array($page, $state['pages'], true)) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "«{$page}» non è una pagina pubblica"));
+        }
+        $state['pages'] = self::withoutValue($state['pages'], $page);
+        if (is_array($state['seo']['sitemap'] ?? null)) {
+            $state['seo']['sitemap'] = array_values(array_filter($state['seo']['sitemap'], fn($r) => !is_array($r) || ($r['page'] ?? null) !== $page));
+        }
+        return [$state, $op];
+    }
 
     private static function registerPage(array $state, array $op, array $ctx): array
     {

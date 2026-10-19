@@ -12,10 +12,12 @@ use Kris\Entity\StorageException;
  * ancora pubbliche. Vive in data/staging/, gia protetta come tutto data/.
  *
  * Tre tipi di modifiche:
- *  - file del tema (template/*.html, assets/css/*.css): copie modificate che
- *    ricalcano la struttura del sito. manifest.json ricorda l'impronta della
- *    versione del sito da cui ogni modifica e partita: se il sito nel
- *    frattempo e cambiato, il file e in conflitto;
+ *  - file del tema (vedi FilePolicy): copie modificate che ricalcano la
+ *    struttura del sito, o file da eliminare ("deleted" nel manifest).
+ *    manifest.json ricorda l'impronta della versione del sito da cui ogni
+ *    modifica e partita: se il sito nel frattempo e cambiato, il file e in
+ *    conflitto. JavaScript e SVG nuovi girano nell'anteprima solo dopo
+ *    l'approvazione dell'admin (approveCode);
  *  - contenuti, schema e pagine: un elenco di operazioni (operations.json,
  *    vedi Operations) rieseguite sui dati del sito alla pubblicazione, cosi
  *    le modifiche che il cliente fa intanto dall'editor non vanno perse;
@@ -38,7 +40,12 @@ final class Staging
         'model' => 'data/k_model.json',
         'pages' => 'config/allowed_pages.json',
         'seo' => 'config/seo.json',
+        'settings' => 'data/cms_settings.json',
     ];
+
+    /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
+    private const PAGE_OPS = ['register_page', 'unregister_page', 'remove_collection', 'rename_collection'];
+    private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection'];
 
     private string $root;
     private string $dir;
@@ -91,6 +98,9 @@ final class Staging
     public function read(string $relative): array
     {
         FilePolicy::assertEditable($relative);
+        if (!empty($this->manifest()['files'][$relative]['deleted'])) {
+            return ['content' => null, 'hash' => null, 'source' => 'staging'];
+        }
         foreach (['staging' => $this->dir, 'site' => $this->root] as $source => $base) {
             if (is_file("{$base}/{$relative}")) {
                 $content = (string) file_get_contents("{$base}/{$relative}");
@@ -124,6 +134,7 @@ final class Staging
             // La base e la versione del sito da cui parte la modifica, non quella dello staging
             $manifest['files'][$relative] = ['base' => self::hashOf("{$this->root}/{$relative}")];
         }
+        unset($manifest['files'][$relative]['deleted']);
         $manifest['files'][$relative]['changed_at'] = gmdate('c');
         $manifest['files'][$relative]['changed_by'] = $by;
 
@@ -157,6 +168,45 @@ final class Staging
     }
 
     /**
+     * Elimina un file del tema alla pubblicazione. $expectedHash e l'impronta
+     * della versione letta. Il template di una pagina pubblica non si elimina
+     * finche la pagina e registrata (prima unregister_page).
+     *
+     * @throws StagingException
+     */
+    public function delete(string $relative, string $expectedHash, string $by): void
+    {
+        FilePolicy::assertEditable($relative);
+        $current = $this->read($relative);
+        if ($current['hash'] === null) {
+            throw new StagingException("Il file '{$relative}' non esiste.");
+        }
+        if ($current['hash'] !== $expectedHash) {
+            throw new StagingException("Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo prima di eliminarlo.");
+        }
+        if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1 && in_array($m[1], $this->state()['pages'], true)) {
+            throw new StagingException("template/{$m[1]}.html è il template della pagina pubblica «{$m[1]}»: toglila prima con unregister_page.");
+        }
+        $manifest = $this->startManifest($by);
+        $siteHash = self::hashOf("{$this->root}/{$relative}");
+        if ($siteHash === null) {
+            // Un file nuovo mai pubblicato: basta dimenticarlo
+            unset($manifest['files'][$relative]);
+        } else {
+            $manifest['files'][$relative] = ['base' => $manifest['files'][$relative]['base'] ?? $siteHash,
+                'deleted' => true, 'changed_at' => gmdate('c'), 'changed_by' => $by];
+        }
+        @unlink("{$this->dir}/{$relative}");
+        $this->saveManifest($manifest);
+    }
+
+    /** @return string[] i file del tema che lo staging elimina */
+    public function deletedFiles(): array
+    {
+        return array_keys(array_filter($this->manifest()['files'], fn($e) => !empty($e['deleted'])));
+    }
+
+    /**
      * I file del tema in attesa, con quanto serve al riepilogo: versioni del
      * sito e dello staging, conflitti, elementi sensibili introdotti.
      *
@@ -167,14 +217,15 @@ final class Staging
         $out = [];
         foreach ($this->manifest()['files'] as $relative => $entry) {
             $stagedFile = "{$this->dir}/{$relative}";
-            if (!is_file($stagedFile)) continue;
-            $staged = (string) file_get_contents($stagedFile);
+            $deleted = !empty($entry['deleted']);
+            if (!$deleted && !is_file($stagedFile)) continue;
+            $staged = $deleted ? '' : (string) file_get_contents($stagedFile);
             $siteFile = "{$this->root}/{$relative}";
             $site = is_file($siteFile) ? (string) file_get_contents($siteFile) : null;
             $base = $entry['base'] ?? null;
             $out[] = [
                 'file' => (string) $relative,
-                'kind' => $base === null ? 'new' : 'modified',
+                'kind' => $deleted ? 'deleted' : ($base === null ? 'new' : 'modified'),
                 'site' => $site,
                 'staged' => $staged,
                 // Il sito e cambiato da quando la modifica e partita (o il file nuovo ora esiste gia)
@@ -300,12 +351,14 @@ final class Staging
         if (!$ops) return [];
 
         [$state, $report] = $this->replay($ops, false);
-        $touchesPages = (bool) array_filter($ops, fn($o) => ($o['op'] ?? '') === 'register_page');
         self::writeJson("{$this->dir}/data/k_data.json", $state['data']);
         self::writeJson("{$this->dir}/data/k_model.json", $state['model']);
-        if ($touchesPages) {
+        if (self::touches($ops, self::PAGE_OPS)) {
             self::writeJson("{$this->dir}/config/allowed_pages.json", ['allowed_pages' => array_values($state['pages'])]);
             self::writeJson("{$this->dir}/config/seo.json", $state['seo']);
+        }
+        if (self::touches($ops, self::SETTINGS_OPS)) {
+            self::writeJson("{$this->dir}/data/cms_settings.json", $state['settings']);
         }
         return $report;
     }
@@ -319,10 +372,16 @@ final class Staging
     public function templateProblems(): array
     {
         $retired = [];
+        $collections = [];
         foreach ($this->operations() as $op) {
             foreach (Operations::retiredNames($op) as $name) $retired[$name] = true;
+            foreach (Operations::retiredCollections($op) as $name) $collections[$name] = true;
         }
-        if (!$retired) return [];
+        $deleted = [];
+        foreach ($this->deletedFiles() as $relative) {
+            if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1) $deleted[$m[1]] = true;
+        }
+        if (!$retired && !$collections && !$deleted) return [];
 
         $templates = [];
         foreach ([$this->root, $this->dir] as $base) {
@@ -330,6 +389,7 @@ final class Staging
                 $templates['template/' . basename($file)] = (string) file_get_contents($file);
             }
         }
+        foreach (array_keys($deleted) as $name) unset($templates["template/{$name}.html"]);
         $problems = [];
         foreach ($templates as $relative => $html) {
             foreach (array_keys($retired) as $name) {
@@ -338,9 +398,77 @@ final class Staging
                     $problems[] = "{$relative} usa ancora «{$name}»";
                 }
             }
+            foreach (array_keys($collections) as $name) {
+                $q = preg_quote((string) $name, '/');
+                if (preg_match('/k-(?:component|array)=["\']' . $q . '["\']|[?&;]key=' . $q . '(?=["\'&#\s])/', $html) === 1) {
+                    $problems[] = "{$relative} usa ancora la raccolta «{$name}»";
+                }
+            }
+            foreach (array_keys($deleted) as $name) {
+                $q = preg_quote((string) $name, '/');
+                if (preg_match('/k-template=["\']' . $q . '["\']/', $html) === 1) {
+                    $problems[] = "{$relative} usa ancora il template eliminato «{$name}»";
+                }
+            }
         }
         sort($problems);
         return $problems;
+    }
+
+    // --- script nuovi: approvazione dell'anteprima -------------------------------
+
+    /**
+     * I file in attesa che portano codice eseguibile nel browser: JavaScript,
+     * SVG e template che aggiungono script, gestori di eventi o URL javascript:.
+     *
+     * @return string[]
+     */
+    public function codeFiles(): array
+    {
+        $files = [];
+        foreach ($this->changes() as $change) {
+            if ($change['kind'] === 'deleted') continue;
+            if (FilePolicy::isCode($change['file']) || FilePolicy::hasCodeSignal($change['sensitive'])) {
+                $files[] = $change['file'];
+            }
+        }
+        return $files;
+    }
+
+    /** Impronta dei file con codice cosi come sono ora, o null se non ce ne sono. */
+    public function codeFingerprint(): ?string
+    {
+        $parts = [];
+        foreach ($this->codeFiles() as $relative) {
+            $parts[] = $relative . ':' . self::hashOf("{$this->dir}/{$relative}");
+        }
+        return $parts ? self::hash(implode("\n", $parts)) : null;
+    }
+
+    /** Vero se non c'e codice nuovo, o se l'admin ha approvato proprio questa versione. */
+    public function codeApproved(): bool
+    {
+        $fingerprint = $this->codeFingerprint();
+        if ($fingerprint === null) return true;
+        $file = "{$this->dir}/code_approval.json";
+        $approval = is_file($file) ? (new JsonStore($file))->read([]) : [];
+        return ($approval['fingerprint'] ?? null) === $fingerprint;
+    }
+
+    /**
+     * L'admin si assume la responsabilita del codice in attesa: l'anteprima lo
+     * esegue. $fingerprint e quello che l'admin ha visto; se nel frattempo il
+     * codice e cambiato l'approvazione viene rifiutata.
+     *
+     * @throws StagingException
+     */
+    public function approveCode(string $fingerprint, string $by): void
+    {
+        $current = $this->codeFingerprint();
+        if ($current === null || !hash_equals($current, $fingerprint)) {
+            throw new StagingException('Gli script in attesa sono cambiati: ricontrollali prima di approvarli.');
+        }
+        (new JsonStore("{$this->dir}/code_approval.json"))->write(['fingerprint' => $current, 'by' => $by, 'at' => gmdate('c')]);
     }
 
     // --- immagini --------------------------------------------------------------
@@ -431,14 +559,24 @@ final class Staging
 
         // Cosa cambia nel sito: percorso relativo => contenuto nuovo
         $writes = [];
-        foreach ($changes as $change) $writes[$change['file']] = $change['staged'];
+        $deletes = [];
+        foreach ($changes as $change) {
+            if ($change['kind'] === 'deleted') {
+                $deletes[] = $change['file'];
+            } else {
+                $writes[$change['file']] = $change['staged'];
+            }
+        }
         if ($ops) {
             [$state] = $this->replay($ops, true);
             $writes[self::STATE_FILES['data']] = self::encode($state['data']);
             $writes[self::STATE_FILES['model']] = self::encode($state['model']);
-            if (array_filter($ops, fn($o) => ($o['op'] ?? '') === 'register_page')) {
+            if (self::touches($ops, self::PAGE_OPS)) {
                 $writes[self::STATE_FILES['pages']] = self::encode(['allowed_pages' => array_values($state['pages'])]);
                 $writes[self::STATE_FILES['seo']] = self::encode($state['seo']);
+            }
+            if (self::touches($ops, self::SETTINGS_OPS)) {
+                $writes[self::STATE_FILES['settings']] = self::encode($state['settings']);
             }
         }
         $uploads = array_keys($this->manifest()['uploads']);
@@ -452,7 +590,7 @@ final class Staging
         $id = gmdate('Ymd-His') . '-' . bin2hex(random_bytes(3));
         $backup = "{$this->backups}/{$id}";
         $files = [];
-        foreach (array_merge(array_keys($writes), array_map(fn($n) => "assets/uploads/{$n}", $uploads)) as $relative) {
+        foreach (array_merge(array_keys($writes), $deletes, array_map(fn($n) => "assets/uploads/{$n}", $uploads)) as $relative) {
             $target = "{$this->root}/{$relative}";
             $files[$relative] = ['existed' => is_file($target)];
             if (is_file($target)) self::writeFile("{$backup}/files/{$relative}", (string) file_get_contents($target));
@@ -463,6 +601,11 @@ final class Staging
         try {
             foreach ($writes as $relative => $content) {
                 self::writeFile("{$this->root}/{$relative}", $content);
+            }
+            foreach ($deletes as $relative) {
+                if (is_file("{$this->root}/{$relative}") && !@unlink("{$this->root}/{$relative}")) {
+                    throw new StagingException("Non riesco a eliminare {$relative}: controlla i permessi di scrittura.");
+                }
             }
             foreach ($uploads as $name) {
                 if (!is_dir("{$this->root}/assets/uploads")) @mkdir("{$this->root}/assets/uploads", 0775, true);
@@ -545,7 +688,13 @@ final class Staging
             'model' => $read(self::STATE_FILES['model'], []),
             'pages' => is_array($pages['allowed_pages'] ?? null) ? array_values($pages['allowed_pages']) : ['homepage'],
             'seo' => $read(self::STATE_FILES['seo'], []),
+            'settings' => $read(self::STATE_FILES['settings'], []),
         ];
+    }
+
+    private static function touches(array $ops, array $types): bool
+    {
+        return (bool) array_filter($ops, fn($o) => in_array($o['op'] ?? '', $types, true));
     }
 
     /** Le lingue attive del sito, come le legge il sito pubblico. */

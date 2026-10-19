@@ -122,6 +122,10 @@ final class Server
             case 'edit_file':
                 return $s->edit($this->string($r, 'file'), $this->string($r, 'old', true), $this->string($r, 'new', true), (string) $this->hashOrNull($r), $by);
 
+            case 'delete_file':
+                $s->delete($this->string($r, 'file'), (string) $this->hashOrNull($r), $by);
+                return ['deleted' => true];
+
             case 'get_entity':
                 return ['entity' => $this->entity($s->state()['data'], $this->string($r, 'key'), (int) ($r['id'] ?? 0), (array) ($r['path'] ?? []))];
 
@@ -165,10 +169,11 @@ final class Server
         foreach ($state['data'] as $entity) {
             $entities[$entity['name']][] = ['id' => $entity['id'], 'title' => $this->title($entity, $languages[0])] + (!empty($entity['hidden']) ? ['hidden' => true] : []);
         }
-        $files = fn(string $pattern): array => array_values(array_unique(array_map(
+        $deleted = array_map('basename', $this->staging->deletedFiles());
+        $files = fn(string $pattern): array => array_values(array_diff(array_unique(array_map(
             'basename',
             array_merge(glob("{$this->root}/{$pattern}") ?: [], glob($this->staging->dir() . "/{$pattern}") ?: [])
-        )));
+        )), $deleted));
         return [
             'languages' => $languages,
             'pages' => $state['pages'],
@@ -176,6 +181,8 @@ final class Server
             'entities' => $entities,
             'templates' => $files('template/*.html'),
             'stylesheets' => $files('assets/css/*.css'),
+            'scripts' => $files('assets/js/*.js'),
+            'svg_images' => $files('assets/images/*.svg'),
             'staging' => $this->status(),
         ];
     }
@@ -189,6 +196,8 @@ final class Server
             'operations' => array_map(fn($o) => ['description' => $o['description'], 'conflict' => $o['conflict']], $s->rebuild()),
             'uploads' => array_map(fn($n) => "assets/uploads/{$n}", array_keys($s->manifest()['uploads'])),
             'template_problems' => $s->templateProblems(),
+            // JavaScript e SVG nuovi girano nell'anteprima solo dopo l'approvazione dell'admin
+            'code_awaiting_approval' => $s->codeApproved() ? [] : $s->codeFiles(),
             // L'anteprima si apre solo con il login dell'editor: la pubblicazione la decide l'admin
             'preview' => 'index.php?kris_preview=1',
         ];

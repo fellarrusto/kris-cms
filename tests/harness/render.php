@@ -30,6 +30,7 @@ if (getenv('KRIS_TEST_ADMIN') === '1') {
     session_save_path(sys_get_temp_dir());
     @session_start();
     $_SESSION['kris_auth'] = true;
+    $_SESSION['kris_csrf'] = getenv('KRIS_TEST_CSRF') ?: 'token-di-prova';
 }
 
 // Lo script viene dall'ambiente dei test, ma solo fra quelli pubblici previsti.
