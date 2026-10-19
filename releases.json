@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.7.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Raccolte con nome visibile, descrizione, ordine e contenuto unico. Banner cookie con scelta per categoria. Font in locale e video MP4/WebM. Foto caricate con nomi SEO, senza dati GPS e ridotte se troppo grandi. Correzioni all'anteprima e all'avviso delle modifiche in attesa.",
+            "date": "2026-10-19",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.7.0/kris-1.7.0.zip",
+            "sha256": "e35bf54a83cececc2c9892c050158965d0349a66cc175f0d4713a59a8b3984c4",
+            "size": 196909
+        },
+        {
             "version": "1.6.0",
             "min_from": "1.0.0",
             "breaking": false,
