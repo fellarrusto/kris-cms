@@ -488,6 +488,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         }
     }
     // Una raccolta intera nella sezione Posts: ogni contenuto e un post.
+    // Impostazioni dei caricamenti: prefisso dei nomi, larghezza massima, WebP
+    if (isset($_POST['save_upload_settings'])) {
+        $settings['uploads'] = [
+            'prefix' => \Kris\Entity\MediaStore::slug(mb_substr((string) ($_POST['upload_prefix'] ?? ''), 0, 60)),
+            'max_width' => max(0, min(10000, (int) ($_POST['upload_max_width'] ?? \Kris\Entity\MediaStore::DEFAULT_MAX_WIDTH))),
+            'webp' => isset($_POST['upload_webp']) && \Kris\Entity\MediaStore::canWriteWebp(),
+        ];
+        saveJson($settingsFile, $settings);
+        $msg = 'Impostazioni dei caricamenti salvate.';
+    }
     // Nome visibile, descrizione, posizione e contenuto unico di una raccolta
     if (isset($_POST['save_collection_info'])) {
         $g = (string) ($_POST['group_name'] ?? '');

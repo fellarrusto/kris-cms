@@ -202,7 +202,7 @@ Kris aggiunge da solo `?v=<data di modifica>` agli indirizzi `assets/css/…` e 
 
 I percorsi delle risorse si risolvono rispetto all'URL pubblico, non alla cartella `template/`. Usa `assets/...` per l'installazione corrente e verifica anche il deploy in sottocartella; `/assets/...` punta invece alla radice del dominio. Non lasciare link a file locali, export Figma o URL temporanei di preview.
 
-Esporta immagini e icone necessarie dal design, preserva le proporzioni, ottimizza peso e dimensioni e usa font disponibili per il progetto. Gli SVG fidati del tema possono essere asset statici verificati. L'upload editoriale accetta JPG/JPEG, PNG, GIF, WebP, AVIF e PDF fino a 8 MB; non accetta nuovi SVG. Non aggirare `MediaStore` per renderli caricabili.
+Esporta immagini e icone necessarie dal design, preserva le proporzioni, ottimizza peso e dimensioni e usa font disponibili per il progetto. Gli SVG fidati del tema possono essere asset statici verificati. L'upload editoriale accetta JPG/JPEG, PNG, GIF, WebP, AVIF e PDF fino a 8 MB; non accetta nuovi SVG. Non aggirare `MediaStore` per renderli caricabili. Impostazioni › Caricamenti (`cms_settings.json`, `uploads`): prefisso dei nomi (per la SEO; i nomi automatici delle fotocamere come `DSC_1234` vengono ignorati, il codice finale resta), larghezza massima delle foto (predefinita 2560 px, 0 = mai) e conversione in WebP. Con l'estensione GD i JPEG vengono raddrizzati secondo l'orientamento EXIF e ricodificati senza metadati (via la posizione GPS); PNG e WebP solo se vanno ridotti o convertiti; GIF, AVIF e PDF restano come sono. Senza GD, o se la foto non sta nella memoria di PHP, il file resta com'era. Valgono anche per i caricamenti dell'agente.
 
 ## Pagina 404
 

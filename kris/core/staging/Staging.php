@@ -515,7 +515,7 @@ final class Staging
     public function upload(string $path, string $originalName, string $by): string
     {
         try {
-            $url = (new MediaStore($this->dir . '/uploads/', 'assets/uploads/'))->storeLocal($path, $originalName);
+            $url = (new MediaStore($this->dir . '/uploads/', 'assets/uploads/', MediaStore::siteOptions($this->root)))->storeLocal($path, $originalName);
         } catch (StorageException $e) {
             throw new StagingException($e->getMessage());
         }

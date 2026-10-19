@@ -25,8 +25,49 @@ final class MediaStore
 
     private const MAX_BYTES = 8 * 1024 * 1024; // 8 MB
 
-    public function __construct(private string $uploadDir, private string $publicPrefix)
+    /** Larghezza massima predefinita delle foto, in pixel. */
+    public const DEFAULT_MAX_WIDTH = 2560;
+
+    /** @var array{prefix: string, max_width: int, webp: bool} */
+    private array $options;
+
+    /**
+     * $options: prefisso dei nomi, larghezza massima delle foto (0 = nessuna),
+     * conversione in WebP. Senza, quelle del sito (cms_settings.json, "uploads").
+     */
+    public function __construct(private string $uploadDir, private string $publicPrefix, ?array $options = null)
     {
+        $this->options = self::normalizeOptions($options ?? (defined('KRIS_ROOT') ? self::siteOptions(KRIS_ROOT) : []));
+    }
+
+    /** Le opzioni di caricamento di un sito, da data/cms_settings.json. */
+    public static function siteOptions(string $root): array
+    {
+        $file = $root . '/data/cms_settings.json';
+        $settings = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
+        return is_array($settings['uploads'] ?? null) ? $settings['uploads'] : [];
+    }
+
+    /** @return array{prefix: string, max_width: int, webp: bool} */
+    public static function normalizeOptions(array $options): array
+    {
+        return [
+            'prefix' => self::slug(is_string($options['prefix'] ?? null) ? $options['prefix'] : ''),
+            'max_width' => max(0, (int) ($options['max_width'] ?? self::DEFAULT_MAX_WIDTH)),
+            'webp' => ($options['webp'] ?? false) === true,
+        ];
+    }
+
+    /** Vero se questo PHP sa ridimensionare e ripulire le foto (estensione GD). */
+    public static function canProcessImages(): bool
+    {
+        return function_exists('imagecreatefromjpeg') && function_exists('imagejpeg');
+    }
+
+    /** Vero se questo PHP sa scrivere WebP. */
+    public static function canWriteWebp(): bool
+    {
+        return function_exists('imagewebp') && function_exists('imagecreatefromjpeg');
     }
 
     public static function allowedExtensions(): array
@@ -61,7 +102,7 @@ final class MediaStore
             throw new StorageException('Non siamo riusciti a salvare il file.');
         }
 
-        return $this->publicPrefix . $name;
+        return $this->publicPrefix . $this->processImage($name);
     }
 
     /**
@@ -81,7 +122,7 @@ final class MediaStore
             throw new StorageException('Non siamo riusciti a salvare il file.');
         }
 
-        return $this->publicPrefix . $name;
+        return $this->publicPrefix . $this->processImage($name);
     }
 
     /**
@@ -122,11 +163,155 @@ final class MediaStore
 
         // Nome generato: niente estensioni doppie, niente sovrascritture,
         // niente caratteri decisi da chi carica.
-        $base = pathinfo($original, PATHINFO_FILENAME);
-        $base = strtolower(preg_replace('/[^a-zA-Z0-9-_]/', '-', $base) ?? '');
-        $base = trim(preg_replace('/-+/', '-', $base) ?? '', '-');
+        // Per la SEO: prefisso del sito e nome del file, ma non quelli dati dalla fotocamera (DSC_1234, IMG_0042)
+        $base = self::slug(pathinfo($original, PATHINFO_FILENAME));
+        if (self::isCameraName($base)) $base = '';
+        $prefix = $this->options['prefix'];
+        if ($prefix !== '' && !str_starts_with($base, $prefix)) $base = trim($prefix . '-' . $base, '-');
         if ($base === '') $base = 'file';
-        return sprintf('%s-%s.%s', substr($base, 0, 60), bin2hex(random_bytes(4)), $ext);
+        return sprintf('%s-%s.%s', rtrim(substr($base, 0, 60), '-'), bin2hex(random_bytes(4)), $ext);
+    }
+
+    public static function slug(string $text): string
+    {
+        $text = strtolower((string) preg_replace('/[^a-zA-Z0-9]+/', '-', $text));
+        return trim((string) preg_replace('/-+/', '-', $text), '-');
+    }
+
+    /** Nomi automatici di fotocamere e telefoni, senza informazioni utili. */
+    public static function isCameraName(string $slug): bool
+    {
+        return preg_match('/^(?:dsc[fn]?|img|dcim|pxl|mvimg|photo|image|foto|screenshot|whatsapp-image|gopr|dji|p|sam)-?\d[\d-]*(?:-(?:wa|edited|copy|copia)\d*)*$/', $slug) === 1
+            || preg_match('/^\d{8}-\d{6}(?:-\d+)?$/', $slug) === 1;
+    }
+
+    /**
+     * Ripulisce una foto appena salvata, se questo PHP ha GD: la raddrizza
+     * secondo l'orientamento EXIF, la riduce alla larghezza massima e la
+     * ricodifica, togliendo i metadati (posizione GPS compresa); con
+     * l'opzione WebP la converte. I JPEG si ricodificano sempre, PNG e WebP
+     * solo se vanno ridotti o convertiti; GIF, AVIF e PDF restano come sono.
+     * Senza GD, o se la foto non sta nella memoria disponibile, il file resta
+     * com'era. Restituisce il nome finale.
+     */
+    private function processImage(string $name): string
+    {
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true) || !self::canProcessImages()) {
+            return $name;
+        }
+        $path = $this->uploadDir . $name;
+        $info = @getimagesize($path);
+        if (!is_array($info) || !self::fitsInMemory((int) $info[0], (int) $info[1])) {
+            return $name;
+        }
+        $orientation = in_array($ext, ['jpg', 'jpeg'], true) ? self::jpegOrientation($path) : 1;
+        $quarter = in_array($orientation, [5, 6, 7, 8], true);
+        $width = $quarter ? (int) $info[1] : (int) $info[0];
+        $maxWidth = $this->options['max_width'];
+        $resize = $maxWidth > 0 && $width > $maxWidth;
+        $toWebp = $this->options['webp'] && $ext !== 'webp' && self::canWriteWebp();
+        if (!in_array($ext, ['jpg', 'jpeg'], true) && !$resize && !$toWebp) {
+            return $name;
+        }
+
+        $image = match ($ext) {
+            'png' => function_exists('imagecreatefrompng') ? @imagecreatefrompng($path) : false,
+            'webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
+            default => @imagecreatefromjpeg($path),
+        };
+        if ($image === false) return $name;
+        $image = self::orient($image, $orientation);
+        if ($resize) {
+            $height = (int) round(imagesy($image) * $maxWidth / imagesx($image));
+            $scaled = imagescale($image, $maxWidth, max(1, $height), IMG_BICUBIC);
+            if ($scaled !== false) $image = $scaled;
+        }
+
+        $outExt = $toWebp ? 'webp' : $ext;
+        $outName = $outExt === $ext ? $name : substr($name, 0, -strlen($ext)) . $outExt;
+        $tmp = $this->uploadDir . $outName . '.tmp';
+        if (in_array($outExt, ['png', 'webp'], true) || $ext === 'png') {
+            imagealphablending($image, false);
+            imagesavealpha($image, true);
+        }
+        $saved = match ($outExt) {
+            'webp' => @imagewebp($image, $tmp, 82),
+            'png' => @imagepng($image, $tmp, 6),
+            default => @imagejpeg($image, $tmp, 85),
+        };
+        if (!$saved || !@rename($tmp, $this->uploadDir . $outName)) {
+            @unlink($tmp);
+            return $name;
+        }
+        if ($outName !== $name) @unlink($path);
+        return $outName;
+    }
+
+    /** Stima prudente della memoria che serve a GD per una foto di queste dimensioni. */
+    private static function fitsInMemory(int $width, int $height): bool
+    {
+        $limit = self::bytes((string) ini_get('memory_limit'));
+        if ($limit <= 0) return true;
+        return memory_get_usage() + $width * $height * 5 * 2 + 8 * 1024 * 1024 < $limit;
+    }
+
+    private static function bytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '-1') return -1;
+        $number = (int) $value;
+        return match (strtolower(substr($value, -1))) {
+            'g' => $number * 1024 ** 3, 'm' => $number * 1024 ** 2, 'k' => $number * 1024, default => $number,
+        };
+    }
+
+    /** L'orientamento EXIF di un JPEG (1 = dritto), letto anche senza l'estensione exif. */
+    public static function jpegOrientation(string $path): int
+    {
+        if (function_exists('exif_read_data')) {
+            $exif = @exif_read_data($path);
+            return is_array($exif) && isset($exif['Orientation']) ? max(1, min(8, (int) $exif['Orientation'])) : 1;
+        }
+        $data = (string) @file_get_contents($path, false, null, 0, 131072);
+        $offset = 2;
+        while ($offset + 4 <= strlen($data) && $data[$offset] === "\xFF") {
+            $marker = ord($data[$offset + 1]);
+            $length = unpack('n', substr($data, $offset + 2, 2))[1];
+            if ($marker === 0xE1 && substr($data, $offset + 4, 6) === "Exif\0\0") {
+                $tiff = substr($data, $offset + 10, $length - 8);
+                $big = substr($tiff, 0, 2) === 'MM';
+                $u16 = fn(int $at) => unpack($big ? 'n' : 'v', substr($tiff, $at, 2))[1] ?? 0;
+                $u32 = fn(int $at) => unpack($big ? 'N' : 'V', substr($tiff, $at, 4))[1] ?? 0;
+                if (strlen($tiff) < 8) return 1;
+                $ifd = $u32(4);
+                $entries = $u16($ifd);
+                for ($i = 0; $i < $entries; $i++) {
+                    $entry = $ifd + 2 + $i * 12;
+                    if ($entry + 12 > strlen($tiff)) break;
+                    if ($u16($entry) === 0x0112) return max(1, min(8, $u16($entry + 8)));
+                }
+                return 1;
+            }
+            if ($marker === 0xDA) break;
+            $offset += 2 + $length;
+        }
+        return 1;
+    }
+
+    /** Applica l'orientamento EXIF ai pixel: dopo la ricodifica il tag non c'e piu. */
+    private static function orient(\GdImage|false $image, int $orientation): \GdImage|false
+    {
+        if ($image === false || $orientation <= 1) return $image;
+        if (in_array($orientation, [2, 4, 5, 7], true) && function_exists('imageflip')) {
+            imageflip($image, $orientation === 4 ? IMG_FLIP_VERTICAL : IMG_FLIP_HORIZONTAL);
+        }
+        $angle = match ($orientation) { 3, 4 => 180, 5, 6 => -90, 7, 8 => 90, default => 0 };
+        if ($angle !== 0) {
+            $rotated = imagerotate($image, $angle, 0);
+            if ($rotated !== false) $image = $rotated;
+        }
+        return $image;
     }
 
     /**

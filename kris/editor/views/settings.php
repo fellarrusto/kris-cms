@@ -2,6 +2,7 @@
 // Una sotto-pagina per volta, scelta dalla barra interna: ?action=settings&tab=...
 $settingsTabs = [
     'lingue' => ['Lingue', 'Lingue dei moduli', 'content'],
+    'caricamenti' => ['Caricamenti', 'Nomi e foto', 'media'],
     'account' => ['Account', 'Email e password', 'settings'],
     'agent' => ['Kris Agent', 'Assistente AI', 'structure'],
     'versione' => ['Versione di Kris', 'Aggiornamenti', 'check'],
@@ -20,6 +21,23 @@ $tab = is_string($_GET['tab'] ?? null) && isset($settingsTabs[$_GET['tab']]) ? $
 <div class="notice"><strong>I testi restano al sicuro.</strong><p>Disattivare una lingua la nasconde nei moduli, ma conserva le traduzioni già salvate. La navigazione del sito dipende dai suoi template.</p></div></div></section>
 <?php require __DIR__ . '/../partials/save_bar.php'; ?>
 </form>
+<?php elseif ($tab === 'caricamenti'):
+    $uploadOptions = \Kris\Entity\MediaStore::normalizeOptions(is_array($settings['uploads'] ?? null) ? $settings['uploads'] : []);
+    $canProcess = \Kris\Entity\MediaStore::canProcessImages();
+    $canWebp = \Kris\Entity\MediaStore::canWriteWebp(); ?>
+<section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('media') ?></span><div><h2>Caricamenti</h2><p>Nomi dei file e trattamento delle foto caricate da te o dall'assistente.</p></div></header><div class="card-body">
+<form method="POST" action="?action=settings&amp;tab=caricamenti" class="collection-info-form"><input type="hidden" name="save_upload_settings" value="1">
+    <label for="upload-prefix">Prefisso dei nomi dei file</label><input id="upload-prefix" type="text" name="upload_prefix" maxlength="60" value="<?= h($uploadOptions['prefix']) ?>" placeholder="es. studio-dentistico-romano">
+    <p class="hint">Aiuta la SEO delle immagini: «DSC_1234.jpg» diventa «<?= h($uploadOptions['prefix'] !== '' ? $uploadOptions['prefix'] : 'prefisso') ?>-…jpg». I nomi automatici delle fotocamere vengono ignorati, quelli scelti da te restano.</p>
+    <?php if ($canProcess): ?>
+    <label for="upload-width">Larghezza massima delle foto (pixel)</label><input id="upload-width" type="number" name="upload_max_width" min="0" max="10000" step="1" value="<?= (int) $uploadOptions['max_width'] ?>">
+    <p class="hint">Le foto più larghe vengono ridotte; 0 = mai. Le foto JPEG vengono anche raddrizzate e ripulite dai dati nascosti, come la posizione GPS del telefono.</p>
+    <label class="setting-row"><input type="checkbox" name="upload_webp" value="1" <?= $uploadOptions['webp'] && $canWebp ? 'checked' : '' ?> <?= $canWebp ? '' : 'disabled' ?>><span><strong>Converti in WebP</strong><small><?= $canWebp ? 'Foto più leggere, stessa qualità a occhio.' : 'Il PHP di questo hosting non sa scrivere WebP.' ?></small></span></label>
+    <?php else: ?>
+    <div class="notice"><strong>Foto caricate così come sono.</strong><p>Su questo hosting manca l'estensione GD di PHP: le foto non vengono ridotte né ripulite dai dati nascosti. Chiedi all'hosting di attivarla.</p></div>
+    <?php endif; ?>
+    <button class="btn btn-white">Salva</button>
+</form></div></section>
 <?php elseif ($tab === 'account'): ?>
 <?php $account = kris_auth_config() ?? []; $accountEmail = (string) ($account['email'] ?? ''); ?>
 <section class="card" id="account"><header class="card-header"><span class="collection-icon"><?= uiIcon('settings') ?></span><div><h2>Account</h2><p>Accedi come <strong><?= h($account['user'] ?? '') ?></strong>.</p></div></header><div class="card-body account-body">

@@ -75,7 +75,7 @@ function isStagingNeutralPost(array $post): bool
 {
     $neutral = ['save_account_email', 'account_email_later', 'send_test_email', 'change_password',
         'agent_pair', 'agent_toggle', 'agent_unpair', 'agent_grant', 'agent_reset',
-        'staging_promote', 'staging_discard', 'staging_undo', 'approve_code'];
+        'staging_promote', 'staging_discard', 'staging_undo', 'approve_code', 'save_upload_settings'];
     return (bool) array_intersect($neutral, array_keys($post));
 }
 

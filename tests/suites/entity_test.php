@@ -64,3 +64,38 @@ test("l'output non contiene la processing instruction <?xml", function () {
     $out = renderTemplate('<p>{{n}}</p>', makeEntity([fieldPlain('n', '1')]));
     assertNotContains('<?xml', $out);
 });
+
+test('nomi dei file caricati: prefisso del sito, niente nomi da fotocamera', function () {
+    $dir = sys_get_temp_dir() . '/kris-nomi-' . bin2hex(random_bytes(3)) . '/';
+    mkdir($dir);
+    register_shutdown_function(fn() => rrmdir($dir));
+    $pdf = $dir . 'src.pdf';
+    file_put_contents($pdf, "%PDF-1.4\n%prova");
+    $store = new \Kris\Entity\MediaStore($dir, 'assets/uploads/', ['prefix' => 'Studio Romano']);
+    assertTrue(preg_match('#^assets/uploads/studio-romano-[0-9a-f]{8}\.pdf$#', $store->storeLocal($pdf, 'IMG_0042.pdf')) === 1);
+    assertTrue(preg_match('#^assets/uploads/studio-romano-listino-prezzi-[0-9a-f]{8}\.pdf$#', $store->storeLocal($pdf, 'Listino Prezzi.pdf')) === 1);
+    $plain = new \Kris\Entity\MediaStore($dir, 'assets/uploads/', []);
+    assertTrue(preg_match('#^assets/uploads/file-[0-9a-f]{8}\.pdf$#', $plain->storeLocal($pdf, 'DSC_1234.pdf')) === 1);
+    assertTrue(\Kris\Entity\MediaStore::isCameraName('img-20240512-wa0003'));
+    assertTrue(!\Kris\Entity\MediaStore::isCameraName('studio-reception'));
+});
+
+test('con GD le foto JPEG si raddrizzano, perdono i metadati e si riducono', function () {
+    if (!\Kris\Entity\MediaStore::canProcessImages()) {
+        echo "    (GD non disponibile: si controlla solo che il file resti com'e)\n";
+        return;
+    }
+    $dir = sys_get_temp_dir() . '/kris-foto-' . bin2hex(random_bytes(3)) . '/';
+    mkdir($dir);
+    register_shutdown_function(fn() => rrmdir($dir));
+    $im = imagecreatetruecolor(3000, 1000);
+    ob_start(); imagejpeg($im); $jpeg = (string) ob_get_clean();
+    $ifd = pack('v', 1) . pack('vvVvv', 0x0112, 3, 1, 6, 0) . pack('V', 0) . 'GPSDATA';
+    $tiff = 'II' . pack('v', 42) . pack('V', 8) . $ifd;
+    file_put_contents($dir . 'src.jpg', substr($jpeg, 0, 2) . "\xFF\xE1" . pack('n', strlen($tiff) + 8) . "Exif\0\0" . $tiff . substr($jpeg, 2));
+    $url = (new \Kris\Entity\MediaStore($dir, 'assets/uploads/', ['max_width' => 800]))->storeLocal($dir . 'src.jpg', 'foto.jpg');
+    $out = (string) file_get_contents($dir . basename($url));
+    [$w, $h] = getimagesize($dir . basename($url));
+    assertSame([800, 2400], [$w, $h], 'raddrizzata (1000x3000) e ridotta a 800 di larghezza');
+    assertTrue(!str_contains($out, 'GPSDATA') && !str_contains($out, "Exif\0\0"), 'metadati tolti');
+});
