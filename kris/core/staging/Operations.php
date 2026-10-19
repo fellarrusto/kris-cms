@@ -25,6 +25,9 @@ final class Operations
 {
     public const TYPES = ['plain', 'text', 'richtext', 'image', 'array'];
 
+    /** Dati del titolare in kris_legal che l'agente puo scrivere. Informative e banner restano al cliente. */
+    public const LEGAL_OWNER_FIELDS = ['owner_name', 'owner_address', 'owner_vat', 'privacy_email', 'updated_at'];
+
     // Gli stessi nomi che l'editor riserva ai propri controlli, piu quelli esposti dal motore dei template
     private const RESERVED_NAMES = ['id', 'language', 'group', 'path', 'save_entity', 'create_instance',
         'create_nested', 'delete_nested', 'delete_instance', 'reorder_root', 'reorder_nested',
@@ -131,7 +134,10 @@ final class Operations
             throw new StagingException("La lingua '{$lang}' non è attiva sul sito. Lingue attive: " . implode(', ', $ctx['languages']) . '.');
         }
 
-        $entity = &self::entity($state['data'], (string) $op['key'], (int) ($op['id'] ?? 0), $path, true);
+        // Fra le raccolte di Kris si scrivono solo la favicon e i dati del titolare (non i testi delle informative)
+        $key = (string) $op['key'];
+        $writable = $key === 'kris_site' || ($key === 'kris_legal' && in_array($def['name'], self::LEGAL_OWNER_FIELDS, true));
+        $entity = &self::entity($state['data'], $key, (int) ($op['id'] ?? 0), $path, $writable);
         $index = self::fieldIndex($entity, $def['name']);
         $current = $index === null ? null : $entity['data'][$index]['value'];
         $before = $lang === null ? $current : (is_array($current) ? ($current[$lang] ?? null) : null);
@@ -927,10 +933,10 @@ final class Operations
         return null;
     }
 
-    /** $setField: i valori di kris_site (la favicon) si possono cambiare, il resto delle raccolte kris_ no. */
-    private static function &entity(array &$data, string $key, int $id, array $path, bool $setField = false): array
+    /** $reservedWritable: un valore di una raccolta kris_ che si puo cambiare (vedi setField); il resto no. */
+    private static function &entity(array &$data, string $key, int $id, array $path, bool $reservedWritable = false): array
     {
-        if (!($setField && $key === 'kris_site' && !$path)) {
+        if (!($reservedWritable && !$path)) {
             self::assertUserCollection($key);
         }
         $found = null;
