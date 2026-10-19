@@ -160,6 +160,7 @@ function kris_auth_page(string $title, string $body): void // termina sempre con
     <html lang="it"><head><meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$title} - Kris CMS</title>
+    <script>try{var t=localStorage.getItem('kris-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                background:#f3f4f6; display:flex; align-items:center; justify-content:center;
@@ -183,6 +184,29 @@ function kris_auth_page(string $title, string $body): void // termina sempre con
         .alt { display:block; margin-top:16px; font-size:.85rem; color:#2563eb; }
         .brand { font-weight:800; color:#3b82f6; margin-bottom:10px; display:inline-block;
                  letter-spacing:-1px; font-size:1.2rem; }
+        /* Tema scuro: come nell'editor, segue il sistema salvo una scelta esplicita */
+        @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) { color-scheme:dark; }
+            :root:not([data-theme="light"]) body { background:#111513; }
+            :root:not([data-theme="light"]) .login-card { background:#191f1c; box-shadow:none; border:1px solid #2d3732; }
+            :root:not([data-theme="light"]) h2 { color:#e3eae6; }
+            :root:not([data-theme="light"]) label, :root:not([data-theme="light"]) .hint, :root:not([data-theme="light"]) .help { color:#9aa9a1; }
+            :root:not([data-theme="light"]) .help { border-color:#2d3732; }
+            :root:not([data-theme="light"]) input { background:#1e2521; color:#e3eae6; border-color:#3e4b45; }
+            :root:not([data-theme="light"]) .error { background:#3a1e21; color:#ff8f95; }
+            :root:not([data-theme="light"]) .ok { background:#1d3027; color:#8fdcbb; }
+            :root:not([data-theme="light"]) .alt, :root:not([data-theme="light"]) .brand { color:#7fb2ff; }
+        }
+        :root[data-theme="dark"] { color-scheme:dark; }
+        :root[data-theme="dark"] body { background:#111513; }
+        :root[data-theme="dark"] .login-card { background:#191f1c; box-shadow:none; border:1px solid #2d3732; }
+        :root[data-theme="dark"] h2 { color:#e3eae6; }
+        :root[data-theme="dark"] label, :root[data-theme="dark"] .hint, :root[data-theme="dark"] .help { color:#9aa9a1; }
+        :root[data-theme="dark"] .help { border-color:#2d3732; }
+        :root[data-theme="dark"] input { background:#1e2521; color:#e3eae6; border-color:#3e4b45; }
+        :root[data-theme="dark"] .error { background:#3a1e21; color:#ff8f95; }
+        :root[data-theme="dark"] .ok { background:#1d3027; color:#8fdcbb; }
+        :root[data-theme="dark"] .alt, :root[data-theme="dark"] .brand { color:#7fb2ff; }
     </style></head><body><div class="login-card">
         <div class="brand">KRIS CMS</div>
         {$body}

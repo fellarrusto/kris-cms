@@ -284,6 +284,8 @@ Mantieni autenticazione e CSRF per ogni mutazione. I salvataggi asincroni confer
 
 **Accesso e recupero della password.** Il setup chiede utente, email e password; in Impostazioni › Account si cambiano email e password e si invia un'email di prova. "Password dimenticata?" manda all'email un link monouso valido 30 minuti, costruito sull'indirizzo dell'editor salvato da un admin autenticato e mai sull'host della richiesta. L'invio usa `mail()` di PHP: su alcuni hosting non arriva. In quel caso, e quando l'email non è configurata, l'editor dice di contattare l'amministratore dell'hosting, che reimposta l'accesso eliminando `config/auth.php` (al successivo accesso riparte il setup, i contenuti restano).
 
+**Tema chiaro e scuro.** L'editor segue il tema del sistema; il pulsante «Tema» nella barra laterale lo forza su scuro o chiaro (`data-theme` su `<html>`, scelta salvata nel browser in `localStorage`, chiave `kris-theme`). I colori di `kris/editor/css/style.css` sono variabili in `:root`, ridefinite per il tema scuro: nelle regole nuove usa le variabili, non colori scritti a mano.
+
 L'editor permette di configurare anche gli schemi `of` e presenta l'impatto delle modifiche distruttive. I nomi dei campi devono continuare a corrispondere ai template. Non introdurre messaggi che promettono bozze, undo o gestione conflitti non implementati.
 
 ## Staging e anteprima

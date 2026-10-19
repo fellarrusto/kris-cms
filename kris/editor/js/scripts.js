@@ -389,9 +389,22 @@ function openFieldSection(target){const section=target?.closest?.('details.field
 document.addEventListener('click',event=>{const link=event.target.closest('a[href^="#field-"]');if(link)openFieldSection(document.getElementById(link.getAttribute('href').slice(1)));});
 document.addEventListener('invalid',event=>openFieldSection(event.target),true);
 if(location.hash.startsWith('#field-'))openFieldSection(document.getElementById(location.hash.slice(1)));
+// Tema dell'editor: automatico (segue il sistema), scuro o chiaro. La scelta resta nel browser.
+const THEME_LABELS={'':'automatico',dark:'scuro',light:'chiaro'};
+function currentTheme(){return document.documentElement.dataset.theme||'';}
+function isDarkTheme(){return currentTheme()==='dark'||(currentTheme()===''&&matchMedia('(prefers-color-scheme: dark)').matches);}
+function showTheme(){const b=q('[data-theme-toggle]');if(b)b.textContent='Tema: '+THEME_LABELS[currentTheme()];}
+q('[data-theme-toggle]')?.addEventListener('click',()=>{
+    const next={'':'dark',dark:'light',light:''}[currentTheme()];
+    if(next)document.documentElement.dataset.theme=next;else delete document.documentElement.dataset.theme;
+    try{next?localStorage.setItem('kris-theme',next):localStorage.removeItem('kris-theme');}catch(e){}
+    showTheme();
+    if(q('.richtext'))toast('Il testo formattato cambia tema al prossimo caricamento della pagina.');
+});
+showTheme();
 if(q('.richtext')){
     if(window.tinymce){
-        tinymce.init({selector:'.richtext',height:300,menubar:false,plugins:'image link lists code fullscreen',toolbar:'undo redo | blocks | bold italic | bullist numlist | link image | code fullscreen',file_picker_callback:openCmsMediaPicker,
+        tinymce.init({selector:'.richtext',height:300,skin:isDarkTheme()?'oxide-dark':'oxide',content_css:isDarkTheme()?'dark':'default',menubar:false,plugins:'image link lists code fullscreen',toolbar:'undo redo | blocks | bold italic | bullist numlist | link image | code fullscreen',file_picker_callback:openCmsMediaPicker,
             setup(editor){editor.on('change input undo redo',()=>{editor.save();markAsDirty();});}
         });
     }else{toast('Editor formattato non disponibile. Puoi comunque modificare e salvare il testo HTML.');}

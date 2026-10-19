@@ -14,5 +14,5 @@
         <a href="?action=settings" class="nav-item <?= $action === 'settings' ? 'active' : '' ?>" <?= $action === 'settings' ? 'aria-current="page"' : '' ?>><?= uiIcon('settings') ?>Impostazioni</a>
     </nav>
     <?php if ($userModels): ?><div class="collection-nav"><p class="nav-label">LE TUE RACCOLTE</p><?php foreach ($userModels as $name => $_): ?><a href="?action=list&amp;group=<?= urlencode($name) ?>" class="collection-link <?= $group === $name ? 'selected' : '' ?>"><span><?= h(editorLabel($name)) ?></span><small><?= $counts[$name] ?? 0 ?></small></a><?php endforeach; ?></div><?php endif; ?>
-    <div class="sidebar-bottom"><a href="?action=settings&amp;tab=versione" class="version-link" title="Versione di Kris installata">Kris <?= h($krisVersion) ?></a><a href="?logout=1" class="logout-link">Esci dall’editor <span aria-hidden="true">&middot;</span></a></div>
+    <div class="sidebar-bottom"><button type="button" class="theme-toggle" data-theme-toggle aria-live="polite">Tema: automatico</button><a href="?action=settings&amp;tab=versione" class="version-link" title="Versione di Kris installata">Kris <?= h($krisVersion) ?></a><a href="?logout=1" class="logout-link">Esci dall’editor <span aria-hidden="true">&middot;</span></a></div>
 </aside>

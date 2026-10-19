@@ -331,6 +331,7 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="kris-csrf" content="<?= htmlspecialchars(kris_csrf_token()) ?>">
     <title><?= h($sectionLabel) ?> · Kris CMS</title>
+    <script>/* Tema scelto nell'editor, prima del CSS: niente lampo chiaro */try{var t=localStorage.getItem('kris-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
     <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css<?= $assetVersion ?>">
 </head>
