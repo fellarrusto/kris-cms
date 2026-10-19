@@ -190,3 +190,23 @@ test('le pagine e la 404 mostrano la favicon scelta nell editor', function () {
     assertSame(404, $missing['status']);
     assertContains($tag, $missing['output']);
 });
+
+test('0005 aggiunge a kris_legal i testi delle categorie cookie, senza toccare quelli compilati', function () {
+    $legal = runLegalMigration(['k_data' => [], 'k_model' => [], 'cms_settings' => ['languages' => ['it', 'en']]]);
+    $m = require KRIS_ROOT . '/kris/migrations/0005_categorie_cookie.php';
+    $once = ($m['up'])($legal);
+    $names = array_column($once['k_model']['kris_legal'], 'name');
+    foreach (['banner_customize', 'banner_save', 'category_thirdparty', 'category_statistics_text', 'category_marketing'] as $field) {
+        assertTrue(in_array($field, $names, true), "manca {$field}");
+    }
+    $values = array_column($once['k_data'][0]['data'], 'value', 'name');
+    assertSame(['it' => 'Statistiche', 'en' => 'Statistics'], $values['category_statistics']);
+    foreach ($once['k_data'][0]['data'] as &$field) {
+        if ($field['name'] === 'banner_save') $field['value']['it'] = 'Conferma';
+    }
+    unset($field);
+    $twice = ($m['up'])($once);
+    assertSame(count($once['k_model']['kris_legal']), count($twice['k_model']['kris_legal']));
+    assertSame('Conferma', array_column($twice['k_data'][0]['data'], 'value', 'name')['banner_save']['it']);
+    assertSame(['k_data' => [], 'k_model' => []], ($m['up'])(['k_data' => [], 'k_model' => []]), 'senza kris_legal non fa nulla');
+});

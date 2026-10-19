@@ -217,7 +217,8 @@ Ogni sito Kris ha la raccolta riservata `kris_legal`, con un solo contenuto (ID 
 | `owner_name`, `owner_address`, `owner_vat`, `privacy_email` | `plain` | Titolare del trattamento: nome o ragione sociale, indirizzo, P.IVA o codice fiscale, email per le richieste |
 | `updated_at` | `plain` | Data di ultimo aggiornamento delle informative |
 | `privacy_policy`, `cookie_policy` | `richtext` | Testi delle informative |
-| `banner_title`, `banner_text`, `banner_accept`, `banner_reject`, `banner_more` | `text` | Testi del banner cookie |
+| `banner_title`, `banner_text`, `banner_accept`, `banner_reject`, `banner_more`, `banner_customize`, `banner_save` | `text` | Testi del banner cookie |
+| `category_thirdparty`, `category_statistics`, `category_marketing` e i loro `…_text` | `text` | Nome e descrizione delle categorie (migrazione `0005_categorie_cookie.php`) |
 
 Kris Agent può preparare i soli dati del titolare (vedi "Staging e anteprima"), presi da fonti date dal cliente; informative e banner no. Lo schema lo gestisce il framework con le migrazioni (`kris/migrations/0002_privacy_e_cookie.php`): non modificarlo a mano e non aggiungere campi a `kris_legal`. Per un dato legale che manca, proponi una migrazione del framework.
 
@@ -235,9 +236,10 @@ Kris Agent può preparare i soli dati del titolare (vedi "Staging e anteprima"),
 <script src="kris/core/scripts/consent.js" defer></script>
 ```
 
-- Gli script non tecnici si scrivono bloccati, `<script type="text/plain" data-kris-consent-script src="…"></script>`: `consent.js` li esegue solo dopo "Accetta". Non caricarli in nessun altro modo.
+- Gli script non tecnici si scrivono bloccati, con la loro categoria: `<script type="text/plain" data-kris-consent-script="statistics" src="…"></script>`. Categorie: `thirdparty` (mappe, video, social incorporati), `statistics` (per esempio Google Analytics), `marketing` (per esempio Pixel di Meta). `consent.js` li esegue solo con il consenso a quella categoria; senza categoria, solo con "Accetta tutto". Non caricarli in nessun altro modo.
+- Con più finalità il Garante chiede la scelta per categoria: il banner ha un secondo livello `[data-kris-consent-details]` (con `hidden`) aperto da `data-kris-consent="details"`, caselle `<input type="checkbox" data-kris-consent-category="statistics">` mai spuntate in partenza e un pulsante `data-kris-consent="save"`. Vedi `template/cookie-banner.html` della demo.
 - "Rifiuta" deve essere visibile e semplice quanto "Accetta"; niente caselle preselezionate. Un link `data-kris-consent="open"` nel footer riapre il banner.
-- La scelta resta nel cookie `kris_consent` (`accepted` o `rejected`) per 180 giorni. `window.KrisConsent.status()` la legge; l'evento `kris:consent` su `document` la notifica.
+- La scelta resta nel cookie `kris_consent` per 180 giorni: `accepted` (tutto), `rejected` (niente) o `c:statistics,marketing` (solo quelle categorie). `window.KrisConsent.status()` restituisce `accepted`, `rejected`, `custom` o `null`; `KrisConsent.allows('statistics')` dice se una categoria è accettata; l'evento `kris:consent` su `document` ha `detail.accepted` e `detail.categories`. Revocare una categoria ricarica la pagina.
 - Lo stile del banner è del tema, in `assets/css/`. Il banner deve restare usabile da tastiera e su mobile.
 - Kris non scrive i testi legali e non sa quali cookie usa il sito: segnala al cliente cosa compilare, senza inventare informative.
 
