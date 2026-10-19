@@ -45,7 +45,7 @@ final class Staging
 
     /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
     private const PAGE_OPS = ['register_page', 'unregister_page', 'remove_collection', 'rename_collection'];
-    private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection'];
+    private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection', 'set_collection_info', 'move_collection'];
 
     private string $root;
     private string $dir;
@@ -78,13 +78,14 @@ final class Staging
             'created_by' => (string) ($manifest['created_by'] ?? ''),
             'files' => is_array($manifest['files'] ?? null) ? $manifest['files'] : [],
             'uploads' => is_array($manifest['uploads'] ?? null) ? $manifest['uploads'] : [],
+            'fonts' => is_array($manifest['fonts'] ?? null) ? $manifest['fonts'] : [],
         ];
     }
 
     /** Vero se c'e qualcosa da pubblicare. */
     public function hasChanges(): bool
     {
-        return $this->changes() || $this->operations() || $this->manifest()['uploads'];
+        return $this->changes() || $this->operations() || $this->manifest()['uploads'] || $this->manifest()['fonts'];
     }
 
     // --- file del tema -------------------------------------------------------
@@ -281,7 +282,8 @@ final class Staging
             $list = self::append($list, $completed + ['by' => $by, 'at' => gmdate('c')]);
         }
         (new JsonStore($this->dir . '/operations.json'))->write($list);
-        $this->rebuild();
+        // Lo stato e gia quello dell'anteprima: niente secondo replay (sui siti grandi raddoppiava i tempi)
+        $this->writePreview($state, $list);
         return $done;
     }
 
@@ -345,12 +347,43 @@ final class Staging
     public function rebuild(): array
     {
         $ops = $this->operations();
+        if (!$ops) {
+            $this->writePreview([], []);
+            return [];
+        }
+        [$state, $report] = $this->replay($ops, false);
+        $this->writePreview($state, $ops);
+        return $report;
+    }
+
+    /**
+     * Le operazioni con il loro esito sui dati attuali del sito, senza
+     * riscrivere i file dell'anteprima: per chi deve solo leggere lo stato.
+     *
+     * @return list<array{op: array, description: string, conflict: ?string}>
+     */
+    public function report(): array
+    {
+        return $this->stateAndReport()[1];
+    }
+
+    /**
+     * Stato dell'anteprima ed esito delle operazioni con un solo replay.
+     *
+     * @return array{0: array, 1: list<array{op: array, description: string, conflict: ?string}>}
+     */
+    public function stateAndReport(): array
+    {
+        return $this->replay($this->operations(), false);
+    }
+
+    /** Scrive le copie dei contenuti lette dall'anteprima; senza operazioni le toglie. */
+    private function writePreview(array $state, array $ops): void
+    {
         foreach (self::STATE_FILES as $relative) {
             @unlink("{$this->dir}/{$relative}");
         }
-        if (!$ops) return [];
-
-        [$state, $report] = $this->replay($ops, false);
+        if (!$ops) return;
         self::writeJson("{$this->dir}/data/k_data.json", $state['data']);
         self::writeJson("{$this->dir}/data/k_model.json", $state['model']);
         if (self::touches($ops, self::PAGE_OPS)) {
@@ -360,7 +393,6 @@ final class Staging
         if (self::touches($ops, self::SETTINGS_OPS)) {
             self::writeJson("{$this->dir}/data/cms_settings.json", $state['settings']);
         }
-        return $report;
     }
 
     /**
@@ -483,7 +515,7 @@ final class Staging
     public function upload(string $path, string $originalName, string $by): string
     {
         try {
-            $url = (new MediaStore($this->dir . '/uploads/', 'assets/uploads/'))->storeLocal($path, $originalName);
+            $url = (new MediaStore($this->dir . '/uploads/', 'assets/uploads/', MediaStore::siteOptions($this->root)))->storeLocal($path, $originalName);
         } catch (StorageException $e) {
             throw new StagingException($e->getMessage());
         }
@@ -491,6 +523,47 @@ final class Staging
         $manifest['uploads'][basename($url)] = ['original' => $originalName, 'by' => $by, 'at' => gmdate('c')];
         $this->saveManifest($manifest);
         return $url;
+    }
+
+    /** Font del tema: solo WOFF2, fino a 2 MB. */
+    public const FONT_MAX_BYTES = 2 * 1024 * 1024;
+
+    /**
+     * Carica un font del tema (.woff2) nello staging; alla pubblicazione va in
+     * assets/fonts/. Il nome resta leggibile e stabile, perche lo richiama il
+     * CSS (@font-face): un font con lo stesso nome lo sostituisce. Restituisce
+     * il percorso pubblico, assets/fonts/<nome>.woff2.
+     *
+     * @throws StagingException
+     */
+    public function uploadFont(string $path, string $originalName, string $by): string
+    {
+        if (strtolower(pathinfo($originalName, PATHINFO_EXTENSION)) !== 'woff2') {
+            throw new StagingException('Come font si carica solo un file .woff2.');
+        }
+        $size = is_file($path) ? (int) filesize($path) : 0;
+        if ($size <= 0 || $size > self::FONT_MAX_BYTES) {
+            throw new StagingException('Il font è vuoto o supera i 2 MB.');
+        }
+        // Ogni file WOFF2 comincia con la firma "wOF2"
+        if ((string) file_get_contents($path, false, null, 0, 4) !== 'wOF2') {
+            throw new StagingException('Il file non è un font WOFF2.');
+        }
+        $base = strtolower((string) preg_replace('/[^a-zA-Z0-9_-]+/', '-', pathinfo($originalName, PATHINFO_FILENAME)));
+        $base = trim((string) preg_replace('/-+/', '-', $base), '-_');
+        if ($base === '' || preg_match('/^[a-z0-9]/', $base) !== 1) $base = 'font-' . $base;
+        $name = substr($base, 0, 80) . '.woff2';
+        $target = "{$this->dir}/assets/fonts/{$name}";
+        if (!is_dir(dirname($target)) && !@mkdir(dirname($target), 0775, true) && !is_dir(dirname($target))) {
+            throw new StagingException('Non riesco a creare la cartella dei font: controlla i permessi di scrittura.');
+        }
+        if (!@copy($path, $target)) {
+            throw new StagingException('Non riesco a salvare il font.');
+        }
+        $manifest = $this->startManifest($by);
+        $manifest['fonts'][$name] = ['original' => $originalName, 'by' => $by, 'at' => gmdate('c')];
+        $this->saveManifest($manifest);
+        return "assets/fonts/{$name}";
     }
 
     /** @return string[] i percorsi dei file caricati nello staging, piu recenti prima */
@@ -580,6 +653,7 @@ final class Staging
             }
         }
         $uploads = array_keys($this->manifest()['uploads']);
+        $fonts = array_values(array_filter(array_keys($this->manifest()['fonts']), fn($n) => is_file("{$this->dir}/assets/fonts/{$n}")));
         foreach ($uploads as $name) {
             if (is_file("{$this->root}/assets/uploads/{$name}")) {
                 throw new StagingException("Esiste già un file assets/uploads/{$name}: rinomina il caricamento e riprova.");
@@ -590,7 +664,7 @@ final class Staging
         $id = gmdate('Ymd-His') . '-' . bin2hex(random_bytes(3));
         $backup = "{$this->backups}/{$id}";
         $files = [];
-        foreach (array_merge(array_keys($writes), $deletes, array_map(fn($n) => "assets/uploads/{$n}", $uploads)) as $relative) {
+        foreach (array_merge(array_keys($writes), $deletes, array_map(fn($n) => "assets/uploads/{$n}", $uploads), array_map(fn($n) => "assets/fonts/{$n}", $fonts)) as $relative) {
             $target = "{$this->root}/{$relative}";
             $files[$relative] = ['existed' => is_file($target)];
             if (is_file($target)) self::writeFile("{$backup}/files/{$relative}", (string) file_get_contents($target));
@@ -605,6 +679,12 @@ final class Staging
             foreach ($deletes as $relative) {
                 if (is_file("{$this->root}/{$relative}") && !@unlink("{$this->root}/{$relative}")) {
                     throw new StagingException("Non riesco a eliminare {$relative}: controlla i permessi di scrittura.");
+                }
+            }
+            foreach ($fonts as $name) {
+                if (!is_dir("{$this->root}/assets/fonts")) @mkdir("{$this->root}/assets/fonts", 0775, true);
+                if (!@copy("{$this->dir}/assets/fonts/{$name}", "{$this->root}/assets/fonts/{$name}")) {
+                    throw new StagingException("Non riesco a copiare il font {$name} in assets/fonts/.");
                 }
             }
             foreach ($uploads as $name) {

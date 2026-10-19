@@ -4,13 +4,14 @@ $staging = new \Kris\Staging\Staging();
 $changes = $staging->changes();
 $operations = $staging->rebuild();
 $uploads = $staging->manifest()['uploads'];
+$fonts = $staging->manifest()['fonts'];
 $templateProblems = $staging->templateProblems();
 $manifest = $staging->manifest();
 $lastPromotion = $staging->lastPromotion();
 $fileConflicts = array_filter($changes, fn($c) => $c['conflict']);
 $opConflicts = array_filter($operations, fn($o) => $o['conflict'] !== null);
 $blocked = $fileConflicts || $opConflicts || $templateProblems;
-$hasChanges = $changes || $operations || $uploads;
+$hasChanges = $changes || $operations || $uploads || $fonts;
 $siteRoot = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
 $previewUrl = $siteRoot . '/index.php?kris_preview=1';
 $when = fn(string $iso): string => $iso === '' ? '' : date('d/m/Y H:i', strtotime($iso));
@@ -48,13 +49,18 @@ $codeApproved = $staging->codeApproved();
     <?php endif; ?>
 
     <?php if ($uploads): ?>
-    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('media') ?></span><div><h2>Immagini caricate</h2><p>Finiranno nella libreria media con la pubblicazione.</p></div></header>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('media') ?></span><div><h2>File caricati</h2><p>Finiranno nella libreria media con la pubblicazione.</p></div></header>
     <div class="card-body staging-uploads">
-        <?php foreach ($uploads as $name => $info): $isPdf = str_ends_with((string) $name, '.pdf'); ?>
-            <figure><?php if ($isPdf): ?><span class="file-placeholder">PDF</span><?php else: ?><img src="<?= h($siteRoot . '/index.php?kris_preview_asset=uploads/' . rawurlencode((string) $name)) ?>" alt="" loading="lazy"><?php endif; ?>
+        <?php foreach ($uploads as $name => $info): ?>
+            <figure><?= editorMediaThumb($siteRoot . '/' . \Kris\Staging\Preview::assetUrl('uploads/' . rawurlencode((string) $name)), (string) $name) ?>
             <figcaption><?= h((string) ($info['original'] ?? $name)) ?></figcaption></figure>
         <?php endforeach; ?>
     </div></section>
+    <?php endif; ?>
+
+    <?php if ($fonts): ?>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('content') ?></span><div><h2>Font del tema</h2><p>Finiranno in assets/fonts/ con la pubblicazione; un font con lo stesso nome viene sostituito.</p></div></header>
+    <div class="card-body"><ul class="staging-problems"><?php foreach ($fonts as $name => $info): ?><li><code>assets/fonts/<?= h((string) $name) ?></code> · <?= h((string) ($info['by'] ?? '')) ?></li><?php endforeach; ?></ul></div></section>
     <?php endif; ?>
 
     <?php if ($codeFiles): ?>

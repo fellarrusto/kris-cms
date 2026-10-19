@@ -25,6 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
     $error = $editorLock . ' Nulla è stato modificato.';
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isReservedStructuralPost($_POST)) {
     $error = 'I nomi che iniziano con kris_ sono riservati a Kris: queste raccolte hanno una struttura fissa. Nulla è stato modificato.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($singleError = singleCollectionViolation($_POST, $data)) !== null) {
+    $error = $singleError;
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $stagingMode && !isStagingNeutralPost($_POST)) {
     // Modifiche in attesa: i contenuti diventano operazioni dello staging, il sito non cambia
     require __DIR__ . '/staging_actions.php';
@@ -447,6 +449,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             } elseif (isset($_POST['staging_discard'])) {
                 $staging->discard();
                 $msg = 'Modifiche scartate. Il sito non è cambiato.';
+            }
+            if (!isset($_POST['staging_undo'])) {
+                // Non c'e piu niente in attesa: l'editor torna al sito pubblico,
+                // altrimenti resterebbe l'avviso «Stai preparando modifiche in attesa»
+                $_SESSION['kris_editing'] = 'live';
+                $stagingMode = false;
             } else {
                 $restored = $staging->undoLastPromotion();
                 $msg = 'Pubblicazione annullata: ' . count($restored) . ' file sono tornati com\'erano.';
@@ -480,6 +488,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         }
     }
     // Una raccolta intera nella sezione Posts: ogni contenuto e un post.
+    // Impostazioni dei caricamenti: prefisso dei nomi, larghezza massima, WebP
+    if (isset($_POST['save_upload_settings'])) {
+        $settings['uploads'] = [
+            'prefix' => \Kris\Entity\MediaStore::slug(mb_substr((string) ($_POST['upload_prefix'] ?? ''), 0, 60)),
+            'max_width' => max(0, min(10000, (int) ($_POST['upload_max_width'] ?? \Kris\Entity\MediaStore::DEFAULT_MAX_WIDTH))),
+            'webp' => isset($_POST['upload_webp']) && \Kris\Entity\MediaStore::canWriteWebp(),
+        ];
+        saveJson($settingsFile, $settings);
+        $msg = 'Impostazioni dei caricamenti salvate.';
+    }
+    // Nome visibile, descrizione, posizione e contenuto unico di una raccolta
+    if (isset($_POST['save_collection_info'])) {
+        $g = (string) ($_POST['group_name'] ?? '');
+        $count = count(array_filter($data, fn($e) => ($e['name'] ?? null) === $g));
+        if (!isset($models[$g]) || isReservedCollection($g)) {
+            $error = 'La raccolta non è disponibile.';
+        } else {
+            $info = is_array($settings['collections'] ?? null) ? $settings['collections'] : [];
+            $entry = [
+                'label' => mb_substr(trim((string) ($_POST['collection_label'] ?? '')), 0, 60),
+                'description' => mb_substr(trim((string) ($_POST['collection_description'] ?? '')), 0, 200),
+                'single' => isset($_POST['collection_single']) && $count <= 1,
+            ];
+            $entry = array_filter($entry, fn($v) => $v !== '' && $v !== false);
+            if ($entry) {
+                $info[$g] = $entry;
+            } else {
+                unset($info[$g]);
+            }
+            $settings['collections'] = $info;
+            // L'ordine si salva intero: tutte le raccolte del sito, con questa nella posizione scelta
+            $order = array_values(array_filter(array_keys(orderCollections($models)), fn($n) => !isReservedCollection($n) && $n !== $g));
+            array_splice($order, max(0, min((int) ($_POST['collection_position'] ?? 0), count($order))), 0, [$g]);
+            $settings['collection_order'] = $order;
+            saveJson($settingsFile, $settings);
+            editorCollectionInfo($settings);
+            $msg = 'Nome e posizione della raccolta salvati.';
+        }
+    }
     if (isset($_POST['toggle_post_collection'])) {
         $g = (string) ($_POST['group_name'] ?? '');
         if (!isset($models[$g]) || isReservedCollection($g)) {

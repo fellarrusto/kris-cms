@@ -185,7 +185,7 @@ test('l anteprima riscrive i fogli di stile modificati e i link interni', functi
 
     $out = Preview::decorate($html, $s, 'editor/index.php?action=staging', 'index.php?page=post');
 
-    assertContains('href="index.php?kris_preview_asset=css/style.css"', $out);
+    assertContains('href="index.php?kris_preview_asset=css/style.css&kris_preview=1"', $out);
     assertContains('href="assets/css/other.css"', $out);
     assertContains('href="index.php?page=post&amp;id=2&amp;kris_preview=1#c"', $out);
     assertContains('href="index.php?kris_preview=1"', $out);
@@ -328,7 +328,7 @@ test('l anteprima con codice nuovo mostra il popup e serve il JavaScript solo do
         assertContains('name="csrf" value="token-di-prova"', $page['output']);
         assertContains('required', $page['output'], 'serve spuntare l assunzione di responsabilita');
         assertContains('Anteprima senza script', $page['output']);
-        assertContains('src="index.php?kris_preview_asset=js/nuovo.js"', $page['output']);
+        assertContains('src="index.php?kris_preview_asset=js/nuovo.js&kris_preview=1"', $page['output']);
         assertSame(404, renderPage(['kris_preview_asset' => 'js/nuovo.js'], null, 'index.php', true)['status'], 'prima dell approvazione il file non si serve');
 
         $s->approveCode((string) $s->codeFingerprint(), 'admin');
@@ -338,4 +338,55 @@ test('l anteprima con codice nuovo mostra il popup e serve il JavaScript solo do
     } finally {
         $s->discard();
     }
+});
+
+test('nell anteprima il CSS in attesa tiene i suoi url() relativi', function () {
+    $root = stagingSite();
+    mkdir("{$root}/data/staging/assets/images", 0777, true);
+    file_put_contents("{$root}/data/staging/assets/images/nuova.svg", '<svg/>');
+    $css = Preview::rebaseCss('a{background:url("../images/marquee/x.svg")}b{background:url(../images/nuova.svg)}'
+        . 'c{background:url(data:image/png;base64,AA==)}d{src:url(\'../fonts/inter.woff2?v=2#x\')}@import "base.css";e{background:url(https://x.it/a.png)}', new Staging($root));
+    assertContains('url("assets/images/marquee/x.svg")', $css);
+    assertContains('url(index.php?kris_preview_asset=images/nuova.svg&kris_preview=1)', $css);
+    assertContains('url(data:image/png;base64,AA==)', $css);
+    assertContains("url('assets/fonts/inter.woff2?v=2#x')", $css);
+    assertContains('@import "assets/css/base.css"', $css);
+    assertContains('url(https://x.it/a.png)', $css);
+});
+
+test('le pagine chiedono CSS e JS del tema con la versione del file', function () {
+    $root = stagingSite();
+    mkdir("{$root}/assets/js", 0777, true);
+    file_put_contents("{$root}/assets/js/app.js", 'x()');
+    touch("{$root}/assets/css/style.css", 1700000000);
+    $html = '<link href="assets/css/style.css"><link href="assets/css/manca.css"><script src="./assets/js/app.js"></script>'
+        . '<link href="assets/css/style.css?x=1"><img src="assets/uploads/a.png">';
+    $out = \Kris\Template\Assets::version($html, $root);
+    assertContains('href="assets/css/style.css?v=' . base_convert('1700000000', 10, 36) . '"', $out);
+    assertContains('href="assets/css/manca.css"', $out);
+    assertContains('src="./assets/js/app.js?v=', $out);
+    assertContains('href="assets/css/style.css?x=1"', $out);
+    assertContains('src="assets/uploads/a.png"', $out);
+});
+
+test('un font WOFF2 si carica nello staging, si vede in anteprima e va in assets/fonts alla pubblicazione', function () {
+    $root = stagingSite();
+    $s = new Staging($root);
+    $font = tempnam(sys_get_temp_dir(), 'woff');
+    file_put_contents($font, 'wOF2' . str_repeat("\0", 60));
+    assertSame('assets/fonts/inter-regular.woff2', $s->uploadFont($font, 'Inter Regular.woff2', 'agente'));
+    assertTrue($s->hasChanges());
+
+    $fake = tempnam(sys_get_temp_dir(), 'woff');
+    file_put_contents($fake, '<?php echo 1;');
+    assertThrowsStaging(fn() => $s->uploadFont($fake, 'finto.woff2', 'agente'), 'WOFF2');
+    assertThrowsStaging(fn() => $s->uploadFont($font, 'inter.ttf', 'agente'), '.woff2');
+
+    $css = Preview::rebaseCss("@font-face{src:url('../fonts/inter-regular.woff2') format('woff2')}", $s);
+    assertContains("url('index.php?kris_preview_asset=fonts/inter-regular.woff2&kris_preview=1')", $css);
+
+    $s->promote('admin');
+    assertSame('wOF2', substr((string) file_get_contents("{$root}/assets/fonts/inter-regular.woff2"), 0, 4));
+    $s->undoLastPromotion();
+    assertTrue(!is_file("{$root}/assets/fonts/inter-regular.woff2"), 'l annullamento toglie il font nuovo');
 });

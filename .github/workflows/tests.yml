@@ -22,7 +22,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: dom, mbstring, json, sodium, zip, curl
+          extensions: dom, mbstring, json, sodium, zip, curl, gd, exif
           coverage: none
 
       - name: Sintassi PHP

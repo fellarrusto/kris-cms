@@ -76,7 +76,7 @@ test('le operazioni non valide vengono rifiutate prima di essere registrate', fu
     expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'page_title', 'lang' => 'it', 'value' => '<b>x</b>'], 'a'), 'niente HTML');
     expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'logo', 'lang' => 'it', 'value' => 'assets/uploads/manca.png'], 'a'), 'non esiste');
     expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'steps', 'value' => []], 'a'), 'elenco');
-    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'owner_name', 'value' => 'x'], 'a'), 'appartiene a Kris');
+    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'privacy_policy', 'lang' => 'it', 'value' => 'x'], 'a'), 'appartiene a Kris');
     expectStaging(fn() => $s->operate(['op' => 'boh'], 'a'), 'sconosciuta');
     assertSame([], $s->operations());
 });
@@ -351,4 +351,46 @@ test('move_field, set_posts, set_post_collection e unregister_page', function ()
     $s->operate(['op' => 'unregister_page', 'page' => $page], 'a');
     assertTrue(!in_array($page, $s->state()['pages'], true));
     expectStaging(fn() => $s->operate(['op' => 'unregister_page', 'page' => 'homepage'], 'a'), 'homepage');
+});
+
+
+// --- raccolte: nome visibile, descrizione, contenuto unico, ordine ----------
+
+test('set_collection_info e move_collection; il contenuto unico protegge la pagina', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'set_collection_info', 'collection' => 'navbar', 'label' => ' Elementi comuni ', 'description' => 'Menu e footer', 'single' => true], 'a');
+    $info = $s->state()['settings']['collections']['navbar'];
+    assertSame(['label' => 'Elementi comuni', 'description' => 'Menu e footer', 'single' => true], $info);
+    expectStaging(fn() => $s->operate(['op' => 'create_entity', 'key' => 'navbar'], 'a'), 'contenuto unico');
+    expectStaging(fn() => $s->operate(['op' => 'remove_entity', 'key' => 'navbar', 'id' => 0], 'a'), 'contenuto unico');
+
+    $s->operate(['op' => 'set_collection_info', 'collection' => 'navbar', 'description' => ''], 'a');
+    assertSame(['label' => 'Elementi comuni', 'single' => true], $s->state()['settings']['collections']['navbar']);
+
+    $s->operate(['op' => 'move_collection', 'collection' => 'navbar', 'to' => 0], 'a');
+    assertSame(['navbar', 'homepage'], $s->state()['settings']['collection_order']);
+
+    $s->operate(['op' => 'rename_collection', 'from' => 'navbar', 'to' => 'comuni'], 'a');
+    $settings = $s->state()['settings'];
+    assertSame('Elementi comuni', $settings['collections']['comuni']['label']);
+    assertSame(['comuni', 'homepage'], $settings['collection_order']);
+});
+
+test('il contenuto unico si rifiuta su una raccolta con piu contenuti', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'create_entity', 'key' => 'navbar'], 'a');
+    expectStaging(fn() => $s->operate(['op' => 'set_collection_info', 'collection' => 'navbar', 'single' => true], 'a'), 'contenuti');
+});
+
+test('l agente scrive i dati del titolare in kris_legal, non le informative ne il banner', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'owner_vat', 'value' => '01234567890'], 'a');
+    $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'owner_name', 'value' => 'Studio Rossi snc'], 'a');
+    assertSame('01234567890', siteValue("{$root}/data/staging/data/k_data.json", 'kris_legal', 0, 'owner_vat'));
+    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'cookie_policy', 'lang' => 'it', 'value' => 'x'], 'a'), 'appartiene a Kris');
+    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'banner_text', 'lang' => 'it', 'value' => 'x'], 'a'), 'appartiene a Kris');
+    expectStaging(fn() => $s->operate(['op' => 'add_field', 'collection' => 'kris_legal', 'field' => ['name' => 'extra', 'type' => 'text']], 'a'), 'appartiene a Kris');
 });

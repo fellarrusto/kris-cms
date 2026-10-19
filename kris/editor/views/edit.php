@@ -23,6 +23,12 @@ if ($inPosts) {
     $backLabel = 'Torna ai post';
 }
 $title = $entity ? editorTitle($entity) : 'Contenuto non disponibile';
+// Contenuto unico: si chiama come la raccolta (il primo campo di testo puo essere il meta title) e non ha una lista
+if ($entity && !$path && isSingleCollection($group)) {
+    $title = collectionLabel($group);
+    $backHref = '?action=dashboard';
+    $backLabel = 'Torna ai contenuti';
+}
 $firstLang = $activeLangs[0] ?? 'it';
 // L'elemento aperto si puo sospendere, tranne l'unico contenuto di una raccolta
 // (sarebbe un'intera pagina) e le raccolte del framework.
@@ -35,7 +41,7 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
     <?php elseif (isReservedCollection($group)): ?>
     <header class="page-heading"><div><h1>Privacy e cookie</h1><p>Dati del titolare, informative e testi del banner. Il sito li mostra dove i suoi template li usano.</p></div></header>
     <?php else: ?>
-    <header class="page-heading"><div><p class="eyebrow"><?= h(editorLabel($group)) ?><?= $path ? ' / ' . h(editorLabel($path[count($path)-2])) : '' ?></p><h1><?= h($title) ?></h1><?php if ($path): ?><p>Modifica questo elemento, poi torna al contenuto principale.</p><?php endif; ?></div><div class="actions"><?php if ($canHideCurrent): ?><?= visibilityToggle('vis_current', !isHiddenItem($entity), $title) ?><?= visibilityForm('vis_current', $group, $id, $pathRaw) ?><?php endif; ?><a class="btn btn-white" href="<?= h($backHref) ?>"><?= uiIcon('back') ?><?= h($backLabel) ?></a></div></header>
+    <header class="page-heading"><div><p class="eyebrow"><?= h(collectionLabel($group)) ?><?= $path ? ' / ' . h(editorLabel($path[count($path)-2])) : '' ?></p><h1><?= h($title) ?></h1><?php if ($path): ?><p>Modifica questo elemento, poi torna al contenuto principale.</p><?php endif; ?></div><div class="actions"><?php if ($canHideCurrent): ?><?= visibilityToggle('vis_current', !isHiddenItem($entity), $title) ?><?= visibilityForm('vis_current', $group, $id, $pathRaw) ?><?php endif; ?><a class="btn btn-white" href="<?= h($backHref) ?>"><?= uiIcon('back') ?><?= h($backLabel) ?></a></div></header>
     <?php endif; ?>
     <?php if ($path): ?><nav class="nested-breadcrumb" aria-label="Contenuto annidato"><a href="<?= h($editUrl) ?>"><?= h(editorTitle($rootEntity)) ?></a><?php for ($i=0; $i<count($path); $i+=2): ?><span aria-hidden="true">/</span><a href="<?= h($editUrl . '&path=' . urlencode(pathToString(array_slice($path,0,$i+2)))) ?>"><?= h(editorLabel($path[$i])) ?> #<?= (int) $path[$i+1] ?></a><?php endfor; ?></nav><?php endif; ?>
     <?php if ($entity === null): ?><div class="empty-state"><h2>Questo contenuto non è più disponibile.</h2><p>Potrebbe essere stato rimosso. Torna alla raccolta e scegli un altro elemento.</p><a class="btn btn-primary" href="?action=list&amp;group=<?= urlencode($group) ?>">Apri raccolta</a></div><?php else: ?>
@@ -69,7 +75,7 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
             <div class="localized-field" data-language-panel="<?= h($lang) ?>" <?= $i ? 'hidden' : '' ?>>
             <label class="sr-only" for="<?= $inputId ?>"><?= h($label . ' · ' . ($DEFAULT_LANGS[$lang] ?? $lang)) ?></label>
             <?php if ($t === 'image'): ?>
-                <div class="media-field"><div class="media-preview" data-preview-for="<?= $inputId ?>"><?php $src = editorMediaSource((string) $v); if ($src && strtolower(pathinfo((string) parse_url($src, PHP_URL_PATH), PATHINFO_EXTENSION)) !== 'pdf'): ?><img src="<?= h($src) ?>" alt="Anteprima di <?= h($label) ?>"><?php else: ?><?= uiIcon('media') ?><?php endif; ?></div><div class="media-field-controls"><input type="text" id="<?= $inputId ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" value="<?= h($v) ?>" placeholder="URL del file" data-media-input><button type="button" class="btn btn-white" data-pick-media="<?= $inputId ?>"><?= uiIcon('media') ?>Scegli dalla libreria</button></div></div>
+                <div class="media-field"><div class="media-preview" data-preview-for="<?= $inputId ?>"><?php $src = editorMediaSource((string) $v); if ($src !== ''): ?><?= editorMediaThumb($src, (string) $v, 'Anteprima di ' . $label) ?><?php else: ?><?= uiIcon('media') ?><?php endif; ?></div><div class="media-field-controls"><input type="text" id="<?= $inputId ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" value="<?= h($v) ?>" placeholder="URL del file" data-media-input><button type="button" class="btn btn-white" data-pick-media="<?= $inputId ?>"><?= uiIcon('media') ?>Scegli dalla libreria</button></div></div>
             <?php else: ?><textarea id="<?= $inputId ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" rows="<?= $t === 'richtext' ? 8 : 3 ?>" <?= $t === 'richtext' ? 'class="richtext"' : '' ?>><?= h($v) ?></textarea><?php endif; ?>
             </div>
         <?php endforeach; endif; ?>

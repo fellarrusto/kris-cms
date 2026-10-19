@@ -100,7 +100,7 @@
         {
             "name": "footer_logo_text",
             "type": "text",
-            "description": "Nome\/testo del logo nel footer"
+            "description": "Nome/testo del logo nel footer"
         },
         {
             "name": "footer_tagline",
@@ -327,6 +327,46 @@
             "name": "banner_more",
             "type": "text",
             "description": "Banner cookie: link all'informativa"
+        },
+        {
+            "name": "banner_customize",
+            "type": "text",
+            "description": "Banner cookie: pulsante per scegliere le categorie"
+        },
+        {
+            "name": "banner_save",
+            "type": "text",
+            "description": "Banner cookie: pulsante per salvare le scelte"
+        },
+        {
+            "name": "category_thirdparty",
+            "type": "text",
+            "description": "Categoria contenuti di terze parti: nome"
+        },
+        {
+            "name": "category_thirdparty_text",
+            "type": "text",
+            "description": "Categoria contenuti di terze parti: descrizione (mappe, video, social incorporati)"
+        },
+        {
+            "name": "category_statistics",
+            "type": "text",
+            "description": "Categoria statistiche: nome"
+        },
+        {
+            "name": "category_statistics_text",
+            "type": "text",
+            "description": "Categoria statistiche: descrizione (per esempio Google Analytics)"
+        },
+        {
+            "name": "category_marketing",
+            "type": "text",
+            "description": "Categoria marketing: nome"
+        },
+        {
+            "name": "category_marketing_text",
+            "type": "text",
+            "description": "Categoria marketing: descrizione (per esempio Pixel di Meta)"
         }
     ]
 }

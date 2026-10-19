@@ -25,6 +25,9 @@ final class Operations
 {
     public const TYPES = ['plain', 'text', 'richtext', 'image', 'array'];
 
+    /** Dati del titolare in kris_legal che l'agente puo scrivere. Informative e banner restano al cliente. */
+    public const LEGAL_OWNER_FIELDS = ['owner_name', 'owner_address', 'owner_vat', 'privacy_email', 'updated_at'];
+
     // Gli stessi nomi che l'editor riserva ai propri controlli, piu quelli esposti dal motore dei template
     private const RESERVED_NAMES = ['id', 'language', 'group', 'path', 'save_entity', 'create_instance',
         'create_nested', 'delete_nested', 'delete_instance', 'reorder_root', 'reorder_nested',
@@ -52,6 +55,7 @@ final class Operations
             'remove_collection' => 'removeCollection', 'rename_collection' => 'renameCollection',
             'change_type' => 'changeType', 'move_field' => 'moveField', 'set_posts' => 'setPosts',
             'set_post_collection' => 'setPostCollection', 'unregister_page' => 'unregisterPage',
+            'set_collection_info' => 'setCollectionInfo', 'move_collection' => 'moveCollection',
         ][$type] ?? null;
         if ($method === null) {
             throw new StagingException("Operazione sconosciuta: '{$type}'.");
@@ -86,6 +90,8 @@ final class Operations
             'set_posts' => (!empty($op['posts']) ? 'Mostra in Posts' : 'Toglie da Posts') . " l'elenco «{$op['name']}» di «{$op['collection']}»",
             'set_post_collection' => (!empty($op['enabled']) ? 'Mostra in Posts' : 'Toglie da Posts') . " la raccolta «{$op['collection']}»",
             'unregister_page' => "Toglie la pagina pubblica «{$op['page']}», anche dalla sitemap",
+            'set_collection_info' => "Nome, descrizione o contenuto unico della raccolta «{$op['collection']}»",
+            'move_collection' => "Sposta la raccolta «{$op['collection']}» in posizione " . ((int) ($op['to'] ?? 0) + 1),
             default => (string) ($op['op'] ?? 'operazione'),
         };
     }
@@ -128,7 +134,10 @@ final class Operations
             throw new StagingException("La lingua '{$lang}' non è attiva sul sito. Lingue attive: " . implode(', ', $ctx['languages']) . '.');
         }
 
-        $entity = &self::entity($state['data'], (string) $op['key'], (int) ($op['id'] ?? 0), $path, true);
+        // Fra le raccolte di Kris si scrivono solo la favicon e i dati del titolare (non i testi delle informative)
+        $key = (string) $op['key'];
+        $writable = $key === 'kris_site' || ($key === 'kris_legal' && in_array($def['name'], self::LEGAL_OWNER_FIELDS, true));
+        $entity = &self::entity($state['data'], $key, (int) ($op['id'] ?? 0), $path, $writable);
         $index = self::fieldIndex($entity, $def['name']);
         $current = $index === null ? null : $entity['data'][$index]['value'];
         $before = $lang === null ? $current : (is_array($current) ? ($current[$lang] ?? null) : null);
@@ -229,6 +238,9 @@ final class Operations
             throw new StagingException("La raccolta «{$key}» non esiste.");
         }
         $ids = array_map(fn($e) => (int) $e['id'], array_filter($state['data'], fn($e) => ($e['name'] ?? null) === $key));
+        if ($ids && !empty($state['settings']['collections'][$key]['single']) && !($ctx['replay'] && $ctx['force'])) {
+            throw new StagingException("«{$key}» ha un contenuto unico: non ne riceve un secondo.");
+        }
         $newId = $ids ? max($ids) + 1 : 0;
         if ($ctx['replay'] && isset($op['assigned_id'])) {
             if (in_array((int) $op['assigned_id'], $ids, true)) {
@@ -246,6 +258,10 @@ final class Operations
     {
         $key = (string) ($op['key'] ?? '');
         self::assertUserCollection($key);
+        if (!empty($state['settings']['collections'][$key]['single']) && !($ctx['replay'] && $ctx['force'])) {
+            // Eliminarlo svuoterebbe la pagina
+            throw new StagingException("«{$key}» ha un contenuto unico: non si elimina.");
+        }
         $pos = self::rootPosition($state['data'], $key, (int) ($op['id'] ?? -1));
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
@@ -417,6 +433,10 @@ final class Operations
         unset($state['model'][$name]);
         $state['data'] = array_values(array_filter($state['data'], fn($e) => ($e['name'] ?? null) !== $name));
         $state['settings']['post_collections'] = self::withoutValue($state['settings']['post_collections'] ?? [], $name);
+        unset($state['settings']['collections'][$name]);
+        if (isset($state['settings']['collection_order'])) {
+            $state['settings']['collection_order'] = self::withoutValue($state['settings']['collection_order'], $name);
+        }
         if (is_array($state['seo']['sitemap'] ?? null)) {
             $state['seo']['sitemap'] = array_values(array_filter($state['seo']['sitemap'], fn($r) => !is_array($r) || ($r['key'] ?? 'homepage') !== $name));
         }
@@ -445,6 +465,13 @@ final class Operations
         $posts = $state['settings']['post_collections'] ?? [];
         if (is_array($posts) && in_array($from, $posts, true)) {
             $state['settings']['post_collections'] = array_values(array_map(fn($n) => $n === $from ? $to : $n, $posts));
+        }
+        if (isset($state['settings']['collections'][$from])) {
+            $state['settings']['collections'][$to] = $state['settings']['collections'][$from];
+            unset($state['settings']['collections'][$from]);
+        }
+        if (is_array($state['settings']['collection_order'] ?? null)) {
+            $state['settings']['collection_order'] = array_values(array_map(fn($n) => $n === $from ? $to : $n, $state['settings']['collection_order']));
         }
         if (is_array($state['seo']['sitemap'] ?? null)) {
             foreach ($state['seo']['sitemap'] as &$rule) {
@@ -612,6 +639,58 @@ final class Operations
         $names = self::withoutValue($state['settings']['post_collections'] ?? [], $collection);
         if (!empty($op['enabled'])) $names[] = $collection;
         $state['settings']['post_collections'] = $names;
+        return [$state, $op];
+    }
+
+    /**
+     * Nome visibile, descrizione e contenuto unico di una raccolta
+     * (cms_settings.json, collections). Solo le chiavi indicate; "" toglie
+     * nome o descrizione. Contenuto unico solo con al massimo un contenuto.
+     */
+    private static function setCollectionInfo(array $state, array $op, array $ctx): array
+    {
+        $collection = (string) ($op['collection'] ?? '');
+        self::assertUserCollection($collection);
+        if (!isset($state['model'][$collection])) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "la raccolta «{$collection}» non esiste"));
+        }
+        $entry = is_array($state['settings']['collections'][$collection] ?? null) ? $state['settings']['collections'][$collection] : [];
+        foreach (['label' => 60, 'description' => 200] as $key => $max) {
+            if (!array_key_exists($key, $op)) continue;
+            $text = mb_substr(trim((string) $op[$key]), 0, $max);
+            if ($text === '') unset($entry[$key]); else $entry[$key] = $text;
+        }
+        if (array_key_exists('single', $op)) {
+            $count = count(array_filter($state['data'], fn($e) => ($e['name'] ?? null) === $collection));
+            if (!empty($op['single']) && $count > 1) {
+                throw new StagingException("«{$collection}» ha {$count} contenuti: il contenuto unico vale solo con uno.");
+            }
+            if (!empty($op['single'])) $entry['single'] = true; else unset($entry['single']);
+        }
+        if ($entry) {
+            $state['settings']['collections'][$collection] = $entry;
+        } else {
+            unset($state['settings']['collections'][$collection]);
+        }
+        return [$state, $op];
+    }
+
+    /** Posizione di una raccolta nell'editor (cms_settings.json, collection_order). */
+    private static function moveCollection(array $state, array $op, array $ctx): array
+    {
+        $collection = (string) ($op['collection'] ?? '');
+        self::assertUserCollection($collection);
+        if (!isset($state['model'][$collection])) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "la raccolta «{$collection}» non esiste"));
+        }
+        $current = is_array($state['settings']['collection_order'] ?? null) ? $state['settings']['collection_order'] : [];
+        $names = array_values(array_filter(array_keys($state['model']), fn($n) => !str_starts_with((string) $n, 'kris_')));
+        $order = array_values(array_unique(array_merge(array_values(array_intersect($current, $names)), $names)));
+        $order = self::withoutValue($order, $collection);
+        array_splice($order, max(0, min((int) ($op['to'] ?? 0), count($order))), 0, [$collection]);
+        $state['settings']['collection_order'] = $order;
         return [$state, $op];
     }
 
@@ -854,10 +933,10 @@ final class Operations
         return null;
     }
 
-    /** $setField: i valori di kris_site (la favicon) si possono cambiare, il resto delle raccolte kris_ no. */
-    private static function &entity(array &$data, string $key, int $id, array $path, bool $setField = false): array
+    /** $reservedWritable: un valore di una raccolta kris_ che si puo cambiare (vedi setField); il resto no. */
+    private static function &entity(array &$data, string $key, int $id, array $path, bool $reservedWritable = false): array
     {
-        if (!($setField && $key === 'kris_site' && !$path)) {
+        if (!($reservedWritable && !$path)) {
             self::assertUserCollection($key);
         }
         $found = null;

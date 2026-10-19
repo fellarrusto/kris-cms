@@ -60,3 +60,21 @@ test('in Posts le raccolte scelte, poi gli elenchi; solo raccolte del sito esist
     assertSame(['homepage', 0, 'posts'], [$sources[1]['group'], $sources[1]['id'], $sources[1]['field']]);
     assertSame([], editorPostCollections([], $models));
 });
+
+
+test('nome visibile, descrizione, contenuto unico e ordine delle raccolte nell editor', function () {
+    editorCollectionInfo(['collections' => ['site' => ['label' => 'Elementi comuni', 'description' => 'Menu', 'single' => true]],
+        'collection_order' => ['site', 'homepage', 'manca']]);
+    assertSame('Elementi comuni', collectionLabel('site'));
+    assertSame('Logopedia', collectionLabel('logopedia'));
+    assertSame('Menu', collectionDescription('site'));
+    assertTrue(isSingleCollection('site'));
+    assertTrue(!isSingleCollection('homepage'));
+    assertSame(['site', 'homepage', 'logopedia'], array_keys(orderCollections(['homepage' => [], 'logopedia' => [], 'site' => []])));
+    $data = [['name' => 'site', 'id' => 0, 'data' => []]];
+    assertContains('contenuto unico', (string) singleCollectionViolation(['delete_instance' => 1, 'group' => 'site'], $data));
+    assertContains('già', (string) singleCollectionViolation(['create_instance' => 1, 'group' => 'site'], $data));
+    assertSame(null, singleCollectionViolation(['create_instance' => 1, 'group' => 'site'], []));
+    assertSame(null, singleCollectionViolation(['delete_instance' => 1, 'group' => 'homepage'], $data));
+    editorCollectionInfo([]);
+});

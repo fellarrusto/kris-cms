@@ -57,7 +57,7 @@ function isReservedCollection(mixed $name): bool
  */
 function isReservedStructuralPost(array $post): bool
 {
-    $structural = ['create_collection', 'save_structure', 'delete_collection', 'create_instance', 'delete_instance', 'reorder_root'];
+    $structural = ['create_collection', 'save_structure', 'delete_collection', 'save_collection_info', 'create_instance', 'delete_instance', 'reorder_root'];
     if (!array_intersect($structural, array_keys($post))) {
         return false;
     }
@@ -75,7 +75,7 @@ function isStagingNeutralPost(array $post): bool
 {
     $neutral = ['save_account_email', 'account_email_later', 'send_test_email', 'change_password',
         'agent_pair', 'agent_toggle', 'agent_unpair', 'agent_grant', 'agent_reset',
-        'staging_promote', 'staging_discard', 'staging_undo', 'approve_code'];
+        'staging_promote', 'staging_discard', 'staging_undo', 'approve_code', 'save_upload_settings'];
     return (bool) array_intersect($neutral, array_keys($post));
 }
 
@@ -98,6 +98,70 @@ function editorLabel(string $name): string
     return ucfirst(str_replace('_', ' ', $name));
 }
 
+// --- RACCOLTE: NOME, DESCRIZIONE, CONTENUTO UNICO, ORDINE ---
+// In cms_settings.json, separati dal nome tecnico:
+//   "collections": {"site": {"label": "Elementi comuni", "description": "...", "single": true}}
+//   "collection_order": ["homepage", "logopedia", "site"]
+
+/** Le informazioni delle raccolte; con $settings le registra (index.php, una volta). */
+function editorCollectionInfo(?array $settings = null): array
+{
+    static $info = [];
+    if ($settings !== null) {
+        $info = [
+            'collections' => is_array($settings['collections'] ?? null) ? $settings['collections'] : [],
+            'order' => is_array($settings['collection_order'] ?? null) ? array_values(array_filter($settings['collection_order'], 'is_string')) : [],
+        ];
+    }
+    return $info + ['collections' => [], 'order' => []];
+}
+
+/** Nome visibile della raccolta, o quello ricavato dal nome tecnico. */
+function collectionLabel(string $name): string
+{
+    $label = editorCollectionInfo()['collections'][$name]['label'] ?? '';
+    return is_string($label) && trim($label) !== '' ? trim($label) : editorLabel($name);
+}
+
+function collectionDescription(string $name): string
+{
+    $description = editorCollectionInfo()['collections'][$name]['description'] ?? '';
+    return is_string($description) ? trim($description) : '';
+}
+
+/** Raccolta con un solo contenuto (una pagina, gli elementi comuni): si apre direttamente la modifica. */
+function isSingleCollection(string $name): bool
+{
+    return (editorCollectionInfo()['collections'][$name]['single'] ?? false) === true;
+}
+
+/**
+ * Una raccolta a contenuto unico non riceve un secondo contenuto e non perde
+ * il suo: eliminarlo svuoterebbe la pagina. null se la richiesta va bene.
+ */
+function singleCollectionViolation(array $post, array $data): ?string
+{
+    $group = is_string($post['group'] ?? null) ? $post['group'] : '';
+    if ($group === '' || !isSingleCollection($group)) return null;
+    if (isset($post['delete_instance'])) {
+        return '«' . collectionLabel($group) . '» ha un contenuto unico: non si elimina. Nulla è stato modificato.';
+    }
+    if (isset($post['create_instance']) && array_filter($data, fn($e) => ($e['name'] ?? null) === $group)) {
+        return '«' . collectionLabel($group) . '» ha già il suo contenuto unico. Nulla è stato modificato.';
+    }
+    return null;
+}
+
+/** Le raccolte nell'ordine scelto; quelle non ordinate seguono, nell'ordine dello schema. */
+function orderCollections(array $models): array
+{
+    $out = [];
+    foreach (editorCollectionInfo()['order'] as $name) {
+        if (array_key_exists($name, $models)) $out[$name] = $models[$name];
+    }
+    return $out + $models;
+}
+
 function editorTitle(array $entity): string
 {
     foreach (['title', 'page_title', 'name', 'meta_title', null] as $preferred) {
@@ -115,6 +179,23 @@ function editorTitle(array $entity): string
     return 'Contenuto #' . ($entity['id'] ?? '');
 }
 
+/** Che cosa e un file della libreria, dall'estensione: image, video o pdf. */
+function editorMediaKind(string $name): string
+{
+    $ext = strtolower(pathinfo((string) parse_url($name, PHP_URL_PATH), PATHINFO_EXTENSION));
+    return $ext === 'pdf' ? 'pdf' : (in_array($ext, \Kris\Entity\MediaStore::VIDEO_EXTENSIONS, true) ? 'video' : 'image');
+}
+
+/** Anteprima di un file della libreria: immagine, video senza audio o segnaposto del PDF. */
+function editorMediaThumb(string $src, string $name, string $alt = ''): string
+{
+    return match (editorMediaKind($name)) {
+        'pdf' => '<span class="file-placeholder">PDF</span>',
+        'video' => '<video src="' . h($src) . '" muted playsinline preload="metadata" aria-label="' . h($alt !== '' ? $alt : $name) . '"></video>',
+        default => '<img src="' . h($src) . '" alt="' . h($alt) . '" loading="lazy">',
+    };
+}
+
 function editorMediaFiles(string $directory): array
 {
     $extensions = [...\Kris\Entity\MediaStore::allowedExtensions(), 'svg'];
@@ -130,7 +211,7 @@ function editorMediaSource(string $url): string
         return preg_match('~^https?://~i', $url) ? $url : '';
     }
     if (preg_match('~^assets/uploads/([A-Za-z0-9._-]+)$~', $url, $m) && isset(editorStagedUploads()[$m[1]])) {
-        return '../index.php?kris_preview_asset=uploads/' . rawurlencode($m[1]);
+        return '../' . \Kris\Staging\Preview::assetUrl('uploads/' . rawurlencode($m[1]));
     }
     return str_starts_with($url, '/') || str_starts_with($url, '../') ? $url : '../' . $url;
 }
@@ -324,7 +405,7 @@ function editorPostSources(array $models, array $data, array $postCollections = 
     $sources = [];
     foreach ($postCollections as $group) {
         $sources[] = [
-            'group' => $group, 'id' => -1, 'field' => '', 'label' => editorLabel($group), 'owner' => 'Raccolta',
+            'group' => $group, 'id' => -1, 'field' => '', 'label' => collectionLabel($group), 'owner' => 'Raccolta',
             'items' => array_values(array_filter($data, fn($e) => ($e['name'] ?? null) === $group)),
         ];
     }

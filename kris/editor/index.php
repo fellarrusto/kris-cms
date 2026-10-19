@@ -249,13 +249,18 @@ try {
         $data = $stagingState['data'];
         $models = $stagingState['model'];
         // Le raccolte in Posts possono cambiare in attesa; le lingue si cambiano solo sul sito pubblico
-        if (array_key_exists('post_collections', $stagingState['settings'])) $settings['post_collections'] = $stagingState['settings']['post_collections'];
-        editorStagedUploads(array_map('basename', $stagingNav->uploadFiles()));
+        // Raccolte in Posts, nomi, descrizioni e ordine possono cambiare in attesa; le lingue solo sul sito pubblico
+        foreach (['post_collections', 'collections', 'collection_order'] as $key) {
+            if (array_key_exists($key, $stagingState['settings'])) $settings[$key] = $stagingState['settings'][$key];
+        }
     }
+    // Le immagini caricate e non ancora pubblicate si vedono attraverso l'anteprima, in entrambe le modalita
+    editorStagedUploads(array_map('basename', array_filter($stagingNav->uploadFiles(), fn($f) => !is_file($uploadDir . basename($f)))));
 } catch (StorageException $e) {
     renderStorageError($e->getMessage());
 }
 $activeLangs = $settings['languages'];
+editorCollectionInfo($settings);
 
 $action = $_GET['action'] ?? 'dashboard';
 $group = $_GET['group'] ?? null;
@@ -272,7 +277,9 @@ $BASE = $_SERVER['SCRIPT_NAME'];
 require __DIR__ . '/actions.php';
 // View Data
 // Le raccolte del framework non compaiono tra quelle del sito.
-$userModels = array_filter($models, fn($name) => !isReservedCollection($name), ARRAY_FILTER_USE_KEY);
+// Le azioni possono aver cambiato nomi e ordine delle raccolte
+editorCollectionInfo($settings);
+$userModels = orderCollections(array_filter($models, fn($name) => !isReservedCollection($name), ARRAY_FILTER_USE_KEY));
 $counts = [];
 foreach ($models as $k => $v)
     $counts[$k] = 0;
@@ -297,6 +304,17 @@ if (in_array($action, ['edit', 'list', 'structure'], true) && (!is_string($group
     $action = 'dashboard';
     $error = 'La raccolta non è disponibile. Scegli uno dei contenuti qui sotto.';
 }
+// Una raccolta a contenuto unico non ha una lista: si apre direttamente il suo contenuto
+if ($action === 'list' && is_string($group) && isSingleCollection($group)) {
+    foreach ($data as $entity) {
+        if (($entity['name'] ?? null) === $group) {
+            $action = 'edit';
+            $_GET['id'] = (string) (int) $entity['id'];
+            $_GET['path'] = '';
+            break;
+        }
+    }
+}
 // Le raccolte del framework hanno un solo contenuto e uno schema fisso.
 if (isReservedCollection($group) && in_array($action, ['list', 'structure', 'structure_impact'], true)) {
     $action = 'edit';
@@ -311,7 +329,7 @@ if ($stagingMode && in_array($action, ['structure', 'structure_impact'], true)) 
 $inLegal = $action === 'edit' && $group === 'kris_legal';
 $inSite = $action === 'edit' && $group === 'kris_site';
 // La voce compare quando ci sono modifiche da pubblicare o una pubblicazione da poter annullare.
-$stagingCount = count($stagingNav->changes()) + count($stagingNav->operations()) + count($stagingNav->manifest()['uploads']);
+$stagingCount = count($stagingNav->changes()) + count($stagingNav->operations()) + count($stagingNav->manifest()['uploads']) + count($stagingNav->manifest()['fonts']);
 $stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
 $sectionLabel = match ($action) {
     'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts', 'staging' => 'Modifiche in attesa',
@@ -345,7 +363,7 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
 
     <div class="editor-workspace">
     <header class="topbar">
-        <nav class="breadcrumbs" aria-label="Percorso"><a href="?action=dashboard">Il tuo sito</a><span aria-hidden="true">/</span><span><?= h($sectionLabel) ?></span><?php if ($group && !isReservedCollection($group)): ?><span aria-hidden="true">/</span><strong><?= h(editorLabel($group)) ?></strong><?php endif; ?></nav>
+        <nav class="breadcrumbs" aria-label="Percorso"><a href="?action=dashboard">Il tuo sito</a><span aria-hidden="true">/</span><span><?= h($sectionLabel) ?></span><?php if ($group && !isReservedCollection($group)): ?><span aria-hidden="true">/</span><strong><?= h(collectionLabel($group)) ?></strong><?php endif; ?></nav>
         <div class="topbar-actions">
             <?php $returnTo = str_starts_with((string) ($_SERVER['QUERY_STRING'] ?? ''), 'action=') ? '?' . $_SERVER['QUERY_STRING'] : '?action=dashboard'; ?>
             <form method="POST" class="mode-switch" aria-label="Dove salvano le modifiche">

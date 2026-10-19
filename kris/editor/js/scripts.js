@@ -127,7 +127,7 @@ function submitNative(form, submitter) {
 const stagedUploads = new Set(JSON.parse(document.body.dataset.stagedUploads || '[]'));
 function safeMediaSource(url) {
     const staged = /^assets\/uploads\/([A-Za-z0-9._-]+)$/.exec(url);
-    if (staged && stagedUploads.has(staged[1])) return '../index.php?kris_preview_asset=uploads/' + encodeURIComponent(staged[1]);
+    if (staged && stagedUploads.has(staged[1])) return '../index.php?kris_preview_asset=uploads/' + encodeURIComponent(staged[1]) + '&kris_preview=1';
     if (/^https?:\/\//i.test(url)) return url;
     if (/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(url)) return '';
     return url.startsWith('/') || url.startsWith('../') ? url : '../' + url;
@@ -136,7 +136,8 @@ function refreshPreview(input) {
     const holder = qa('[data-preview-for]').find(el => el.dataset.previewFor === input.id);
     if (!holder) return;
     holder.replaceChildren(); const source = safeMediaSource(input.value);
-    if (source && !/\.pdf(?:[?#]|$)/i.test(source)) { const img = new Image(); img.src = source; img.alt = 'Anteprima del file selezionato'; holder.append(img); }
+    if (source && /\.(?:mp4|webm)(?:[?#&]|$)/i.test(input.value)) { const video = document.createElement('video'); video.src = source; video.muted = true; video.playsInline = true; video.preload = 'metadata'; video.setAttribute('aria-label','Anteprima del video selezionato'); holder.append(video); }
+    else if (source && !/\.pdf(?:[?#]|$)/i.test(source)) { const img = new Image(); img.src = source; img.alt = 'Anteprima del file selezionato'; holder.append(img); }
     else holder.textContent = source ? 'PDF' : 'Nessun file';
 }
 function pickMedia(id) {
@@ -165,6 +166,7 @@ function appendMedia(url, file) {
     const choice = document.createElement('button'); choice.type = 'button'; choice.className = 'media-choice'; choice.dataset.mediaUrl = url; choice.dataset.search = file.name; choice.setAttribute('aria-pressed','false');
     const art = document.createElement('span'); art.className = 'media-art';
     if (/\.pdf$/i.test(url)) { const label=document.createElement('span'); label.className='file-placeholder';label.textContent='PDF';art.append(label); }
+    else if (/\.(?:mp4|webm)$/i.test(url)) { const video=document.createElement('video');video.src=safeMediaSource(url);video.muted=true;video.playsInline=true;video.preload='metadata';art.append(video); }
     else { const img=new Image();img.src=safeMediaSource(url);img.alt='';art.append(img); }
     const caption=document.createElement('span');caption.className='media-caption';caption.textContent=file.name;choice.append(art,caption);q('#mediaGrid').prepend(choice);
     const grid=q('#libraryGrid');

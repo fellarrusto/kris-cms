@@ -2,8 +2,15 @@
   <div class="cookie-banner-text">
     <h2 id="cookie-banner-title">{{banner_title}}</h2>
     <p id="cookie-banner-text">{{banner_text}} <a href="index.php?page=cookie&amp;key=kris_legal&amp;ln={{language}}">{{banner_more}}</a></p>
+    <div class="cookie-banner-details" id="cookie-banner-details" data-kris-consent-details hidden>
+      <label class="cookie-category"><input type="checkbox" data-kris-consent-category="thirdparty"><span><strong>{{category_thirdparty}}</strong> {{category_thirdparty_text}}</span></label>
+      <label class="cookie-category"><input type="checkbox" data-kris-consent-category="statistics"><span><strong>{{category_statistics}}</strong> {{category_statistics_text}}</span></label>
+      <label class="cookie-category"><input type="checkbox" data-kris-consent-category="marketing"><span><strong>{{category_marketing}}</strong> {{category_marketing_text}}</span></label>
+      <button type="button" class="btn btn-secondary" data-kris-consent="save">{{banner_save}}</button>
+    </div>
   </div>
   <div class="cookie-banner-actions">
+    <button type="button" class="btn btn-link" data-kris-consent="details" aria-expanded="false" aria-controls="cookie-banner-details">{{banner_customize}}</button>
     <button type="button" class="btn btn-secondary" data-kris-consent="reject">{{banner_reject}}</button>
     <button type="button" class="btn btn-primary" data-kris-consent="accept">{{banner_accept}}</button>
   </div>

@@ -39,6 +39,24 @@ class DomHelper {
         return $fragment;
     }
 
+    /**
+     * Il documento come HTML in UTF-8. saveHTML() sul documento intero
+     * trasforma ogni carattere non ASCII in un'entita, anche dentro <script>
+     * e <style>, dove le entita non vengono decodificate: uno spazio non
+     * separabile in una stringa JavaScript diventava "&nbsp;" sulla pagina.
+     * Nodo per nodo libxml scrive i caratteri cosi come sono; il doctype va
+     * rimesso a mano.
+     */
+    public static function saveHtml(DOMDocument $dom): string {
+        $html = '';
+        foreach ($dom->childNodes as $node) {
+            $html .= $node->nodeType === XML_DOCUMENT_TYPE_NODE
+                ? '<!DOCTYPE ' . $node->nodeName . ">\n"
+                : $dom->saveHTML($node);
+        }
+        return $html . "\n";
+    }
+
     public static function setContent(DOMElement $element, string $value, DOMDocument $dom): void {
         while ($element->firstChild) {
             $element->removeChild($element->firstChild);

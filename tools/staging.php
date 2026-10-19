@@ -114,7 +114,8 @@ try {
             break;
 
         case 'upload':
-            out('Caricato nello staging: ' . $staging->upload((string) $file, basename((string) $file), $by));
+            $name = basename((string) $file);
+            out('Caricato nello staging: ' . (str_ends_with(strtolower($name), '.woff2') ? $staging->uploadFont((string) $file, $name, $by) : $staging->upload((string) $file, $name, $by)));
             break;
 
         case 'promote':

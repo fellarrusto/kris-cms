@@ -707,6 +707,50 @@ body {
     gap: 12px;
 }
 
+.cookie-banner-details {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.cookie-banner-details[hidden] {
+    display: none;
+}
+
+.cookie-category {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    font-size: 0.88rem;
+    color: var(--gray-600);
+    cursor: pointer;
+}
+
+.cookie-category input {
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    flex: none;
+}
+
+.cookie-category strong {
+    color: var(--gray-800);
+}
+
+.cookie-banner-details .btn {
+    justify-self: start;
+}
+
+.cookie-banner .btn-link {
+    background: none;
+    border: none;
+    color: var(--gray-800);
+    text-decoration: underline;
+    cursor: pointer;
+    padding: 0 4px;
+    font: inherit;
+}
+
 .cookie-banner-actions .btn {
     padding: 10px 22px;
 }

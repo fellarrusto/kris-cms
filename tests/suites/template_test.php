@@ -106,3 +106,14 @@ test('un valore non deve poter uscire da un attributo', function () {
     assertSame(false, $link->hasAttribute('data-iniettato'), 'il valore ha creato un attributo nuovo');
     assertSame(1, $link->attributes->length, 'il tag ha piu attributi del previsto');
 });
+
+test('i caratteri non ASCII restano tali, anche dentro script e style', function () {
+    $html = "<!DOCTYPE html>\n<html><head><meta charset=\"UTF-8\"><style>p:after{content:\"\u{2014}\"}</style></head>"
+        . "<body><p>caf\u{e9}\u{a0}&amp; &lt;b&gt;</p><script>var s=\"a\u{a0}b\" && 1<2;</script></body></html>";
+    $out = renderTemplate($html, makeEntity([]));
+    assertContains("<!DOCTYPE html>", $out);
+    assertContains("<p>caf\u{e9}\u{a0}&amp; &lt;b&gt;</p>", $out);
+    assertContains("var s=\"a\u{a0}b\" && 1<2;", $out);
+    assertContains("content:\"\u{2014}\"", $out);
+    assertNotContains('&nbsp;', $out);
+});
