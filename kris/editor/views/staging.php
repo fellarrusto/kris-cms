@@ -4,13 +4,14 @@ $staging = new \Kris\Staging\Staging();
 $changes = $staging->changes();
 $operations = $staging->rebuild();
 $uploads = $staging->manifest()['uploads'];
+$fonts = $staging->manifest()['fonts'];
 $templateProblems = $staging->templateProblems();
 $manifest = $staging->manifest();
 $lastPromotion = $staging->lastPromotion();
 $fileConflicts = array_filter($changes, fn($c) => $c['conflict']);
 $opConflicts = array_filter($operations, fn($o) => $o['conflict'] !== null);
 $blocked = $fileConflicts || $opConflicts || $templateProblems;
-$hasChanges = $changes || $operations || $uploads;
+$hasChanges = $changes || $operations || $uploads || $fonts;
 $siteRoot = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
 $previewUrl = $siteRoot . '/index.php?kris_preview=1';
 $when = fn(string $iso): string => $iso === '' ? '' : date('d/m/Y H:i', strtotime($iso));
@@ -55,6 +56,11 @@ $codeApproved = $staging->codeApproved();
             <figcaption><?= h((string) ($info['original'] ?? $name)) ?></figcaption></figure>
         <?php endforeach; ?>
     </div></section>
+    <?php endif; ?>
+
+    <?php if ($fonts): ?>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('content') ?></span><div><h2>Font del tema</h2><p>Finiranno in assets/fonts/ con la pubblicazione; un font con lo stesso nome viene sostituito.</p></div></header>
+    <div class="card-body"><ul class="staging-problems"><?php foreach ($fonts as $name => $info): ?><li><code>assets/fonts/<?= h((string) $name) ?></code> · <?= h((string) ($info['by'] ?? '')) ?></li><?php endforeach; ?></ul></div></section>
     <?php endif; ?>
 
     <?php if ($codeFiles): ?>

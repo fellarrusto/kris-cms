@@ -140,7 +140,9 @@ final class Server
                 $tmp = tempnam(sys_get_temp_dir(), 'kris-agent-');
                 file_put_contents($tmp, $data);
                 try {
-                    return ['url' => $s->upload($tmp, basename($this->string($r, 'name')), $by)];
+                    // Un .woff2 e un font del tema (assets/fonts/), il resto un'immagine o un PDF (assets/uploads/)
+                    $name = basename($this->string($r, 'name'));
+                    return ['url' => str_ends_with(strtolower($name), '.woff2') ? $s->uploadFont($tmp, $name, $by) : $s->upload($tmp, $name, $by)];
                 } finally {
                     @unlink($tmp);
                 }
@@ -187,6 +189,7 @@ final class Server
             'stylesheets' => $files('assets/css/*.css'),
             'scripts' => $files('assets/js/*.js'),
             'svg_images' => $files('assets/images/*.svg'),
+            'fonts' => $files('assets/fonts/*.woff2'),
             'staging' => $this->status($report),
         ];
     }
@@ -201,6 +204,7 @@ final class Server
             'files' => array_map(fn($c) => ['file' => $c['file'], 'kind' => $c['kind'], 'conflict' => $c['conflict'], 'sensitive' => $c['sensitive']], $s->changes()),
             'operations' => array_map(fn($o) => ['description' => $o['description'], 'conflict' => $o['conflict']], $report),
             'uploads' => array_map(fn($n) => "assets/uploads/{$n}", array_keys($s->manifest()['uploads'])),
+            'fonts' => array_map(fn($n) => "assets/fonts/{$n}", array_keys($s->manifest()['fonts'])),
             'template_problems' => $s->templateProblems(),
             // JavaScript e SVG nuovi girano nell'anteprima solo dopo l'approvazione dell'admin
             'code_awaiting_approval' => $s->codeApproved() ? [] : $s->codeFiles(),

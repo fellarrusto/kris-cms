@@ -75,6 +75,9 @@ final class Preview
             // Il JavaScript in attesa si serve solo dopo l'approvazione
             $file = $staging->dir() . '/assets/' . $asset;
             $type = 'text/javascript; charset=utf-8';
+        } elseif (preg_match('#^fonts/[a-z0-9][a-z0-9_-]*\.woff2$#', $asset) === 1) {
+            $file = $staging->dir() . '/assets/' . $asset;
+            $type = 'font/woff2';
         } elseif (preg_match('#^images/[a-z0-9][a-z0-9_-]*\.svg$#', $asset) === 1) {
             $file = $staging->dir() . '/assets/' . $asset;
             $type = 'image/svg+xml';
@@ -124,7 +127,7 @@ final class Preview
                 $parts[] = $segment;
             }
             $relative = implode('/', $parts);
-            if (preg_match('#^assets/((?:css/[a-z0-9][a-z0-9_-]*\.css)|(?:images/[a-z0-9][a-z0-9_-]*\.svg))$#', $relative, $m) === 1
+            if (preg_match('#^assets/((?:css/[a-z0-9][a-z0-9_-]*\.css)|(?:images/[a-z0-9][a-z0-9_-]*\.svg)|(?:fonts/[a-z0-9][a-z0-9_-]*\.woff2))$#', $relative, $m) === 1
                 && is_file($staging->dir() . '/' . $relative)) {
                 return self::assetUrl($m[1]);
             }
@@ -172,7 +175,7 @@ final class Preview
     {
         // assets/css|js|images/<nome> -> file dello staging, se e stato modificato o creato
         $html = (string) preg_replace_callback(
-            '#(["\'])(?:\./)?assets/((?:css/[a-z0-9][a-z0-9_-]*\.css)|(?:js/[a-z0-9][a-z0-9_-]*\.js)|(?:images/[a-z0-9][a-z0-9_-]*\.svg))(?:\?[^"\']*)?\1#i',
+            '#(["\'])(?:\./)?assets/((?:css/[a-z0-9][a-z0-9_-]*\.css)|(?:js/[a-z0-9][a-z0-9_-]*\.js)|(?:images/[a-z0-9][a-z0-9_-]*\.svg)|(?:fonts/[a-z0-9][a-z0-9_-]*\.woff2))(?:\?[^"\']*)?\1#i',
             function (array $m) use ($staging): string {
                 return is_file($staging->dir() . '/assets/' . $m[2])
                     ? $m[1] . self::assetUrl($m[2]) . $m[1]

@@ -368,3 +368,25 @@ test('le pagine chiedono CSS e JS del tema con la versione del file', function (
     assertContains('href="assets/css/style.css?x=1"', $out);
     assertContains('src="assets/uploads/a.png"', $out);
 });
+
+test('un font WOFF2 si carica nello staging, si vede in anteprima e va in assets/fonts alla pubblicazione', function () {
+    $root = stagingSite();
+    $s = new Staging($root);
+    $font = tempnam(sys_get_temp_dir(), 'woff');
+    file_put_contents($font, 'wOF2' . str_repeat("\0", 60));
+    assertSame('assets/fonts/inter-regular.woff2', $s->uploadFont($font, 'Inter Regular.woff2', 'agente'));
+    assertTrue($s->hasChanges());
+
+    $fake = tempnam(sys_get_temp_dir(), 'woff');
+    file_put_contents($fake, '<?php echo 1;');
+    assertThrowsStaging(fn() => $s->uploadFont($fake, 'finto.woff2', 'agente'), 'WOFF2');
+    assertThrowsStaging(fn() => $s->uploadFont($font, 'inter.ttf', 'agente'), '.woff2');
+
+    $css = Preview::rebaseCss("@font-face{src:url('../fonts/inter-regular.woff2') format('woff2')}", $s);
+    assertContains("url('index.php?kris_preview_asset=fonts/inter-regular.woff2&kris_preview=1')", $css);
+
+    $s->promote('admin');
+    assertSame('wOF2', substr((string) file_get_contents("{$root}/assets/fonts/inter-regular.woff2"), 0, 4));
+    $s->undoLastPromotion();
+    assertTrue(!is_file("{$root}/assets/fonts/inter-regular.woff2"), 'l annullamento toglie il font nuovo');
+});
