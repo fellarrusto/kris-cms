@@ -421,6 +421,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             $error = $e->getMessage();
         }
     }
+    // Staging: l'admin si assume la responsabilita del codice in attesa (dal popup dell'anteprima o da qui)
+    if (isset($_POST['approve_code'])) {
+        try {
+            (new \Kris\Staging\Staging())->approveCode((string) $_POST['approve_code'], (string) ($_SESSION['kris_user'] ?? ''));
+            $msg = 'Script approvati: l\'anteprima ora li esegue.';
+            // Dal popup si torna alla stessa pagina dell'anteprima
+            $return = (string) ($_POST['return'] ?? '');
+            if (preg_match('/^[A-Za-z0-9_=&%.\/-]*kris_preview=1[A-Za-z0-9_=&%.\/-]*$/', $return) === 1) {
+                header('Location: ' . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/index.php?' . $return);
+                exit;
+            }
+        } catch (\Kris\Staging\StagingException $e) {
+            $error = $e->getMessage();
+        }
+    }
     // Staging: pubblica, scarta, annulla l'ultima pubblicazione
     if (isset($_POST['staging_promote']) || isset($_POST['staging_discard']) || isset($_POST['staging_undo'])) {
         $staging = new \Kris\Staging\Staging();

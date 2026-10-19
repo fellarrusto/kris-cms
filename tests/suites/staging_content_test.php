@@ -288,3 +288,67 @@ test('la sezione di un campo si imposta con add_field e describe_field, e vuota 
     $s->operate(['op' => 'describe_field', 'collection' => 'homepage', 'name' => 'page_title', 'section' => ''], 'a');
     assertTrue(!array_key_exists('section', array_column($s->state()['model']['homepage'], null, 'name')['page_title']));
 });
+
+// --- struttura dati: raccolte, tipi, ordine, Posts, pagine ---------------------
+
+test('remove_collection e rename_collection: schema, contenuti, Posts e sitemap; i template che le usano bloccano', function () {
+    $root = contentSite();
+    file_put_contents("{$root}/data/cms_settings.json", json_encode(['languages' => ['it', 'en'], 'post_collections' => ['navbar']]));
+    file_put_contents("{$root}/config/seo.json", json_encode(['sitemap' => [['page' => 'homepage'], ['page' => 'homepage', 'key' => 'navbar']]]));
+    $s = new Staging($root);
+    $s->operate(['op' => 'rename_collection', 'from' => 'navbar', 'to' => 'menu'], 'a');
+    $state = $s->state();
+    assertTrue(isset($state['model']['menu']) && !isset($state['model']['navbar']));
+    assertSame(['menu'], $state['settings']['post_collections']);
+    assertSame('menu', $state['seo']['sitemap'][1]['key']);
+    assertTrue((bool) array_filter($state['data'], fn($e) => $e['name'] === 'menu'));
+    assertTrue((bool) array_filter($s->templateProblems(), fn($p) => str_contains($p, 'usa ancora la raccolta «navbar»')));
+
+    $s->operate(['op' => 'remove_collection', 'name' => 'menu'], 'a');
+    $state = $s->state();
+    assertTrue(!isset($state['model']['menu']));
+    assertSame([], array_values(array_filter($state['data'], fn($e) => $e['name'] === 'menu')));
+    assertSame([], $state['settings']['post_collections']);
+    assertSame([['page' => 'homepage']], $state['seo']['sitemap']);
+    expectStaging(fn() => $s->operate(['op' => 'remove_collection', 'name' => 'kris_legal'], 'a'), 'appartiene a Kris');
+
+    $s->promote('admin', true);
+    $settings = json_decode((string) file_get_contents("{$root}/data/cms_settings.json"), true);
+    assertSame(['languages' => ['it', 'en'], 'post_collections' => []], $settings, 'le lingue restano');
+});
+
+test('change_type converte i valori; da o verso un elenco solo se vuoto', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $before = siteValue("{$root}/data/k_data.json", 'homepage', 0, 'page_title');
+    $s->operate(['op' => 'change_type', 'collection' => 'homepage', 'name' => 'page_title', 'type' => 'plain'], 'a');
+    $file = "{$root}/data/staging/data/k_data.json";
+    assertSame($before['it'], siteValue($file, 'homepage', 0, 'page_title'));
+    $s->operate(['op' => 'change_type', 'collection' => 'homepage', 'name' => 'page_title', 'type' => 'richtext'], 'a');
+    $value = siteValue($file, 'homepage', 0, 'page_title');
+    assertSame(htmlspecialchars($before['it'], ENT_QUOTES, 'UTF-8'), $value['it']);
+    assertSame($value['it'], $value['en'], 'il valore plain vale per ogni lingua');
+    expectStaging(fn() => $s->operate(['op' => 'change_type', 'collection' => 'homepage', 'name' => 'steps', 'type' => 'text'], 'a'), 'vuoto');
+    expectStaging(fn() => $s->operate(['op' => 'change_type', 'collection' => 'homepage', 'name' => 'page_title', 'type' => 'boolean'], 'a'), 'non valido');
+    $types = array_column($s->state()['model']['homepage'], 'type', 'name');
+    assertSame('richtext', $types['page_title']);
+});
+
+test('move_field, set_posts, set_post_collection e unregister_page', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'move_field', 'collection' => 'homepage', 'name' => 'steps', 'to' => 0], 'a');
+    assertSame('steps', $s->state()['model']['homepage'][0]['name']);
+    $s->operate(['op' => 'set_posts', 'collection' => 'homepage', 'name' => 'steps', 'posts' => true], 'a');
+    assertSame(true, $s->state()['model']['homepage'][0]['posts']);
+    expectStaging(fn() => $s->operate(['op' => 'set_posts', 'collection' => 'homepage', 'name' => 'page_title', 'posts' => true], 'a'), 'elenco');
+    $s->operate(['op' => 'set_post_collection', 'collection' => 'navbar', 'enabled' => true], 'a');
+    assertSame(['navbar'], $s->state()['settings']['post_collections']);
+    assertTrue(is_file("{$root}/data/staging/data/cms_settings.json"), 'l anteprima vede le raccolte in Posts');
+
+    $pages = $s->state()['pages'];
+    $page = current(array_filter($pages, fn($p) => $p !== 'homepage'));
+    $s->operate(['op' => 'unregister_page', 'page' => $page], 'a');
+    assertTrue(!in_array($page, $s->state()['pages'], true));
+    expectStaging(fn() => $s->operate(['op' => 'unregister_page', 'page' => 'homepage'], 'a'), 'homepage');
+});

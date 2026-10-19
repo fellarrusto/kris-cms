@@ -49,10 +49,11 @@ test('una modifica finisce nello staging e il sito non cambia', function () {
     assertTrue($s->exists());
 });
 
-test('solo template e fogli di stile del tema si possono modificare', function () {
+test('solo i file del tema si possono modificare, mai il core', function () {
     $s = new Staging(stagingSite());
     foreach (['kris/public.php', 'index.php', 'template/home.php', '.htaccess', 'data/k_data.json', 'config/auth.php',
-        'template/../kris/x.html', 'assets/js/app.js', 'template/Home.html', 'assets/css/sub/x.css'] as $path) {
+        'template/../kris/x.html', 'kris/editor/js/scripts.js', 'assets/js/sub/app.js', 'assets/js/app.php',
+        'assets/images/logo.png', 'template/Home.html', 'assets/css/sub/x.css'] as $path) {
         assertThrowsStaging(fn() => $s->write($path, 'x', null, 'test'), 'non si può modificare');
     }
 });
@@ -241,6 +242,99 @@ test('con la sessione dell editor l anteprima mostra lo staging e i suoi fogli d
 
         $normal = renderPage([], null, 'index.php', true);
         assertNotContains('SOLO-IN-STAGING', $normal['output'], 'senza ?kris_preview anche un admin vede il sito');
+    } finally {
+        $s->discard();
+    }
+});
+
+// --- JavaScript, SVG, eliminazioni e approvazione degli script -----------------
+
+test('JavaScript e SVG del tema si scrivono; un SVG puo avere la dichiarazione XML ma non PHP', function () {
+    $s = new Staging(stagingSite());
+    $s->write('assets/js/menu.js', "if (a <? b) {}\ndocument.body.dataset.ok = '1';", null, 'test');
+    $s->write('assets/images/logo.svg', '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg"></svg>', null, 'test');
+    assertSame('staging', $s->read('assets/js/menu.js')['source']);
+    assertThrowsStaging(fn() => $s->write('assets/images/x.svg', '<svg><?php echo 1; ?></svg>', null, 'test'), 'PHP');
+});
+
+test('un file del tema si elimina alla pubblicazione e l annullamento lo rimette', function () {
+    $root = stagingSite();
+    file_put_contents("{$root}/assets/css/vecchio.css", 'p{}');
+    $s = new Staging($root);
+    assertThrowsStaging(fn() => $s->delete('assets/css/vecchio.css', 'impronta-sbagliata', 'test'), 'cambiato');
+    $s->delete('assets/css/vecchio.css', Staging::hash('p{}'), 'test');
+    assertSame(null, $s->read('assets/css/vecchio.css')['content']);
+    assertSame(['assets/css/vecchio.css'], $s->deletedFiles());
+    assertSame('deleted', $s->changes()[0]['kind']);
+    assertTrue(is_file("{$root}/assets/css/vecchio.css"), 'il sito non cambia prima della pubblicazione');
+
+    $s->promote('admin');
+    assertTrue(!is_file("{$root}/assets/css/vecchio.css"));
+    $s->undoLastPromotion();
+    assertSame('p{}', file_get_contents("{$root}/assets/css/vecchio.css"));
+});
+
+test('un file nuovo eliminato prima di pubblicarlo sparisce dallo staging', function () {
+    $s = new Staging(stagingSite());
+    $s->write('assets/js/prova.js', 'x()', null, 'test');
+    $s->delete('assets/js/prova.js', Staging::hash('x()'), 'test');
+    assertSame([], $s->changes());
+    assertSame(null, $s->read('assets/js/prova.js')['content']);
+});
+
+test('il template di una pagina pubblica non si elimina, un frammento ancora usato blocca la pubblicazione', function () {
+    $root = stagingSite();
+    file_put_contents("{$root}/template/homepage.html", '<div k-array="servizi" k-template="card"></div>');
+    file_put_contents("{$root}/template/card.html", '<p>{{title}}</p>');
+    $s = new Staging($root);
+    assertThrowsStaging(fn() => $s->delete('template/homepage.html', Staging::hash('<div k-array="servizi" k-template="card"></div>'), 'test'), 'unregister_page');
+    $s->delete('template/card.html', Staging::hash('<p>{{title}}</p>'), 'test');
+    assertSame(['template/homepage.html usa ancora il template eliminato «card»'], $s->templateProblems());
+});
+
+test('JavaScript, SVG e script nei template aspettano l approvazione, che scade se il codice cambia', function () {
+    $root = stagingSite();
+    $s = new Staging($root);
+    assertTrue($s->codeApproved(), 'senza codice nuovo non serve approvare');
+    $s->write('assets/css/style.css', 'a{background:url(https://cdn.esempio.it/x.png)}', $s->read('assets/css/style.css')['hash'], 'test');
+    assertSame([], $s->codeFiles(), 'un dominio esterno non e codice');
+
+    $s->write('assets/js/menu.js', 'menu()', null, 'test');
+    $s->edit('template/home.html', '<p>Testo</p>', '<p onclick="x()">Testo</p>', $s->read('template/home.html')['hash'], 'test');
+    assertSame(['assets/js/menu.js', 'template/home.html'], $s->codeFiles());
+    assertTrue(!$s->codeApproved());
+
+    assertThrowsStaging(fn() => $s->approveCode('impronta-vecchia', 'admin'), 'cambiati');
+    $s->approveCode((string) $s->codeFingerprint(), 'admin');
+    assertTrue($s->codeApproved());
+
+    $s->write('assets/js/menu.js', 'menu(); altro()', Staging::hash('menu()'), 'test');
+    assertTrue(!$s->codeApproved(), 'codice cambiato: va riapprovato');
+});
+
+test('l anteprima con codice nuovo mostra il popup e serve il JavaScript solo dopo l approvazione', function () {
+    $sandbox = projectSandbox();
+    $s = new Staging($sandbox);
+    $file = 'template/homepage.html';
+    $original = (string) file_get_contents("{$sandbox}/{$file}");
+    $s->write($file, str_replace('</body>', '<script src="assets/js/nuovo.js"></script></body>', $original), Staging::hash($original), 'test');
+    $s->write('assets/js/nuovo.js', 'window.NUOVO = 1;', null, 'test');
+    try {
+        $page = renderPage(['kris_preview' => '1'], null, 'index.php', true);
+        assertSame(200, $page['status']);
+        assertContains('id="kris-code-approval"', $page['output']);
+        assertContains('<li>assets/js/nuovo.js</li>', $page['output']);
+        assertContains('name="approve_code"', $page['output']);
+        assertContains('name="csrf" value="token-di-prova"', $page['output']);
+        assertContains('required', $page['output'], 'serve spuntare l assunzione di responsabilita');
+        assertContains('Anteprima senza script', $page['output']);
+        assertContains('src="index.php?kris_preview_asset=js/nuovo.js"', $page['output']);
+        assertSame(404, renderPage(['kris_preview_asset' => 'js/nuovo.js'], null, 'index.php', true)['status'], 'prima dell approvazione il file non si serve');
+
+        $s->approveCode((string) $s->codeFingerprint(), 'admin');
+        $approved = renderPage(['kris_preview' => '1'], null, 'index.php', true);
+        assertNotContains('id="kris-code-approval"', $approved['output']);
+        assertSame('window.NUOVO = 1;', renderPage(['kris_preview_asset' => 'js/nuovo.js'], null, 'index.php', true)['output']);
     } finally {
         $s->discard();
     }

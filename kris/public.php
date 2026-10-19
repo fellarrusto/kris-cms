@@ -95,11 +95,11 @@ if (Preview::requested($_GET)) {
         exit;
     }
     $preview = $staging;
-    Preview::headers();
+    Preview::headers($staging);
     if ($staging->exists()) {
         // I contenuti del sito possono essere cambiati dall'ultima operazione: l'anteprima riparte da quelli
         $staging->rebuild();
-        Paths::useOverlay($staging->dir());
+        Paths::useOverlay($staging->dir(), $staging->deletedFiles());
     }
 }
 

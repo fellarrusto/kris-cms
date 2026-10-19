@@ -19,11 +19,14 @@ namespace Kris\Site;
 final class Paths
 {
     private static ?string $overlay = null;
+    /** @var array<string, true> file che la sovrapposizione elimina: per l'anteprima non esistono */
+    private static array $removed = [];
 
-    /** Cartella da sovrapporre al sito, o null per leggere solo il sito. */
-    public static function useOverlay(?string $dir): void
+    /** Cartella da sovrapporre al sito, o null per leggere solo il sito; $removed: percorsi relativi eliminati. */
+    public static function useOverlay(?string $dir, array $removed = []): void
     {
         self::$overlay = $dir === null ? null : rtrim($dir, '/\\');
+        self::$removed = $dir === null ? [] : array_fill_keys($removed, true);
     }
 
     public static function overlay(): ?string
@@ -35,6 +38,10 @@ final class Paths
     public static function file(string $relative): string
     {
         $relative = ltrim($relative, '/');
+        if (self::$overlay !== null && isset(self::$removed[$relative])) {
+            // Eliminato nell'anteprima: un percorso che non esiste
+            return self::$overlay . '/' . $relative;
+        }
         if (self::$overlay !== null && is_file(self::$overlay . '/' . $relative)) {
             return self::$overlay . '/' . $relative;
         }
