@@ -903,6 +903,70 @@
                     "it": "Cookie policy",
                     "en": "Cookie policy"
                 }
+            },
+            {
+                "name": "banner_customize",
+                "type": "text",
+                "value": {
+                    "it": "Personalizza",
+                    "en": "Customize"
+                }
+            },
+            {
+                "name": "banner_save",
+                "type": "text",
+                "value": {
+                    "it": "Salva le scelte",
+                    "en": "Save choices"
+                }
+            },
+            {
+                "name": "category_thirdparty",
+                "type": "text",
+                "value": {
+                    "it": "Contenuti di terze parti",
+                    "en": "Third-party content"
+                }
+            },
+            {
+                "name": "category_thirdparty_text",
+                "type": "text",
+                "value": {
+                    "it": "Mappe, video e contenuti social incorporati nelle pagine.",
+                    "en": "Maps, videos and social content embedded in the pages."
+                }
+            },
+            {
+                "name": "category_statistics",
+                "type": "text",
+                "value": {
+                    "it": "Statistiche",
+                    "en": "Statistics"
+                }
+            },
+            {
+                "name": "category_statistics_text",
+                "type": "text",
+                "value": {
+                    "it": "Ci aiutano a capire come viene usato il sito.",
+                    "en": "They help us understand how the site is used."
+                }
+            },
+            {
+                "name": "category_marketing",
+                "type": "text",
+                "value": {
+                    "it": "Marketing",
+                    "en": "Marketing"
+                }
+            },
+            {
+                "name": "category_marketing_text",
+                "type": "text",
+                "value": {
+                    "it": "Servono a mostrarti annunci pertinenti su altri siti.",
+                    "en": "They are used to show you relevant ads on other sites."
+                }
             }
         ]
     }
