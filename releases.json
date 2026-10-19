@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.5.1",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Tema scuro per l'editor: segue il sistema oppure si sceglie dal pulsante Tema nella barra laterale.",
+            "date": "2026-10-19",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.5.1/kris-1.5.1.zip",
+            "sha256": "4c3eb7606a23adc95c052d21e25eac6bfde77aae758d63f266fa6fde646f33c7",
+            "size": 176533
+        },
+        {
             "version": "1.5.0",
             "min_from": "1.0.0",
             "breaking": false,
