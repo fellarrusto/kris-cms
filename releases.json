@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.6.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Kris Agent può modificare tutta la struttura dati e il tema (anche JavaScript e SVG), mai il core. Gli script nuovi girano nell'anteprima solo dopo la tua approvazione.",
+            "date": "2026-10-19",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.6.0/kris-1.6.0.zip",
+            "sha256": "9df67bb8bd550319d4843b1173535a5aedfcfd729a8f8d5d0633bb772ae9eb9e",
+            "size": 183570
+        },
+        {
             "version": "1.5.1",
             "min_from": "1.0.0",
             "breaking": false,
