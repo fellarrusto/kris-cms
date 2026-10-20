@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.7.1",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "L'assistente può scrivere tutto Privacy e cookie, informative comprese. Via il riquadro «Il tuo sito» dalla barra laterale.",
+            "date": "2026-10-20",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.7.1/kris-1.7.1.zip",
+            "sha256": "a2eba8d2f9348e3f7eed424c9271c9043f37926519216efc3eedbb2d21974ca7",
+            "size": 196550
+        },
+        {
             "version": "1.7.0",
             "min_from": "1.0.0",
             "breaking": false,
