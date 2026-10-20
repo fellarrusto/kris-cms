@@ -3,12 +3,13 @@
     <a class="brand" href="?action=dashboard"><span class="brand-mark">k<span>.</span></span><span>kris<small>CONTENT STUDIO</small></span></a>
     <p class="nav-label">IL TUO SPAZIO</p>
     <nav>
-        <?php $inContents = in_array($action, ['dashboard','list','edit']) && !$inPosts && !$inLegal && !$inSite; ?>
+        <?php $inContents = in_array($action, ['dashboard','list','edit']) && !$inPosts && !$inLegal && !$inSite && !$inNotFound; ?>
         <a href="?action=dashboard" class="nav-item <?= $inContents ? 'active' : '' ?>" <?= $inContents ? 'aria-current="page"' : '' ?>><?= uiIcon('content') ?>Contenuti <span class="nav-count"><?= count($userModels) ?></span></a>
         <?php if ($postSources): ?><a href="?action=posts" class="nav-item <?= $inPosts ? 'active' : '' ?>" <?= $inPosts ? 'aria-current="page"' : '' ?>><?= uiIcon('posts') ?>Posts <span class="nav-count"><?= count($postSources) ?></span></a><?php endif; ?>
         <a href="?action=media" class="nav-item <?= $action === 'media' ? 'active' : '' ?>" <?= $action === 'media' ? 'aria-current="page"' : '' ?>><?= uiIcon('media') ?>Libreria media</a>
         <?php if (isset($models['kris_legal'])): ?><a href="?action=edit&amp;group=kris_legal&amp;id=0" class="nav-item <?= $inLegal ? 'active' : '' ?>" <?= $inLegal ? 'aria-current="page"' : '' ?>><?= uiIcon('check') ?>Privacy e cookie</a><?php endif; ?>
         <?php if (isset($models['kris_site'])): ?><a href="?action=edit&amp;group=kris_site&amp;id=0" class="nav-item <?= $inSite ? 'active' : '' ?>" <?= $inSite ? 'aria-current="page"' : '' ?>><?= uiIcon('media') ?>Favicon</a><?php endif; ?>
+        <?php if (isset($models['kris_notfound'])): ?><a href="?action=edit&amp;group=kris_notfound&amp;id=0" class="nav-item <?= $inNotFound ? 'active' : '' ?>" <?= $inNotFound ? 'aria-current="page"' : '' ?>><?= uiIcon('close') ?>Pagina 404</a><?php endif; ?>
         <?php if ($stagingVisible): ?><a href="?action=staging" class="nav-item <?= $action === 'staging' ? 'active' : '' ?>" <?= $action === 'staging' ? 'aria-current="page"' : '' ?>><?= uiIcon('structure') ?>Da pubblicare<?php if ($stagingCount): ?> <span class="nav-count"><?= $stagingCount ?></span><?php endif; ?></a><?php endif; ?>
         <a href="?action=settings" class="nav-item <?= $action === 'settings' ? 'active' : '' ?>" <?= $action === 'settings' ? 'aria-current="page"' : '' ?>><?= uiIcon('settings') ?>Impostazioni</a>
     </nav>

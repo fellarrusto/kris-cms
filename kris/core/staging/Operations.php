@@ -132,9 +132,9 @@ final class Operations
             throw new StagingException("La lingua '{$lang}' non è attiva sul sito. Lingue attive: " . implode(', ', $ctx['languages']) . '.');
         }
 
-        // Fra le raccolte di Kris si scrivono i valori di kris_site (favicon) e kris_legal (titolare, informative, banner); lo schema no
+        // Fra le raccolte di Kris si scrivono i valori di kris_site (favicon), kris_legal (titolare, informative, banner) e kris_notfound (pagina 404); lo schema no
         $key = (string) $op['key'];
-        $writable = $key === 'kris_site' || $key === 'kris_legal';
+        $writable = in_array($key, ['kris_site', 'kris_legal', 'kris_notfound'], true);
         $entity = &self::entity($state['data'], $key, (int) ($op['id'] ?? 0), $path, $writable);
         $index = self::fieldIndex($entity, $def['name']);
         $current = $index === null ? null : $entity['data'][$index]['value'];

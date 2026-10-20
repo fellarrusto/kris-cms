@@ -22,7 +22,7 @@ $isAjax = in_array($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '', ['save', 'reorder', 'vi
 
 try {
     // La favicon si prepara anche in attesa; Privacy e cookie solo sul sito pubblico
-    if ($g !== '' && $g !== 'kris_site' && isReservedCollection($g)) {
+    if ($g !== '' && !in_array($g, ['kris_site', 'kris_notfound'], true) && isReservedCollection($g)) {
         throw new StagingException('Privacy e cookie si modificano sul sito pubblico: passa a «Sito pubblico» per cambiarli.');
     }
 

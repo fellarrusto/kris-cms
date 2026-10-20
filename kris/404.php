@@ -2,13 +2,18 @@
 declare(strict_types=1);
 
 http_response_code(404);
+// I testi arrivano dalla sezione Pagina 404 dell'editor (kris_notfound); senza, quelli predefiniti
+$notFound = isset($notFound) && is_array($notFound) ? $notFound : [];
+$say = fn(string $key, string $default): string => htmlspecialchars($notFound[$key] ?? $default, ENT_QUOTES, 'UTF-8');
+$href = $say('button_url', '/');
+if (preg_match('#^\s*(?:javascript|data):#i', html_entity_decode($href))) $href = '/';
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page Not Found</title>
+    <title>404 - <?= $say('title', 'Page Not Found') ?></title>
     <style>
         * {
             margin: 0;
@@ -71,9 +76,9 @@ http_response_code(404);
 <body>
     <div class="container">
         <div class="error-code">404</div>
-        <h1>Page Not Found</h1>
-        <p>The page you're looking for doesn't exist or has been moved.</p>
-        <a href="/" class="btn">Go Back Home</a>
+        <h1><?= $say('title', 'Page Not Found') ?></h1>
+        <p><?= $say('text', "The page you're looking for doesn't exist or has been moved.") ?></p>
+        <a href="<?= $href ?>" class="btn"><?= $say('button_label', 'Go Back Home') ?></a>
     </div>
 </body>
 </html>
