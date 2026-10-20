@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.8.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Pagina 404 gestita dall'editor: titolo, testo e pulsante modificabili, anche dall'assistente. Gli indirizzi inesistenti mostrano la 404 del sito con il codice giusto.",
+            "date": "2026-10-20",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.8.0/kris-1.8.0.zip",
+            "sha256": "4582c32a78391ae18cda4e4364e575206809317a29e933de6f0093d6758169ea",
+            "size": 199032
+        },
+        {
             "version": "1.7.1",
             "min_from": "1.0.0",
             "breaking": false,
