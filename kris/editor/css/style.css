@@ -48,13 +48,9 @@ svg { width:19px; height:19px; vertical-align:middle; flex-shrink:0; }
 .brand-mark { display:flex; justify-content:center; align-items:center; width:42px; height:42px; border-radius:12px; background:var(--ink); color:var(--on-ink); font-size:32px; line-height:1; }
 .brand-mark span { color:var(--brand-accent); }
 .brand small { display:block; font-size:8px; letter-spacing:1.6px; color:var(--muted); margin-top:-6px; }
-.workspace-label { margin:32px 0 27px; display:flex; align-items:center; gap:11px; padding:12px; border:1px solid var(--border); border-radius:9px; }
-.site-mark { width:32px; height:32px; border-radius:7px; display:grid; place-items:center; background:var(--surface-2); font-family:Georgia,serif; font-size:22px; }
-.workspace-label strong { display:block; font-size:12px; }
-.workspace-label small { display:block; font-size:11px; color:var(--muted); }
-.status-dot { width:7px; height:7px; background:#76946a; border-radius:50%; margin-left:auto; }
 .nav-label,.eyebrow { font-size:10px; letter-spacing:1.3px; font-weight:650; color:var(--muted); }
 .nav-label { padding:0 12px; margin-bottom:12px; }
+.sidebar > .nav-label:first-of-type { margin-top:34px; }
 .nav-item { display:flex; align-items:center; gap:11px; padding:12px; border-radius:8px; margin-bottom:5px; color:var(--muted); font-size:13px; font-weight:500; }
 .nav-item:hover { background:var(--surface-2); }
 .nav-item.active { background:var(--mint); color:var(--primary); font-weight:650; }
@@ -340,7 +336,7 @@ dialog::backdrop { background:var(--backdrop); backdrop-filter:blur(3px); }
     :root { --sidebar-width:0px; }
     .sidebar { position:relative; width:100%; padding:17px 17px 8px; border-right:0; border-bottom:1px solid var(--border); overflow:visible; }
     .brand { font-size:25px; padding:0; width:fit-content; }.brand-mark { width:34px;height:34px;font-size:27px; }.brand small { font-size:7px; }
-    .workspace-label,.sidebar>.nav-label,.collection-nav { display:none; }
+    .sidebar>.nav-label,.collection-nav { display:none; }
     .sidebar nav { display:flex; gap:4px; margin-top:16px; overflow:auto; }.nav-item { margin:0; padding:10px; font-size:12px; white-space:nowrap; }.nav-count { display:none; }
     .sidebar-bottom { position:absolute; top:22px; right:18px; margin:0; padding:0; }.logout-link { padding:0; border:0; font-size:11px; gap:8px; }.version-link { display:none; }.theme-toggle { display:none; }
     .editor-workspace { margin:0; }.topbar { min-height:62px; padding:12px 18px;gap:10px; }.topbar .btn { font-size:11px;padding:7px 10px; }.breadcrumbs { font-size:10px; gap:6px; }

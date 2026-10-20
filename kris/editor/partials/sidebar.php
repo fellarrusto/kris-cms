@@ -1,7 +1,6 @@
 <?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } ?>
 <aside class="sidebar" aria-label="Navigazione principale">
     <a class="brand" href="?action=dashboard"><span class="brand-mark">k<span>.</span></span><span>kris<small>CONTENT STUDIO</small></span></a>
-    <div class="workspace-label"><span class="site-mark">K</span><div><strong>Il tuo sito</strong><small>Spazio di lavoro</small></div><span class="status-dot" aria-hidden="true"></span></div>
     <p class="nav-label">IL TUO SPAZIO</p>
     <nav>
         <?php $inContents = in_array($action, ['dashboard','list','edit']) && !$inPosts && !$inLegal && !$inSite; ?>
