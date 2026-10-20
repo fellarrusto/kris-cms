@@ -36,7 +36,9 @@ $siblings = count(array_filter($data, fn($d) => ($d['name'] ?? null) === $group)
 $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path || $siblings > 1);
 ?>
 <div class="container">
-    <?php if ($group === 'kris_site'): ?>
+    <?php if ($group === 'kris_notfound'): ?>
+    <header class="page-heading"><div><h1>Pagina 404</h1><p>Quello che vede chi apre un indirizzo che non esiste. Se il tema ha un suo <code>404.html</code> usa questi testi, altrimenti li usa la pagina di serie di Kris.</p></div></header>
+    <?php elseif ($group === 'kris_site'): ?>
     <header class="page-heading"><div><h1>Favicon</h1><p>L’icona del sito nella scheda del browser e nei preferiti. Kris la aggiunge a tutte le pagine; usa un PNG quadrato di almeno 48×48 pixel.</p></div></header>
     <?php elseif (isReservedCollection($group)): ?>
     <header class="page-heading"><div><h1>Privacy e cookie</h1><p>Dati del titolare, informative e testi del banner. Il sito li mostra dove i suoi template li usano.</p></div></header>

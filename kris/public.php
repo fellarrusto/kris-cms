@@ -13,10 +13,11 @@ use Kris\Template\Seo;
 /**
  * La pagina 404, con lo stato 404. In ordine:
  *  - template/404.html del tema, resa come le altre pagine: i testi dalla
- *    raccolta not_found (contenuto 0) se esiste, navbar e footer se il
- *    template li include con k-component;
+ *    raccolta not_found (contenuto 0) se il tema ne ha una sua, altrimenti
+ *    da kris_notfound (la sezione Pagina 404 dell'editor); navbar e footer
+ *    se il template li include con k-component;
  *  - 404.php nella root del sito (siti precedenti alla 1.4.3);
- *  - quella generica di Kris.
+ *  - quella generica di Kris, con i testi di kris_notfound.
  */
 function kris_not_found(string $lang): string
 {
@@ -27,8 +28,12 @@ function kris_not_found(string $lang): string
             try {
                 $entity = new Entity('k_data', 'not_found', 0);
             } catch (Exception $e) {
-                // Il template puo non avere testi propri: entita vuota
-                $entity = new Entity('k_data', 'not_found', 0, ['name' => 'not_found', 'id' => 0, 'data' => []]);
+                try {
+                    $entity = new Entity('k_data', 'kris_notfound', 0);
+                } catch (Exception $e) {
+                    // Il template puo non avere testi propri: entita vuota
+                    $entity = new Entity('k_data', 'not_found', 0, ['name' => 'not_found', 'id' => 0, 'data' => []]);
+                }
             }
             return kris_finish_page((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $lang);
         } catch (Throwable $e) {
@@ -36,10 +41,27 @@ function kris_not_found(string $lang): string
         }
     }
     $site = KRIS_ROOT . '/404.php';
+    $notFound = kris_not_found_texts($lang);
     ob_start();
     require is_file($site) ? $site : KRIS_DIR . '/404.php';
     http_response_code(404);
     return kris_finish_page((string) ob_get_clean(), $lang);
+}
+
+/** I testi della sezione Pagina 404 per la 404 di serie; vuoti se mancano (valgono quelli predefiniti). */
+function kris_not_found_texts(string $lang): array
+{
+    try {
+        $entity = new Entity('k_data', 'kris_notfound', 0);
+    } catch (Throwable $e) {
+        return [];
+    }
+    $texts = [];
+    foreach (['title', 'text', 'button_label', 'button_url'] as $field) {
+        $value = $entity->getData($field, $lang);
+        if (is_string($value) && trim($value) !== '') $texts[$field] = trim($value);
+    }
+    return $texts;
 }
 
 /** Ultimi ritocchi di ogni pagina, 404 compresa: favicon e versione dei file del tema. */
