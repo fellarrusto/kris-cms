@@ -76,7 +76,7 @@ test('le operazioni non valide vengono rifiutate prima di essere registrate', fu
     expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'page_title', 'lang' => 'it', 'value' => '<b>x</b>'], 'a'), 'niente HTML');
     expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'logo', 'lang' => 'it', 'value' => 'assets/uploads/manca.png'], 'a'), 'non esiste');
     expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'steps', 'value' => []], 'a'), 'elenco');
-    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'privacy_policy', 'lang' => 'it', 'value' => 'x'], 'a'), 'appartiene a Kris');
+    expectStaging(fn() => $s->operate(['op' => 'create_collection', 'name' => 'kris_nuova', 'fields' => []], 'a'), 'appartiene a Kris');
     expectStaging(fn() => $s->operate(['op' => 'boh'], 'a'), 'sconosciuta');
     assertSame([], $s->operations());
 });
@@ -384,13 +384,16 @@ test('il contenuto unico si rifiuta su una raccolta con piu contenuti', function
     expectStaging(fn() => $s->operate(['op' => 'set_collection_info', 'collection' => 'navbar', 'single' => true], 'a'), 'contenuti');
 });
 
-test('l agente scrive i dati del titolare in kris_legal, non le informative ne il banner', function () {
+test('l agente scrive tutti i valori di kris_legal (titolare, informative, banner), non il suo schema', function () {
     $root = contentSite();
     $s = new Staging($root);
     $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'owner_vat', 'value' => '01234567890'], 'a');
     $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'owner_name', 'value' => 'Studio Rossi snc'], 'a');
     assertSame('01234567890', siteValue("{$root}/data/staging/data/k_data.json", 'kris_legal', 0, 'owner_vat'));
-    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'cookie_policy', 'lang' => 'it', 'value' => 'x'], 'a'), 'appartiene a Kris');
-    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'banner_text', 'lang' => 'it', 'value' => 'x'], 'a'), 'appartiene a Kris');
+    $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'cookie_policy', 'lang' => 'it', 'value' => '<h2>Cookie</h2><p>Testo.</p>'], 'a');
+    $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'banner_text', 'lang' => 'it', 'value' => 'Usiamo cookie'], 'a');
+    assertSame('<h2>Cookie</h2><p>Testo.</p>', siteValue("{$root}/data/staging/data/k_data.json", 'kris_legal', 0, 'cookie_policy')['it']);
+    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'kris_legal', 'id' => 0, 'field' => 'inventato', 'value' => 'x'], 'a'), 'non esiste');
+    expectStaging(fn() => $s->operate(['op' => 'set_hidden', 'key' => 'kris_legal', 'id' => 0, 'hidden' => true], 'a'), 'non esiste');
     expectStaging(fn() => $s->operate(['op' => 'add_field', 'collection' => 'kris_legal', 'field' => ['name' => 'extra', 'type' => 'text']], 'a'), 'appartiene a Kris');
 });

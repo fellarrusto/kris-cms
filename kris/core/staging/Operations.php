@@ -25,8 +25,6 @@ final class Operations
 {
     public const TYPES = ['plain', 'text', 'richtext', 'image', 'array'];
 
-    /** Dati del titolare in kris_legal che l'agente puo scrivere. Informative e banner restano al cliente. */
-    public const LEGAL_OWNER_FIELDS = ['owner_name', 'owner_address', 'owner_vat', 'privacy_email', 'updated_at'];
 
     // Gli stessi nomi che l'editor riserva ai propri controlli, piu quelli esposti dal motore dei template
     private const RESERVED_NAMES = ['id', 'language', 'group', 'path', 'save_entity', 'create_instance',
@@ -134,9 +132,9 @@ final class Operations
             throw new StagingException("La lingua '{$lang}' non è attiva sul sito. Lingue attive: " . implode(', ', $ctx['languages']) . '.');
         }
 
-        // Fra le raccolte di Kris si scrivono solo la favicon e i dati del titolare (non i testi delle informative)
+        // Fra le raccolte di Kris si scrivono i valori di kris_site (favicon) e kris_legal (titolare, informative, banner); lo schema no
         $key = (string) $op['key'];
-        $writable = $key === 'kris_site' || ($key === 'kris_legal' && in_array($def['name'], self::LEGAL_OWNER_FIELDS, true));
+        $writable = $key === 'kris_site' || $key === 'kris_legal';
         $entity = &self::entity($state['data'], $key, (int) ($op['id'] ?? 0), $path, $writable);
         $index = self::fieldIndex($entity, $def['name']);
         $current = $index === null ? null : $entity['data'][$index]['value'];
