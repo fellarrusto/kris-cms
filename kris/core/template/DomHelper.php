@@ -13,9 +13,12 @@ class DomHelper {
         @$dom->loadHTML('<?xml encoding="UTF-8">' . $html, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
 
         // Il prologo serve solo a forzare UTF-8 durante il parsing: se resta
-        // nel documento finisce nell'output di ogni pagina.
+        // nel documento finisce nell'output di ogni pagina. libxml fino alla
+        // 2.12 lo legge come istruzione di elaborazione, le versioni recenti
+        // come commento (<!--?xml encoding="UTF-8"-->): si tolgono entrambi.
         foreach (iterator_to_array($dom->childNodes) as $node) {
-            if ($node->nodeType === XML_PI_NODE) {
+            if ($node->nodeType === XML_PI_NODE
+                || ($node->nodeType === XML_COMMENT_NODE && preg_match('/^\?xml encoding="UTF-8"\??$/', trim((string) $node->nodeValue)) === 1)) {
                 $dom->removeChild($node);
             }
         }
