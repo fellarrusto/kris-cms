@@ -306,6 +306,17 @@ function parsePath(?string $raw): array
     return array_values(array_filter(explode('/', $raw), fn($s) => $s !== ''));
 }
 
+/**
+ * L'ancora dove tornare dopo un'azione su un elenco (return_to del modulo),
+ * cosi la pagina resta all'altezza a cui si lavorava invece di ripartire
+ * dall'alto. Vuota se manca o non e un id valido.
+ */
+function returnAnchor(): string
+{
+    $anchor = (string) ($_POST['return_to'] ?? '');
+    return preg_match('/^[A-Za-z0-9_-]{1,160}$/', $anchor) === 1 ? '#' . $anchor : '';
+}
+
 function pathToString(array $path): string
 {
     return implode('/', $path);

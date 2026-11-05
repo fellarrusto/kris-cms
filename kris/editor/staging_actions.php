@@ -77,7 +77,7 @@ try {
             exit;
         }
         $back = pathToString($parentPath);
-        header("Location: $BASE?action=edit&group=" . urlencode($g) . "&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
+        header("Location: $BASE?action=edit&group=" . urlencode($g) . "&id=$id" . ($back ? '&path=' . urlencode($back) : '') . returnAnchor());
         exit;
     } elseif (isset($_POST['toggle_visibility'])) {
         $visible = ($_POST['visible'] ?? '') === '1';

@@ -201,6 +201,8 @@ tr:hover td { background:var(--surface-2); }
 .row-actions { justify-content:flex-end; }
 .nested-table td { padding:13px 7px; }
 .nested-table th { padding:10px 7px; }
+/* Dopo un'eliminazione si torna all'elemento vicino (#item-…): a meta schermo, non contro il bordo */
+.nested-heading, .nested-table tr[id] { scroll-margin-top:30vh; }
 .nested-table .btn { min-height:35px; padding:6px 10px; }
 .dnd-dragging { opacity:.45; }
 .dnd-table tr[draggable=true] { cursor:grab; }
