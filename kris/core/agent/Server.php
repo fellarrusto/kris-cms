@@ -23,6 +23,8 @@ use Kris\Staging\StagingException;
 final class Server
 {
     public const WINDOW = 300;
+    /** Operazioni al massimo in un gruppo: oltre, la richiesta e troppo lunga da ripetere a ogni anteprima */
+    private const MAX_BATCH = 100;
     private const MAX_BODY = 12 * 1024 * 1024; // un'immagine da 8 MB in base64, piu il resto
 
     private string $root;
@@ -132,7 +134,18 @@ final class Server
             case 'operate':
                 if (!is_array($r['operation'] ?? null)) throw new AgentException('Serve "operation", un oggetto con "op".', 400);
                 $done = $s->operate($r['operation'], $by);
-                return ['operation' => $done, 'description' => Operations::describe($done)];
+                return ['operation' => $done, 'description' => Operations::describe($done)] + $this->warningsOf($s);
+
+            case 'operate_batch':
+                $ops = $r['operations'] ?? null;
+                if (!is_array($ops) || !array_is_list($ops) || !$ops) throw new AgentException('Serve "operations", una lista di operazioni.', 400);
+                if (count($ops) > self::MAX_BATCH) throw new AgentException('Al massimo ' . self::MAX_BATCH . ' operazioni per volta.', 400);
+                $done = $s->operateAll($ops, $by);
+                return ['operations' => array_map(fn($o) => ['operation' => $o, 'description' => Operations::describe($o)], $done)] + $this->warningsOf($s);
+
+            case 'delete_upload':
+                $s->deleteUpload($this->string($r, 'url'), $by);
+                return ['deleted' => true];
 
             case 'upload':
                 $data = base64_decode($this->string($r, 'data', true), true);
@@ -190,15 +203,16 @@ final class Server
             'scripts' => $files('assets/js/*.js'),
             'svg_images' => $files('assets/images/*.svg'),
             'fonts' => $files('assets/fonts/*.woff2'),
-            'staging' => $this->status($report),
+            'staging' => $this->status($report, $state),
         ];
     }
 
-    /** $report: l'esito delle operazioni, se gia calcolato. Solo letture: i file dell'anteprima non si riscrivono. */
-    private function status(?array $report = null): array
+    /** $state e $report: anteprima ed esito delle operazioni, se gia calcolati. Solo letture: i file dell'anteprima non si riscrivono. */
+    private function status(?array $report = null, ?array $state = null): array
     {
         $s = $this->staging;
-        $report ??= $s->report();
+        // Un solo replay per esito e avvisi: sui siti grandi ogni replay costa
+        if ($report === null) [$state, $report] = $s->stateAndReport();
         return [
             'has_changes' => $s->hasChanges(),
             'files' => array_map(fn($c) => ['file' => $c['file'], 'kind' => $c['kind'], 'conflict' => $c['conflict'], 'sensitive' => $c['sensitive']], $s->changes()),
@@ -206,11 +220,19 @@ final class Server
             'uploads' => array_map(fn($n) => "assets/uploads/{$n}", array_keys($s->manifest()['uploads'])),
             'fonts' => array_map(fn($n) => "assets/fonts/{$n}", array_keys($s->manifest()['fonts'])),
             'template_problems' => $s->templateProblems(),
+            // Da controllare, non bloccano la pubblicazione
+            'warnings' => $s->warnings($state),
             // JavaScript e SVG nuovi girano nell'anteprima solo dopo l'approvazione dell'admin
             'code_awaiting_approval' => $s->codeApproved() ? [] : $s->codeFiles(),
             // L'anteprima si apre solo con il login dell'editor: la pubblicazione la decide l'admin
             'preview' => 'index.php?kris_preview=1',
         ];
+    }
+
+    /** Gli avvisi dell'ultima registrazione, solo se ce ne sono. */
+    private function warningsOf(Staging $s): array
+    {
+        return $s->lastWarnings() ? ['warnings' => $s->lastWarnings()] : [];
     }
 
     /** @throws AgentException */
