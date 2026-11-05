@@ -397,3 +397,94 @@ test('l agente scrive tutti i valori di kris_legal (titolare, informative, banne
     expectStaging(fn() => $s->operate(['op' => 'set_hidden', 'key' => 'kris_legal', 'id' => 0, 'hidden' => true], 'a'), 'non esiste');
     expectStaging(fn() => $s->operate(['op' => 'add_field', 'collection' => 'kris_legal', 'field' => ['name' => 'extra', 'type' => 'text']], 'a'), 'appartiene a Kris');
 });
+
+test('add_item e create_entity rifiutano le chiavi che non conoscono', function () {
+    $s = new Staging(contentSite());
+    expectStaging(fn() => $s->operate(['op' => 'add_item', 'key' => 'homepage', 'id' => 0, 'array' => 'steps',
+        'data' => ['title' => ['it' => 'x']]], 'a'), '«data»');
+    expectStaging(fn() => $s->operate(['op' => 'create_entity', 'key' => 'navbar', 'values' => []], 'a'), 'Chiavi ammesse');
+    assertSame([], $s->operations(), 'niente elementi vuoti registrati');
+});
+
+test('add_item crea anche gli elenchi annidati, con id in ordine', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'add_item', 'key' => 'homepage', 'id' => 0, 'array' => 'features', 'fields' => [
+        'title' => ['it' => 'Veloce', 'en' => 'Fast'],
+        'highlights' => [['title' => ['it' => 'Uno', 'en' => 'One']], ['title' => ['it' => 'Due', 'en' => 'Two']]],
+    ]], 'a');
+    $features = siteValue("{$root}/data/staging/data/k_data.json", 'homepage', 0, 'features');
+    $added = end($features)['data'];
+    $highlights = array_values(array_filter($added, fn($f) => $f['name'] === 'highlights'))[0]['value'];
+    assertSame([0, 1], array_column($highlights, 'id'));
+    assertSame('Due', $highlights[1]['data'][0]['value']['it']);
+
+    expectStaging(fn() => $s->operate(['op' => 'add_item', 'key' => 'homepage', 'id' => 0, 'array' => 'features',
+        'fields' => ['highlights' => ['title' => 'x']]], 'a'), 'lista di elementi');
+    expectStaging(fn() => $s->operate(['op' => 'add_item', 'key' => 'homepage', 'id' => 0, 'array' => 'features',
+        'fields' => ['highlights' => [['inventato' => 'x']]]], 'a'), 'non esiste');
+});
+
+test('un testo solo su un campo multilingua avvisa delle lingue rimaste vuote', function () {
+    $s = new Staging(contentSite());
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'page_title', 'value' => 'Solo italiano'], 'a');
+    assertSame(1, count($s->lastWarnings()));
+    assertContains('lingua en', $s->lastWarnings()[0]);
+
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'page_title', 'value' => ['it' => 'Ciao', 'en' => 'Hi']], 'a');
+    assertSame([], $s->lastWarnings());
+});
+
+test('piu operazioni insieme: tutte o nessuna, e si sa quale e stata rifiutata', function () {
+    $s = new Staging(contentSite());
+    expectStaging(fn() => $s->operateAll([
+        ['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'page_title', 'value' => ['it' => 'A', 'en' => 'A']],
+        ['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'inesistente', 'value' => 'x'],
+    ], 'a'), 'Operazione 1 (set_field)');
+    assertSame([], $s->operations());
+
+    $done = $s->operateAll([
+        ['op' => 'create_collection', 'name' => 'servizi', 'fields' => [['name' => 'titolo', 'type' => 'text']]],
+        ['op' => 'create_entity', 'key' => 'servizi', 'fields' => ['titolo' => ['it' => 'Uno', 'en' => 'One']]],
+    ], 'a');
+    assertSame(0, $done[1]['assigned_id']);
+    assertSame(2, count($s->operations()));
+});
+
+test('un caricamento si toglie dallo staging, non se un campo in attesa lo usa', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $tmp = tempnam(sys_get_temp_dir(), 'png');
+    file_put_contents($tmp, base64_decode(KRIS_TEST_PNG));
+    $unused = $s->upload($tmp, 'scarto.png', 'a');
+    $used = $s->upload($tmp, 'logo.png', 'a');
+    @unlink($tmp);
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'logo', 'value' => ['it' => $used, 'en' => $used]], 'a');
+
+    $s->deleteUpload($unused, 'a');
+    assertTrue(!is_file("{$root}/data/staging/uploads/" . basename($unused)));
+    assertSame([basename($used)], array_keys($s->manifest()['uploads']));
+    expectStaging(fn() => $s->deleteUpload($used, 'a'), 'cambia prima quel campo');
+    expectStaging(fn() => $s->deleteUpload($unused, 'a'), 'non è fra i file caricati');
+    expectStaging(fn() => $s->deleteUpload('template/homepage.html', 'a'), 'Si tolgono solo');
+});
+
+test('gli avvisi segnalano campi senza sezione, campi non usati e font mancanti', function () {
+    $root = contentSite();
+    mkdir("{$root}/assets/css", 0777, true);
+    file_put_contents("{$root}/assets/css/tema.css", "@font-face { font-family: X; src: url('../fonts/manca.woff2') format('woff2'); }");
+    $s = new Staging($root);
+    $s->operateAll([
+        ['op' => 'create_collection', 'name' => 'servizi', 'fields' => [
+            ['name' => 'titolo', 'type' => 'text', 'section' => 'Testata'],
+            ['name' => 'sottotitolo', 'type' => 'text'],
+        ]],
+    ], 'a');
+    $s->write('template/servizi.html', '<h1>{{titolo}}</h1>', null, 'a');
+
+    $warnings = implode("\n", $s->warnings());
+    assertContains('«servizi»: sottotitolo senza sezione', $warnings);
+    assertContains('«servizi»: nessun template usa sottotitolo.', $warnings);
+    assertNotContains('usa titolo', $warnings);
+    assertContains('assets/css/tema.css cita il font manca.woff2', $warnings);
+});
