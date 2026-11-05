@@ -50,6 +50,8 @@ final class Staging
     private string $root;
     private string $dir;
     private string $backups;
+    /** @var string[] avvisi dell'ultima registrazione di operazioni (vedi lastWarnings) */
+    private array $warnings = [];
 
     public function __construct(?string $root = null)
     {
@@ -125,9 +127,12 @@ final class Staging
         FilePolicy::assertContent($relative, $content);
         $current = $this->read($relative);
         if ($current['hash'] !== $expectedHash) {
-            throw new StagingException($current['hash'] === null
-                ? "Il file '{$relative}' non esiste: rileggilo prima di modificarlo."
-                : "Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo e riapplica la modifica.");
+            if ($current['hash'] === null) {
+                throw new StagingException("Il file '{$relative}' non esiste: rileggilo prima di modificarlo.");
+            }
+            // L'hash attuale evita una lettura in piu a chi sa gia cosa e cambiato (per esempio una sua modifica precedente)
+            throw new StagingException("Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo e riapplica la modifica. "
+                . 'Se sai già cosa è cambiato, riprova con current_hash, la versione attuale.', ['current_hash' => $current['hash']]);
         }
 
         $manifest = $this->startManifest($by);
@@ -183,7 +188,7 @@ final class Staging
             throw new StagingException("Il file '{$relative}' non esiste.");
         }
         if ($current['hash'] !== $expectedHash) {
-            throw new StagingException("Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo prima di eliminarlo.");
+            throw new StagingException("Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo prima di eliminarlo.", ['current_hash' => $current['hash']]);
         }
         if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1 && in_array($m[1], $this->state()['pages'], true)) {
             throw new StagingException("template/{$m[1]}.html è il template della pagina pubblica «{$m[1]}»: toglila prima con unregister_page.");
@@ -263,15 +268,27 @@ final class Staging
      */
     public function operateAll(array $ops, string $by): array
     {
+        $this->warnings = [];
         if (!$ops) return [];
         [$state] = $this->replay($this->operations(), false);
         $languages = $this->languages();
+        $warnings = new \ArrayObject();
         $done = [];
-        foreach ($ops as $op) {
-            if (($op['op'] ?? null) === 'register_page' && !$this->templateExists((string) ($op['page'] ?? ''))) {
-                throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/{$op['page']}.html.");
+        foreach (array_values($ops) as $n => $op) {
+            if (!is_array($op)) {
+                throw new StagingException("L'operazione {$n} non è un oggetto con \"op\". Nessuna operazione del gruppo è stata registrata.");
             }
-            [$state, $completed] = Operations::apply($state, $op, $languages, [$this, 'uploadExists']);
+            try {
+                if (($op['op'] ?? null) === 'register_page' && !$this->templateExists((string) ($op['page'] ?? ''))) {
+                    throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/{$op['page']}.html.");
+                }
+                [$state, $completed] = Operations::apply($state, $op, $languages, [$this, 'uploadExists'], false, false, $warnings);
+            } catch (StagingException $e) {
+                // In un gruppo serve sapere quale operazione e stata rifiutata
+                if (count($ops) === 1) throw $e;
+                throw new StagingException("Operazione {$n} (" . ($op['op'] ?? '?') . '): ' . $e->getMessage()
+                    . ' Nessuna operazione del gruppo è stata registrata.', $e->details());
+            }
             $done[] = $completed;
         }
 
@@ -284,7 +301,14 @@ final class Staging
         (new JsonStore($this->dir . '/operations.json'))->write($list);
         // Lo stato e gia quello dell'anteprima: niente secondo replay (sui siti grandi raddoppiava i tempi)
         $this->writePreview($state, $list);
+        $this->warnings = array_values(array_unique($warnings->getArrayCopy()));
         return $done;
+    }
+
+    /** @return string[] gli avvisi dell'ultima operate/operateAll: lingue rimaste vuote */
+    public function lastWarnings(): array
+    {
+        return $this->warnings;
     }
 
     /**
@@ -447,6 +471,76 @@ final class Staging
         return $problems;
     }
 
+    /**
+     * Avvisi da controllare prima di pubblicare, che non la bloccano: campi
+     * senza sezione accanto a campi con sezione, campi che nessun template
+     * usa, font citati dal CSS che non ci sono.
+     *
+     * @param ?array $state lo stato dell'anteprima, se gia calcolato
+     * @return string[]
+     */
+    public function warnings(?array $state = null): array
+    {
+        $state ??= $this->state();
+        $deleted = array_flip($this->deletedFiles());
+        $read = function (string $pattern) use ($deleted): array {
+            $files = [];
+            foreach ([$this->root, $this->dir] as $base) {
+                foreach (glob("{$base}/{$pattern}") ?: [] as $file) {
+                    $relative = substr($file, strlen($base) + 1);
+                    if (!isset($deleted[$relative])) $files[$relative] = (string) file_get_contents($file);
+                }
+            }
+            return $files;
+        };
+        $templates = implode("\n", $read('template/*.html'));
+        $out = [];
+
+        foreach ($state['model'] as $collection => $schema) {
+            if (!is_array($schema) || str_starts_with((string) $collection, 'kris_')) continue;
+            foreach (self::schemaLevels($schema, (string) $collection) as $where => $defs) {
+                $withSection = array_filter($defs, fn($d) => ($d['section'] ?? '') !== '');
+                $loose = array_column(array_filter($defs, fn($d) => ($d['section'] ?? '') === ''), 'name');
+                if ($withSection && $loose) {
+                    $out[] = "«{$where}»: " . implode(', ', $loose) . " senza sezione, mentre gli altri campi ce l'hanno: nell'editor restano fuori dai pannelli.";
+                }
+                $unused = [];
+                foreach ($defs as $def) {
+                    $q = preg_quote((string) ($def['name'] ?? ''), '/');
+                    if (preg_match('/\{\{[^}]*\b' . $q . '\b[^}]*\}\}|k-[a-z-]+=["\']' . $q . '["\']/', $templates) !== 1) $unused[] = $def['name'];
+                }
+                if ($unused) {
+                    $out[] = "«{$where}»: nessun template usa " . implode(', ', $unused) . '.';
+                }
+            }
+        }
+
+        $fonts = array_flip(array_merge(
+            array_map('basename', glob("{$this->root}/assets/fonts/*") ?: []),
+            array_keys($this->manifest()['fonts'])
+        ));
+        foreach ($read('assets/css/*.css') as $relative => $css) {
+            preg_match_all('/url\(\s*["\']?[^"\')?#]*fonts\/([^"\')?#\/]+\.(?:woff2?|ttf|otf))/i', $css, $found);
+            foreach (array_unique($found[1]) as $name) {
+                if (!isset($fonts[$name])) $out[] = "{$relative} cita il font {$name}, che non c'è in assets/fonts/: caricalo come .woff2.";
+            }
+        }
+        return $out;
+    }
+
+    /** I campi di ogni livello dello schema: la raccolta e ogni elenco annidato. @return array<string, list<array>> */
+    private static function schemaLevels(array $schema, string $where): array
+    {
+        $defs = array_values(array_filter($schema, fn($d) => is_array($d) && isset($d['name'])));
+        $levels = [$where => $defs];
+        foreach ($defs as $def) {
+            if (($def['type'] ?? '') === 'array' && is_array($def['of'] ?? null) && $def['of']) {
+                $levels += self::schemaLevels($def['of'], "{$where} › {$def['name']}");
+            }
+        }
+        return $levels;
+    }
+
     // --- script nuovi: approvazione dell'anteprima -------------------------------
 
     /**
@@ -583,6 +677,34 @@ final class Staging
         $name = basename($url);
         return preg_match('#^assets/uploads/[A-Za-z0-9._-]+$#', $url) === 1
             && is_file("{$this->dir}/uploads/{$name}") && !is_file("{$this->root}/assets/uploads/{$name}");
+    }
+
+    /**
+     * Toglie dallo staging un file caricato e non ancora pubblicato
+     * (assets/uploads/<nome> o assets/fonts/<nome>.woff2). I file gia sul
+     * sito non si toccano: si tolgono dall'editor.
+     *
+     * @throws StagingException non e un caricamento dello staging, o un'operazione in attesa lo usa ancora
+     */
+    public function deleteUpload(string $url, string $by): void
+    {
+        if (preg_match('#^assets/uploads/([A-Za-z0-9._-]+)$#', $url, $m) === 1) {
+            [$kind, $file] = ['uploads', "{$this->dir}/uploads/{$m[1]}"];
+        } elseif (preg_match('#^assets/fonts/([a-z0-9][a-z0-9_-]*\.woff2)$#', $url, $m) === 1) {
+            [$kind, $file] = ['fonts', "{$this->dir}/assets/fonts/{$m[1]}"];
+        } else {
+            throw new StagingException("Si tolgono solo i file caricati nello staging, assets/uploads/<nome> o assets/fonts/<nome>.woff2: non '{$url}'.");
+        }
+        $manifest = $this->startManifest($by);
+        if (!isset($manifest[$kind][$m[1]])) {
+            throw new StagingException("{$url} non è fra i file caricati nello staging. Un file già pubblicato si toglie dall'editor, in Media.");
+        }
+        if ($kind === 'uploads' && str_contains((string) json_encode($this->operations(), JSON_UNESCAPED_SLASHES), $url)) {
+            throw new StagingException("{$url} è ancora il valore di un campo in attesa: cambia prima quel campo, poi togli il file.");
+        }
+        @unlink($file);
+        unset($manifest[$kind][$m[1]]);
+        $this->saveManifest($manifest);
     }
 
     /** Un URL assets/uploads/<nome> esiste nel sito o fra le immagini dello staging. */

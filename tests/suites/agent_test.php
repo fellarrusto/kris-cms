@@ -252,3 +252,29 @@ test('un abbinamento non piu riconosciuto chiede di abbinare di nuovo', function
         assertContains('abbinalo di nuovo', $e->getMessage());
     }
 });
+
+test('l agente registra piu operazioni in una chiamata, toglie un caricamento e riceve hash attuale e avvisi', function () {
+    [$root, $worker] = agentSite();
+    $batch = agentCall($root, $worker, ['action' => 'operate_batch', 'operations' => [
+        ['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'page_title', 'value' => 'Solo italiano'],
+        ['op' => 'add_item', 'key' => 'homepage', 'id' => 0, 'array' => 'steps', 'fields' => ['title' => ['it' => 'Passo', 'en' => 'Step']]],
+    ]]);
+    assertSame(200, $batch['status']);
+    assertSame(2, count($batch['body']['operations']));
+    assertContains('lingua en', $batch['body']['warnings'][0]);
+    assertSame(400, agentCall($root, $worker, ['action' => 'operate_batch', 'operations' => []])['status']);
+
+    $png = base64_encode((string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+    $url = agentCall($root, $worker, ['action' => 'upload', 'name' => 'foto.png', 'data' => $png])['body']['url'];
+    assertSame(200, agentCall($root, $worker, ['action' => 'delete_upload', 'url' => $url])['status']);
+    assertSame([], agentCall($root, $worker, ['action' => 'status'])['body']['uploads']);
+
+    $read = agentCall($root, $worker, ['action' => 'read_file', 'file' => 'template/homepage.html'])['body'];
+    agentCall($root, $worker, ['action' => 'edit_file', 'file' => 'template/homepage.html', 'old' => '</body>', 'new' => '<p>a</p></body>', 'expected_hash' => $read['hash']]);
+    $stale = agentCall($root, $worker, ['action' => 'edit_file', 'file' => 'template/homepage.html', 'old' => '<p>a</p>', 'new' => '<p>b</p>', 'expected_hash' => $read['hash']]);
+    assertSame(422, $stale['status']);
+    $retry = agentCall($root, $worker, ['action' => 'edit_file', 'file' => 'template/homepage.html', 'old' => '<p>a</p>', 'new' => '<p>b</p>',
+        'expected_hash' => $stale['body']['details']['current_hash']]);
+    assertSame(200, $retry['status'], 'con l hash attuale si riparte senza rileggere');
+    assertTrue(is_array(agentCall($root, $worker, ['action' => 'status'])['body']['warnings']));
+});

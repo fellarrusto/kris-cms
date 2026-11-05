@@ -32,15 +32,22 @@ final class Operations
         'save_structure', 'delete_collection', 'save_settings', 'delete_media', 'file_name',
         'order', 'group_name', 'schema_json', 'collection_name', 'langs', 'f', 'return_posts'];
 
+    // Chiavi ammesse da chi crea contenuti: una chiave sbagliata ("data" al posto di "fields") creerebbe un elemento vuoto senza errori
+    private const KEYS = [
+        'add_item' => ['op', 'key', 'id', 'path', 'array', 'fields', 'position'],
+        'create_entity' => ['op', 'key', 'fields'],
+    ];
+
     /**
      * Applica un'operazione. Alla prima applicazione (non $replay) completa
      * l'operazione con quanto trovato, da confrontare alla ripetizione.
      *
      * @param callable(string): bool $uploadExists un URL assets/uploads/... esiste (nel sito o nello staging)
+     * @param ?\ArrayObject $warnings raccoglie gli avvisi per chi ha chiesto l'operazione (lingue rimaste vuote)
      * @return array{0: array, 1: array} stato nuovo e operazione completata
      * @throws StagingException operazione non valida, o conflitto alla ripetizione
      */
-    public static function apply(array $state, array $op, array $languages, callable $uploadExists, bool $replay = false, bool $force = false): array
+    public static function apply(array $state, array $op, array $languages, callable $uploadExists, bool $replay = false, bool $force = false, ?\ArrayObject $warnings = null): array
     {
         $type = (string) ($op['op'] ?? '');
         $method = [
@@ -58,7 +65,15 @@ final class Operations
         if ($method === null) {
             throw new StagingException("Operazione sconosciuta: '{$type}'.");
         }
-        $ctx = ['languages' => array_values($languages), 'uploadExists' => $uploadExists, 'replay' => $replay, 'force' => $force];
+        if (!$replay && isset(self::KEYS[$type])) {
+            $unknown = array_diff(array_map('strval', array_keys($op)), self::KEYS[$type]);
+            if ($unknown) {
+                throw new StagingException("{$type} non conosce " . implode(', ', array_map(fn($k) => "«{$k}»", $unknown))
+                    . '. Chiavi ammesse: ' . implode(', ', self::KEYS[$type]) . '.');
+            }
+        }
+        $ctx = ['languages' => array_values($languages), 'uploadExists' => $uploadExists, 'replay' => $replay, 'force' => $force,
+            'warnings' => $warnings ?? new \ArrayObject()];
         return self::$method($state, $op, $ctx);
     }
 
@@ -764,6 +779,11 @@ final class Operations
             }
             $out[$lang] = self::langString($def, $text, $ctx);
         }
+        $empty = array_keys(array_filter($out, fn($text) => $text === ''));
+        if ($empty && count($empty) < count($out) && !$ctx['replay']) {
+            $ctx['warnings'][] = "«{$def['name']}»: " . (count($empty) === 1 ? 'resta vuota la lingua ' : 'restano vuote le lingue ')
+                . implode(', ', $empty) . ". Per scriverle passa un testo per lingua, per esempio {\"" . $ctx['languages'][0] . "\": \"…\", \"{$empty[0]}\": \"…\"}.";
+        }
         return $out;
     }
 
@@ -783,15 +803,32 @@ final class Operations
         return $text;
     }
 
-    /** Campi di un elemento nuovo: tutti quelli dello schema, vuoti se non indicati. */
+    /**
+     * Campi di un elemento nuovo: tutti quelli dello schema, vuoti se non
+     * indicati. Un elenco annidato si passa come lista di elementi, ognuno con
+     * i suoi campi: gli elementi ricevono gli id 0, 1, 2… nell'ordine dato.
+     */
     private static function fill(array $schema, array $fields, array $ctx): array
     {
         $out = [];
         foreach ($schema as $def) {
-            if (array_key_exists($def['name'], $fields) && $def['type'] !== 'array') {
-                $out[] = ['name' => $def['name'], 'type' => $def['type'], 'value' => self::value($def, $fields[$def['name']], $ctx)];
-            } else {
+            if (!array_key_exists($def['name'], $fields)) {
                 $out[] = self::emptyValue($def, $ctx['languages']);
+            } elseif ($def['type'] === 'array') {
+                $items = $fields[$def['name']];
+                if (!is_array($items) || !array_is_list($items)) {
+                    throw new StagingException("«{$def['name']}» è un elenco: passa una lista di elementi, per esempio [{\"title\": {…}}, …].");
+                }
+                $value = [];
+                foreach ($items as $i => $item) {
+                    if (!is_array($item) || ($item && array_is_list($item))) {
+                        throw new StagingException("L'elemento {$i} di «{$def['name']}» deve essere un oggetto con i suoi campi.");
+                    }
+                    $value[] = ['id' => $i, 'data' => self::fill($def['of'] ?? [], $item, $ctx)];
+                }
+                $out[] = ['name' => $def['name'], 'type' => 'array', 'value' => $value];
+            } else {
+                $out[] = ['name' => $def['name'], 'type' => $def['type'], 'value' => self::value($def, $fields[$def['name']], $ctx)];
             }
         }
         foreach (array_keys($fields) as $name) {
