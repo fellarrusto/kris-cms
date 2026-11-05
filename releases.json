@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.9.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Eliminando un elemento da una lista l'editor resta dove stavi lavorando, invece di tornare in cima. L'assistente sbaglia meno: avvisa delle lingue lasciate vuote, crea le liste annidate, registra più modifiche insieme e toglie un singolo file caricato. Corretto un commento che alcuni server aggiungevano in testa alle pagine.",
+            "date": "2026-11-05",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.9.0/kris-1.9.0.zip",
+            "sha256": "6377e751f963908cfbc9760fb7f4023416b8ef224311e0f7fd8a630cdf91c65d",
+            "size": 202326
+        },
+        {
             "version": "1.8.0",
             "min_from": "1.0.0",
             "breaking": false,
