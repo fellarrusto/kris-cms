@@ -78,3 +78,14 @@ test('nome visibile, descrizione, contenuto unico e ordine delle raccolte nell e
     assertSame(null, singleCollectionViolation(['delete_instance' => 1, 'group' => 'homepage'], $data));
     editorCollectionInfo([]);
 });
+
+test('dopo un eliminazione si torna all elemento indicato dal modulo, solo se e un id valido', function () {
+    $_POST['return_to'] = 'item-archive-12';
+    assertSame('#item-archive-12', returnAnchor());
+    foreach (['', 'item"><script>', "list-x\r\nLocation: https://example.com", str_repeat('a', 200)] as $bad) {
+        $_POST['return_to'] = $bad;
+        assertSame('', returnAnchor(), 'rifiutato: ' . substr($bad, 0, 20));
+    }
+    unset($_POST['return_to']);
+    assertSame('', returnAnchor());
+});

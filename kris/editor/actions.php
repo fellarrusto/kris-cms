@@ -219,7 +219,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
                 header("Location: $BASE?action=posts&group=" . urlencode($g) . "&id=$id&field=" . urlencode($fieldName));
                 exit;
             }
-            header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
+            header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : '') . returnAnchor());
             exit;
         }
     }
