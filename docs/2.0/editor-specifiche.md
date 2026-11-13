@@ -275,7 +275,7 @@ Un selettore fra le lingue attive del sito. Cambiando lingua cambiano i valori d
 
 **Indirizzo del contenuto**
 
-Compare solo quando una pagina del sito è collegata al tipo.
+Compare solo quando un indirizzo del sito è collegato al tipo.
 
 - Un nome per l'indirizzo, per lingua e facoltativo. Se è vuoto, la pagina usa il numero del contenuto.
 - L'editor lo propone a partire dal titolo e mostra l'indirizzo completo che ne risulta.
