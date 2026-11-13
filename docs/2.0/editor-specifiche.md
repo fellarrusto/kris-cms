@@ -55,12 +55,14 @@ Non promette nulla che non sia descritto in questo documento.
 | --- | --- |
 | **Tipo** | Un genere di contenuto con i suoi campi: «Homepage», «Progetti», «Menu di navigazione». Ha un nome visibile, una descrizione e un nome tecnico |
 | **Contenuto unico** | Un tipo di cui esiste un solo esemplare: una pagina, il piè di pagina, le impostazioni. Si apre direttamente in modifica |
-| **Raccolta** | Un tipo con molti contenuti: progetti, articoli, eventi. Ha un elenco ordinabile |
+| **Pagina** | Un contenuto unico che ha un indirizzo pubblico: la homepage, «Chi siamo» |
+| **Blocco** | Un contenuto unico senza indirizzo, mostrato dentro altre pagine: il menu di navigazione, il piè di pagina |
+| **Raccolta** | Un tipo con molti contenuti: progetti, articoli, eventi. Ha un elenco ordinabile. Ogni suo contenuto può avere un indirizzo proprio |
 | **Contenuto** | Un esemplare di un tipo |
 | **Campo** | Un valore modificabile di un contenuto. È **condiviso** fra le lingue oppure **per lingua** |
 | **Lista** | Un campo che contiene un gruppo ripetuto di elementi, ognuno con i suoi campi (le domande frequenti di una pagina). Le liste possono contenere altre liste |
 | **Sezione** | Un raggruppamento di campi con un nome, per ordinare un contenuto con molti campi |
-| **Pagina** | Un indirizzo pubblico del sito, collegato a un tipo |
+| **Indirizzo** | Il percorso pubblico (`/menu`, `/progetto/3`) con cui si raggiunge una pagina o un contenuto di una raccolta |
 | **Sospeso** | Un contenuto o un elemento di lista che resta nell'editor ma non compare sul sito |
 | **In attesa** | Modifiche preparate e non ancora pubblicate |
 | **Plugin** | Un'estensione che aggiunge funzioni al sito e schermate all'editor |
@@ -102,12 +104,12 @@ Sezioni dell'editor:
 
 | Gruppo | Voci |
 | --- | --- |
-| **Contenuti** | I contenuti unici e le raccolte del sito |
+| **Contenuti** | Le pagine, i blocchi e le raccolte del sito |
 | **Libreria media** | I file caricati |
 | **Sito** | Proprietà del sito, Privacy e cookie, Pagina 404, Lavori in corso |
 | **Da pubblicare** | Le modifiche in attesa. Compare solo quando ci sono modifiche in attesa o una pubblicazione ancora annullabile; mostra quante sono |
 | **Plugin installati** | Le voci che ogni plugin aggiunge; da zero a molte |
-| **Sviluppo** | Struttura, Pagine e indirizzi, Plugin |
+| **Sviluppo** | Struttura, Indirizzi, Plugin |
 | **Impostazioni** | Lingue, Caricamenti, Account, Assistente AI, Archivio dei dati, Versione di Kris |
 
 Sempre raggiungibili: il tema, la versione di Kris installata, l'uscita.
@@ -116,7 +118,7 @@ Sempre raggiungibili: il tema, la versione di Kris installata, l'uscita.
 
 ### Navigazione principale
 
-Raggiunge tutte le sezioni del capitolo 4. Indica la sezione corrente e il numero di modifiche in attesa. Dà accesso rapido alle raccolte, con il numero di contenuti di ciascuna.
+Raggiunge tutte le sezioni del capitolo 4. Indica la sezione corrente e il numero di modifiche in attesa. Dà accesso rapido alle sole raccolte con l'opzione «i nuovi in cima» (articoli, notizie, eventi), con il numero di contenuti di ciascuna; le altre raccolte si raggiungono dalla schermata «Contenuti».
 
 ### Posizione
 
@@ -197,8 +199,9 @@ Schermate senza navigazione.
 
 **Contenuto**
 
-- I contenuti unici e le raccolte del sito, distinguibili a colpo d'occhio.
-- Per ogni tipo: nome visibile, descrizione, numero di contenuti (per le raccolte).
+- Due gruppi: «Pagine e blocchi» (i contenuti unici) e «Raccolte».
+- Ogni elemento indica cosa è: pagina, blocco o raccolta. L'editor lo ricava da solo: un contenuto unico è una pagina se ha un indirizzo, un blocco se non ne ha.
+- Per ogni tipo: nome visibile, descrizione, data dell'ultima modifica; per le raccolte, numero di contenuti e di sospesi.
 - Ricerca per nome.
 - Riquadri che i plugin possono aggiungere (per esempio un riepilogo delle visite).
 
@@ -330,15 +333,15 @@ Se il salvataggio elimina, rinomina o cambia tipo a campi che contengono già va
 
 **Stati**: tipo senza campi; errore di validazione; modifiche non salvate; riepilogo dell'impatto; non disponibile in «In attesa».
 
-### 6.6 Pagine e indirizzi
+### 6.6 Indirizzi
 
 **Scopo**: vedere e gestire gli indirizzi pubblici del sito. Funzione da sviluppatore.
 
-**Pagine**
+**Elenco degli indirizzi**
 
 - Elenco con: nome, indirizzo (`/menu`, `/progetto/…`), tipo collegato, modello grafico, presenza nella mappa del sito, indicizzabile o no, apertura della pagina.
-- Una pagina è collegata a un contenuto unico oppure a ogni contenuto di una raccolta.
-- Modifica di una pagina: indirizzo, tipo, modello grafico, mappa del sito sì o no, indicizzabile sì o no.
+- Un indirizzo è collegato a un contenuto unico (che così diventa una pagina) oppure a ogni contenuto di una raccolta.
+- Modifica di un indirizzo: percorso, tipo, modello grafico, mappa del sito sì o no, indicizzabile sì o no.
 - L'indirizzo viene verificato: nomi riservati e indirizzi già usati sono rifiutati con il motivo.
 - Quando l'indirizzo cambia, l'editor avvisa che il vecchio verrà reindirizzato al nuovo.
 

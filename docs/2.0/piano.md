@@ -46,6 +46,8 @@ Vincolo trasversale: Kris resta generico. Entra nel core ciò che serve a qualun
 | **Vista** | Un template che rende un tipo: pagina intera, card, dettaglio. Un tipo ha più viste. | Implicito: template e frammenti `k-template` |
 | **Pagina** | Un indirizzo che abbina una vista a un contenuto fisso oppure a ogni contenuto di un tipo. | Un nome in `allowed_pages.json`; `page`, `key` e `id` liberi nell'URL |
 
+Nell'editor il vocabolario per le persone è più semplice e si ricava da questo: un contenuto unico con un indirizzo è una **pagina** (homepage), uno senza è un **blocco** (navbar, piè di pagina), un tipo con molti contenuti è una **raccolta**. La sezione che gestisce le pagine del modello si chiama «Indirizzi».
+
 Due regole:
 
 - Se un elemento ha una pagina propria, è un contenuto di un tipo, non un elemento di lista. Le liste con pagina di dettaglio di oggi (`path=posts/3`) vengono promosse a tipo dalla migrazione.
@@ -146,7 +148,7 @@ Tutte additive.
 
 Attivabile sui tipi che hanno una pagina: aggiunge titolo, descrizione e immagine nell'editor; Kris inietta `<title>`, description e tag Open Graph se il template non li ha. I siti che usano campi propri (`meta_title`) continuano a funzionare.
 
-## 4. Pagine e indirizzi
+## 4. Indirizzi
 
 - Ogni pagina dichiara template, tipo, indirizzo, presenza in sitemap e `noindex`.
 - Lingua: la principale senza prefisso (`/menu`), le altre con prefisso (`/en/menu`).
@@ -290,7 +292,7 @@ La fase 6 può procedere in parallelo alle fasi 3–5 una volta chiusa la specif
 Bug:
 
 - `register_page` con `sitemap: false` aggiunge comunque la pagina alla sitemap (`Operations.php:744`, `isset` è vero anche per `false`).
-- Falso positivo «il template usa ancora il campo» (`Staging.php:451`): il controllo guarda solo il nome del campo. Ripiego per la 1.9.x: se un'altra raccolta ha ancora un campo con quel nome, è un avviso e non un blocco. La correzione vera arriva con le pagine legate a un tipo.
+- Falso positivo «il template usa ancora il campo» (`Staging.php:451`): il controllo guarda solo il nome del campo. Non basta declassare ad avviso quando un'altra raccolta ha un campo omonimo: passerebbero anche i casi veri (`homepage` e `navbar` hanno entrambe `page_title`). Per la 1.9.x va ricavato quale raccolta rende ogni template, dai riferimenti `k-component` e `k-array`, dalle regole della sitemap e dai campi che il template usa. La correzione completa arriva con le pagine legate a un tipo.
 
 Strumenti dell'agente (aggiunte, richiedono lavoro anche in `kris-agent`):
 
