@@ -226,6 +226,8 @@ final class Server
             'code_awaiting_approval' => $s->codeApproved() ? [] : $s->codeFiles(),
             // L'anteprima si apre solo con il login dell'editor: la pubblicazione la decide l'admin
             'preview' => 'index.php?kris_preview=1',
+            // Una per pagina toccata, anche quelle che nessun link del sito raggiunge
+            'preview_pages' => $s->previewPages($state),
         ];
     }
 

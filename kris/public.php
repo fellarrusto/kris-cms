@@ -112,17 +112,27 @@ if ($maintenance !== null && !$maintenance['stale']) {
 // Anteprima dello staging: solo con una sessione dell'editor. Senza, la
 // pagina non esiste: chi riceve il link dell'anteprima vede la 404.
 $preview = null;
-if (Preview::requested($_GET)) {
-    if (!Preview::isAdmin()) {
+if (($_GET['kris_preview'] ?? null) === '0' && Preview::modeCookie($_COOKIE)) {
+    // «Esci» dall'anteprima: da qui in poi il sito pubblico
+    Preview::rememberMode(false);
+}
+$previewAdmin = Preview::requested($_GET, $_COOKIE) && Preview::isAdmin();
+if (Preview::requested($_GET, $_COOKIE) && !$previewAdmin) {
+    if (Preview::explicit($_GET)) {
         echo kris_not_found($lang);
         exit;
     }
+    // Solo il cookie della modalità, senza più la sessione: il sito pubblico, non una 404
+    Preview::rememberMode(false);
+}
+if ($previewAdmin) {
     $staging = new Staging();
     if (isset($_GET['kris_preview_asset'])) {
         Preview::serveAsset($staging, (string) $_GET['kris_preview_asset']);
         exit;
     }
     $preview = $staging;
+    Preview::rememberMode(true);
     Preview::headers($staging);
     if ($staging->exists()) {
         // I contenuti del sito possono essere cambiati dall'ultima operazione: l'anteprima riparte da quelli
