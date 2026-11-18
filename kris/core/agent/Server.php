@@ -116,13 +116,24 @@ final class Server
                 return $this->overview();
 
             case 'read_file':
-                return $s->read($this->string($r, 'file'));
+                return $this->readFile($s->read($this->string($r, 'file')), $r);
+
+            case 'search_theme':
+                return $this->searchTheme($this->string($r, 'query'));
 
             case 'write_file':
                 return $s->write($this->string($r, 'file'), $this->string($r, 'content', true), $this->hashOrNull($r), $by);
 
             case 'edit_file':
-                return $s->edit($this->string($r, 'file'), $this->string($r, 'old', true), $this->string($r, 'new', true), (string) $this->hashOrNull($r), $by);
+                // Senza impronta basta che il testo da sostituire compaia una volta sola: non serve rileggere il file intero
+                $file = $this->string($r, 'file');
+                return $s->edit($file, $this->string($r, 'old', true), $this->string($r, 'new', true), (string) ($this->hashOrNull($r) ?? $s->read($file)['hash']), $by);
+
+            case 'render_page':
+                return $this->renderPage($r);
+
+            case 'site_config':
+                return $this->siteConfig();
 
             case 'delete_file':
                 $s->delete($this->string($r, 'file'), (string) $this->hashOrNull($r), $by);
@@ -170,6 +181,111 @@ final class Server
             default:
                 throw new AgentException("Azione sconosciuta: {$r['action']}.", 404);
         }
+    }
+
+    /** Righe lette al massimo per volta da read_file e risultati da search_theme. */
+    private const MAX_LINES = 400;
+    private const MAX_MATCHES = 200;
+
+    /**
+     * Un file del tema, intero o a pezzi: from_line e lines per un intervallo,
+     * search per le sole righe che contengono un testo, hash_only per la sola
+     * impronta (quella da passare a write_file o edit_file). L'impronta è
+     * sempre quella del file intero.
+     */
+    private function readFile(array $file, array $r): array
+    {
+        if ($file['content'] === null) return $file;
+        $lines = preg_split('/\r\n|\n|\r/', $file['content']) ?: [];
+        $total = count($lines);
+        $meta = ['hash' => $file['hash'], 'source' => $file['source'], 'total_lines' => $total, 'size' => strlen($file['content'])];
+        if (!empty($r['hash_only'])) return $meta;
+        if (is_string($r['search'] ?? null) && $r['search'] !== '') {
+            $matches = [];
+            foreach ($lines as $i => $line) {
+                if (mb_stripos($line, $r['search']) !== false) {
+                    $matches[] = ['line' => $i + 1, 'text' => mb_substr($line, 0, 500)];
+                    if (count($matches) >= self::MAX_MATCHES) break;
+                }
+            }
+            return $meta + ['matches' => $matches];
+        }
+        if (!isset($r['from_line']) && !isset($r['lines'])) return $file + ['total_lines' => $total];
+        $from = max(1, (int) ($r['from_line'] ?? 1));
+        $count = max(1, min(self::MAX_LINES, (int) ($r['lines'] ?? self::MAX_LINES)));
+        $slice = array_slice($lines, $from - 1, $count);
+        return $meta + ['from_line' => $from, 'to_line' => $from + count($slice) - 1, 'content' => implode("\n", $slice)];
+    }
+
+    /** Le righe dei file del tema (template, CSS, JS, SVG) che contengono un testo, con lo staging sopra il sito. */
+    private function searchTheme(string $query): array
+    {
+        $deleted = array_flip($this->staging->deletedFiles());
+        $files = [];
+        foreach (['template/*.html', 'assets/css/*.css', 'assets/js/*.js', 'assets/images/*.svg'] as $pattern) {
+            foreach ([$this->root, $this->staging->dir()] as $base) {
+                foreach (glob("{$base}/{$pattern}") ?: [] as $path) {
+                    $relative = dirname($pattern) . '/' . basename($path);
+                    if (!isset($deleted[$relative])) $files[$relative] = $path; // lo staging, letto dopo, vince
+                }
+            }
+        }
+        ksort($files);
+        $matches = [];
+        foreach ($files as $relative => $path) {
+            foreach (preg_split('/\r\n|\n|\r/', (string) file_get_contents($path)) ?: [] as $i => $line) {
+                if (mb_stripos($line, $query) === false) continue;
+                $matches[] = ['file' => $relative, 'line' => $i + 1, 'text' => mb_substr($line, 0, 300)];
+                if (count($matches) >= self::MAX_MATCHES) return ['matches' => $matches, 'truncated' => true];
+            }
+        }
+        return ['matches' => $matches, 'truncated' => false];
+    }
+
+    /**
+     * L'HTML finito di una pagina con le modifiche in attesa, compreso quanto
+     * Kris aggiunge da solo (canonical, hreflang, favicon, versione dei file).
+     * Senza la barra e il popup dell'anteprima.
+     */
+    private function renderPage(array $r): array
+    {
+        $query = [];
+        foreach (['page', 'key', 'path', 'ln'] as $k) {
+            if (is_string($r[$k] ?? null) && $r[$k] !== '') $query[$k] = $r[$k];
+        }
+        if (isset($r['id'])) $query['id'] = (string) (int) $r['id'];
+        if ($this->staging->exists()) {
+            $this->staging->rebuild();
+            \Kris\Site\Paths::useOverlay($this->staging->dir(), $this->staging->deletedFiles());
+        }
+        try {
+            $page = \Kris\Site\PageRenderer::render($query, $_SERVER);
+        } finally {
+            \Kris\Site\Paths::useOverlay(null);
+        }
+        return ['status' => $page['status'], 'lang' => $page['lang'], 'html' => $page['html']];
+    }
+
+    /** Configurazione pubblica del sito, in sola lettura: pagine, seo.json e sitemap con le modifiche in attesa, robots.txt. */
+    private function siteConfig(): array
+    {
+        $state = $this->staging->state();
+        $settingsFile = $this->root . '/data/cms_settings.json';
+        $settings = is_file($settingsFile) ? (new JsonStore($settingsFile))->read([]) : [];
+        $langs = !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+        $seo = \Kris\Template\Seo::config($this->root);
+        $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : $seo['sitemap'];
+        $robots = $this->root . '/robots.txt';
+        return [
+            'pages' => $state['pages'],
+            'seo' => $state['seo'] ?: (object) [],
+            'robots_txt' => is_file($robots) ? (string) file_get_contents($robots) : null,
+            'sitemap_xml' => \Kris\Template\Seo::sitemapXml(
+                \Kris\Template\Seo::sitemapEntries($state['data'], $sitemap, $state['pages']),
+                \Kris\Template\Seo::baseUrl($seo, $_SERVER),
+                $langs
+            ),
+        ];
     }
 
     /** Quello che serve all'agente per orientarsi: lingue, pagine, schema, contenuti, file del tema. */

@@ -278,3 +278,79 @@ test('l agente registra piu operazioni in una chiamata, toglie un caricamento e 
     assertSame(200, $retry['status'], 'con l hash attuale si riparte senza rileggere');
     assertTrue(is_array(agentCall($root, $worker, ['action' => 'status'])['body']['warnings']));
 });
+
+test('read_file legge a pezzi, cerca e da la sola impronta; edit_file senza impronta', function () {
+    [$root, $worker] = agentSite();
+    $file = 'assets/css/prova.css';
+    $css = implode("\n", array_map(fn($i) => ".r{$i} { color: red; }", range(1, 1000)));
+    agentCall($root, $worker, ['action' => 'write_file', 'file' => $file, 'content' => $css]);
+
+    $whole = agentCall($root, $worker, ['action' => 'read_file', 'file' => $file])['body'];
+    assertSame(1000, $whole['total_lines']);
+    $part = agentCall($root, $worker, ['action' => 'read_file', 'file' => $file, 'from_line' => 10, 'lines' => 3])['body'];
+    assertSame(".r10 { color: red; }\n.r11 { color: red; }\n.r12 { color: red; }", $part['content']);
+    assertSame([10, 12], [$part['from_line'], $part['to_line']]);
+    assertSame($whole['hash'], $part['hash'], 'l impronta e quella del file intero');
+    $capped = agentCall($root, $worker, ['action' => 'read_file', 'file' => $file, 'from_line' => 1, 'lines' => 5000])['body'];
+    assertSame(400, $capped['to_line']);
+    $found = agentCall($root, $worker, ['action' => 'read_file', 'file' => $file, 'search' => '.r999 '])['body'];
+    assertSame([['line' => 999, 'text' => '.r999 { color: red; }']], $found['matches']);
+    $hash = agentCall($root, $worker, ['action' => 'read_file', 'file' => $file, 'hash_only' => true])['body'];
+    assertTrue(!isset($hash['content']) && $hash['hash'] === $whole['hash']);
+
+    // Testo unico: si modifica senza impronta
+    $edit = agentCall($root, $worker, ['action' => 'edit_file', 'file' => $file, 'old' => '.r500 { color: red; }', 'new' => '.r500 { color: blue; }']);
+    assertSame(200, $edit['status'], json_encode($edit['body']));
+    // Testo ripetuto: rifiutato anche senza impronta
+    $twice = agentCall($root, $worker, ['action' => 'edit_file', 'file' => $file, 'old' => 'color: red;', 'new' => 'color: green;']);
+    assertTrue($twice['status'] >= 400, json_encode($twice['body']));
+    assertContains('volte', (string) ($twice['body']['error'] ?? ''));
+});
+
+test('search_theme cerca in tutti i file del tema, con lo staging sopra il sito', function () {
+    [$root, $worker] = agentSite();
+    agentCall($root, $worker, ['action' => 'write_file', 'file' => 'template/nuova.html', 'content' => "<p>uno</p>\n<p>UNICO-NELLO-STAGING</p>"]);
+    $r = agentCall($root, $worker, ['action' => 'search_theme', 'query' => 'unico-nello-staging'])['body'];
+    assertSame([['file' => 'template/nuova.html', 'line' => 2, 'text' => '<p>UNICO-NELLO-STAGING</p>']], $r['matches']);
+    $nav = agentCall($root, $worker, ['action' => 'search_theme', 'query' => 'k-component="navbar"'])['body'];
+    assertTrue(count($nav['matches']) >= 3, 'i template del sito');
+});
+
+test('site_config mostra pagine, seo, robots e sitemap con le modifiche in attesa', function () {
+    [$root, $worker] = agentSite();
+    file_put_contents("{$root}/robots.txt", "User-agent: *\nDisallow: /editor/\n");
+    agentCall($root, $worker, ['action' => 'write_file', 'file' => 'template/lavagna.html', 'content' => '<p>{{page_title}}</p>']);
+    agentCall($root, $worker, ['action' => 'operate', 'operation' => ['op' => 'register_page', 'page' => 'lavagna', 'sitemap' => false]]);
+    $c = agentCall($root, $worker, ['action' => 'site_config'])['body'];
+    assertTrue(in_array('lavagna', $c['pages'], true));
+    assertContains('Disallow: /editor/', (string) $c['robots_txt']);
+    assertContains('<urlset', $c['sitemap_xml']);
+    assertNotContains('page=lavagna', $c['sitemap_xml']);
+});
+
+test('render_page restituisce l HTML finito di una pagina con le modifiche in attesa', function () {
+    $sandbox = projectSandbox();
+    $s = new Staging($sandbox);
+    $file = 'template/homepage.html';
+    $original = (string) file_get_contents("{$sandbox}/{$file}");
+    $s->write($file, str_replace('</body>', '<p>SOLO-IN-STAGING</p></body>', $original), Staging::hash($original), 'test');
+    try {
+        $env = getenv();
+        $env['KRIS_QUERY'] = http_build_query(['page' => 'homepage', 'ln' => 'en']);
+        $proc = proc_open(phpCommand(KRIS_TESTS . '/harness/agent_render.php'), [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $sandbox, $env);
+        $out = stream_get_contents($pipes[1]);
+        $err = stream_get_contents($pipes[2]);
+        foreach ($pipes as $p) fclose($p);
+        proc_close($proc);
+        $page = json_decode((string) $out, true);
+        assertTrue(is_array($page), $out . $err);
+        assertSame(200, $page['status']);
+        assertSame('en', $page['lang']);
+        assertContains('SOLO-IN-STAGING', $page['html']);
+        assertContains('rel="canonical"', $page['html'], 'quello che Kris aggiunge da solo');
+        assertContains('hreflang="x-default"', $page['html']);
+        assertNotContains('kris-preview-bar', $page['html'], 'senza la barra dell anteprima');
+    } finally {
+        $s->discard();
+    }
+});
