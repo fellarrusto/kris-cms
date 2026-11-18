@@ -113,6 +113,17 @@ final class PdoStore implements Store
         });
     }
 
+    public function remove(array $docs): void
+    {
+        $this->locked(function () use ($docs): void {
+            foreach ($docs as $doc) {
+                FileStore::relativePath($doc);
+                $this->pdo->prepare("DELETE FROM {$this->table} WHERE name = ?")->execute([$doc]);
+            }
+            Site::forget();
+        });
+    }
+
     /** @return array{0: array, 1: string} */
     private function row(string $doc): array
     {

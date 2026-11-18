@@ -38,7 +38,9 @@ try {
         $schema = resolveSchemaAtPath($models, $g, $path);
         $before = $target['data'] ?? [];
         $after = applyPostToData($before, $schema, $_POST, $activeLangs);
-        $ops = EditorChanges::fieldOps($g, $id, $path, $schema, $before, $after, $activeLangs);
+        // Le operazioni parlano il formato 2: valori per nome, con le definizioni dello schema in attesa
+        $fields = editorFormat2Fields($schema, editorFields2($staging->state()['schema'], $g, $path));
+        $ops = EditorChanges::fieldOps($g, $id, $path, $fields, editorFormat2Values($before, $fields, $activeLangs), editorFormat2Values($after, $fields, $activeLangs), $activeLangs);
         $staging->operateAll($ops, $by);
         $msg = $ops ? 'Modifiche messe in attesa: il sito pubblico non cambia finché non le pubblichi.' : 'Nessuna modifica da mettere in attesa.';
     } elseif (isset($_POST['create_instance'])) {
@@ -142,6 +144,6 @@ try {
 }
 
 // La pagina che segue mostra lo stato aggiornato dello staging
-$stagingState = $staging->state();
+$stagingState = editorFormat1($staging->state());
 $data = $stagingState['data'];
 $models = $stagingState['model'];

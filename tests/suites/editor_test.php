@@ -89,3 +89,59 @@ test('dopo un eliminazione si torna all elemento indicato dal modulo, solo se e 
     unset($_POST['return_to']);
     assertSame('', returnAnchor());
 });
+
+// --- l'editor sui dati del formato 2 (format1.php) ------------------------------
+
+require_once KRIS_ROOT . '/kris/editor/format1.php';
+
+test('editor: i dati del formato 2 passano dalla forma dell editor e tornano identici', function () {
+    $site = format2Fixture();
+    // Un media e un richtext condivisi, che l'editor mostra per lingua
+    $site['schema']['types']['navbar']['fields'][0]['localized'] = false;
+    foreach ($site['content'] as &$item) {
+        if ($item['type'] === 'navbar') $item['values']['logo'] = 'assets/uploads/logo.svg';
+    }
+    unset($item);
+    $site['schema']['types']['navbar']['label'] = 'Barra';
+    $view = editorFormat1($site);
+    assertSame('image', $view['model']['navbar'][0]['type']);
+    assertSame(['it' => 'assets/uploads/logo.svg', 'en' => 'assets/uploads/logo.svg'], array_column($view['data'][array_search('navbar', array_column($view['data'], 'name'))]['data'], 'value', 'name')['logo']);
+    assertSame(['posts'], $view['cms_settings']['post_collections']);
+    assertSame(['label' => 'Barra'], $view['cms_settings']['collections']['navbar']);
+
+    $langs = ['it', 'en'];
+    foreach ($site['schema']['types'] as $type => $t) {
+        assertSame($t['fields'], editorFormat2Fields($view['model'][$type], $t['fields']), "campi di {$type}");
+    }
+    foreach ($site['content'] as $i => $item) {
+        $fields = $site['schema']['types'][$item['type']]['fields'];
+        assertSame($item['values'], editorFormat2Values($view['data'][$i]['data'], $fields, $langs), "valori di {$item['type']} #{$item['id']}");
+    }
+});
+
+test('editor: un salvataggio scrive il formato 2, anche su un sito ancora nel formato 1', function () {
+    $root = sys_get_temp_dir() . '/kris-editor-f2-' . bin2hex(random_bytes(4));
+    rcopy(projectSandbox(), $root);
+    register_shutdown_function(fn() => rrmdir($root));
+    $before = \Kris\Store\Site::current($root);
+    $view = editorFormat1($before);
+    foreach ($view['data'][0]['data'] as &$field) {
+        if ($field['name'] === 'page_title') $field['value']['it'] = 'Titolo dall editor';
+    }
+    unset($field);
+    editorSaveFormat1('data', $view['data'], $root);
+    foreach (['schema', 'content', 'settings'] as $doc) assertTrue(is_file("{$root}/data/{$doc}.json"), "{$doc}.json scritto");
+    $after = \Kris\Store\Site::current($root);
+    assertSame('Titolo dall editor', $after['content'][0]['values']['page_title']['it']);
+    assertSame($before['schema'], $after['schema'], 'lo schema convertito resta quello');
+    assertSame(array_slice($before['content'], 1), array_slice($after['content'], 1), 'gli altri contenuti non cambiano');
+
+    // Ora nel formato 2: il nome visibile di una raccolta va nello schema, le lingue restano nelle impostazioni
+    $view = editorFormat1($after);
+    $view['cms_settings']['collections']['navbar'] = ['label' => 'Barra'];
+    editorSaveFormat1('cms_settings', $view['cms_settings'], $root);
+    $site = \Kris\Store\Site::current($root);
+    assertSame('Barra', $site['schema']['types']['navbar']['label']);
+    assertSame(['it', 'en'], $site['settings']['languages']);
+    assertTrue(!isset($site['settings']['collections']) && !isset($site['settings']['collection_order']));
+});

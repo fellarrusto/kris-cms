@@ -239,4 +239,6 @@ test('0009 nel Migrator: scrive schema, content e settings dai documenti del for
     assertSame(2, $schema['format']);
     assertSame([['type' => 'homepage', 'id' => 0, 'values' => []]], json_decode((string) file_get_contents("{$root}/data/content.json"), true));
     assertSame(['languages' => ['it', 'en']], json_decode((string) file_get_contents("{$root}/data/settings.json"), true));
+    assertTrue(!is_file("{$root}/data/k_data.json") && !is_file("{$root}/data/k_model.json"), 'i file del formato 1 non restano accanto a quelli nuovi');
+    assertSame([['id' => 0, 'name' => 'homepage', 'data' => []]], json_decode((string) file_get_contents("{$root}/data/format1/k_data.json"), true), 'ne resta una copia');
 });

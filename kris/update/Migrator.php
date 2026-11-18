@@ -116,7 +116,8 @@ final class Migrator
         $applied = is_array($state['migrations'] ?? null) ? $state['migrations'] : [];
         $version = is_int($state['data_version'] ?? null) ? $state['data_version'] : 0;
         $docs = array_values(array_merge(self::LEGACY, self::FORMAT2));
-        $store->transaction($docs, function (array $current) use ($pending, $store, &$applied, &$version): array {
+        $converted = null;
+        $store->transaction($docs, function (array $current) use ($pending, $store, &$applied, &$version, &$converted): array {
             // Un documento che non esiste: null, come un file che manca nella 1.x
             $exists = fn(string $doc): bool => $store->read($doc)->rev !== '';
             $format2 = $exists('schema');
@@ -142,12 +143,29 @@ final class Migrator
                 $applied[] = $name;
                 $version = $def['version'];
             }
+            // Dal formato 1 al formato 2: i documenti vecchi si tolgono dall'archivio (ne resta una copia, vedi sotto)
+            if (!$format2 && isset($files['schema'])) {
+                $converted = [];
+                foreach (self::LEGACY as $key => $doc) {
+                    if ($exists($doc)) $converted[$doc] = $current[$doc];
+                }
+            }
             $changed = [];
             foreach (isset($files['schema']) ? self::FORMAT2 : self::LEGACY as $key => $doc) {
                 if (!in_array($key, ['allowed_pages', 'seo'], true) && ($files[$key] ?? null) !== null && $files[$key] !== ($original[$key] ?? null)) $changed[$doc] = $files[$key];
             }
             return $changed;
         });
+        if ($converted) {
+            // Copia in data/format1/ (per chi la cerca, e per tornare indietro a mano), poi fuori dall'archivio:
+            // un k_data.json rimasto accanto a content.json sarebbe il file sbagliato da modificare
+            $dir = $this->root . '/data/format1';
+            if (!is_dir($dir)) @mkdir($dir, 0775, true);
+            foreach ($converted as $doc => $value) {
+                @file_put_contents($dir . '/' . basename(\Kris\Store\FileStore::relativePath($doc)), json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            }
+            $store->remove(array_keys($converted));
+        }
         $state['migrations'] = $applied;
         $state['data_version'] = $version;
         return $state;

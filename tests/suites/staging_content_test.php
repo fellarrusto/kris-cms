@@ -626,3 +626,30 @@ test('interruttori e scelte: condivisi o per lingua, con le opzioni dello schema
     expectStaging(fn() => $set('in_vetrina', 'forse'), 'interruttore');
     expectStaging(fn() => $set('in_vetrina', true, 'it'), 'togli "lang"');
 });
+
+// --- richtext filtrato (specifica 2.5) -------------------------------------------
+
+test('richtext: restano elementi e attributi editoriali, script e gestori se ne vanno', function () {
+    assertSame('<p>Ciao <strong>mondo</strong> è qui</p>', \Kris\Template\Richtext::clean('<p>Ciao <strong>mondo</strong> è qui</p>'));
+    assertSame('<p>prima dopo</p>', \Kris\Template\Richtext::clean('<p>prima <script>alert(1)</script>dopo</p>'));
+    assertSame('<img src="assets/uploads/a.png" alt="x">', \Kris\Template\Richtext::clean('<img src="assets/uploads/a.png" alt="x" onerror="fetch(1)">'));
+    assertSame('<a>x</a>', \Kris\Template\Richtext::clean('<a href="javascript:alert(1)">x</a>'));
+    assertSame('<a>x</a>', \Kris\Template\Richtext::clean('<a href="  JAVASCRIPT:alert(1)">x</a>'));
+    assertSame('<a href="https://esempio.it" target="_blank" rel="noopener">x</a>', \Kris\Template\Richtext::clean('<a href="https://esempio.it" target="_blank">x</a>'));
+    assertSame('<a href="mailto:a@b.it">m</a> <a href="#sopra">a</a>', \Kris\Template\Richtext::clean('<a href="mailto:a@b.it">m</a> <a href="#sopra">a</a>'));
+    assertSame('<p>dentro</p>', \Kris\Template\Richtext::clean('<div style="color:red"><p>dentro</p></div>'), 'un div lascia il suo contenuto');
+    assertSame('<span class="nota">n</span>', \Kris\Template\Richtext::clean('<span class="nota" style="x" id="y">n</span>'));
+    assertSame('<img alt="x">', \Kris\Template\Richtext::clean('<img src="http://altro.it/a.png" alt="x">'), 'immagini solo del sito o https');
+    assertSame('<table><tr><td colspan="2">c</td></tr></table>', \Kris\Template\Richtext::clean('<table><tr><td colspan="2" onclick="x">c</td></tr></table>'));
+    assertSame('', \Kris\Template\Richtext::clean('<iframe src="https://x.it"></iframe>'));
+    assertSame('testo semplice', \Kris\Template\Richtext::clean('testo semplice'));
+});
+
+test('richtext: filtrato al rendering e al salvataggio dello staging', function () {
+    $e = makeEntity([['name' => 'body', 'type' => 'richtext', 'value' => ['it' => '<p onclick="x()">Ciao</p><script>y()</script>']]]);
+    assertSame('<div><p>Ciao</p></div>', trim(renderTemplate('<div>{{body}}</div>', $e)));
+    $root = contentSite();
+    $s = new \Kris\Staging\Staging($root);
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'hero_description', 'lang' => 'it', 'value' => '<p>Ok<img src="x" onerror="z()"></p>'], 'agente');
+    assertSame('<p>Ok<img src="x"></p>', siteValue("{$root}/data/staging/data/content.json", 'homepage', 0, 'hero_description')['it']);
+});

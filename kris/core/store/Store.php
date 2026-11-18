@@ -36,6 +36,14 @@ interface Store
      */
     public function transaction(array $docs, callable $change): void;
 
+    /**
+     * Toglie dei documenti dall'archivio: i documenti del formato 1, dopo la
+     * conversione al formato 2 (Kris\Update\Migrator).
+     *
+     * @param list<string> $docs
+     */
+    public function remove(array $docs): void;
+
     /** @return array<string, array> i documenti che esistono */
     public function export(): array;
 

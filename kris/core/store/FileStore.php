@@ -96,6 +96,16 @@ final class FileStore implements Store
         });
     }
 
+    public function remove(array $docs): void
+    {
+        $this->locked(function () use ($docs): void {
+            foreach ($docs as $doc) {
+                if (is_file($this->sitePath($doc))) @unlink($this->sitePath($doc));
+            }
+            Site::forget();
+        });
+    }
+
     /** Il file di un documento, relativo alla root del sito: per snapshot, staging e messaggi. */
     public static function relativePath(string $doc): string
     {

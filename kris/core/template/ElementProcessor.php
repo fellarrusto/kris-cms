@@ -160,10 +160,9 @@ class ElementProcessor
     /**
      * Rende il valore di {{campo}}.
      *
-     * L'HTML e ammesso solo dove e voluto, cioe nei campi 'richtext'. Tutto
-     * il resto viene escapato: cosi un testo con < o " non puo alterare il
-     * markup ne uscire da un attributo, e i tipi dello schema hanno finalmente
-     * un effetto concreto sul rendering.
+     * L'HTML e ammesso solo dove e voluto, cioe nei campi 'richtext', e
+     * filtrato (Richtext). Tutto il resto viene escapato: cosi un testo con <
+     * o " non puo alterare il markup ne uscire da un attributo.
      */
     private function renderValue(string $name, Entity $entity): string
     {
@@ -178,8 +177,9 @@ class ElementProcessor
             return '';
         }
 
+        // Il testo formattato passa dal filtro anche qui: un valore scritto a mano nei dati non porta script nella pagina
         return $entity->getType($name) === 'richtext'
-            ? (string) $value
+            ? Richtext::clean((string) $value)
             : htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
     }
 

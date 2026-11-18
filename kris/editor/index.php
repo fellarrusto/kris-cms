@@ -14,6 +14,7 @@ require_once __DIR__ . '/auth.php';
 define('KRIS_EDITOR', true);
 
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/format1.php';
 
 use Kris\Entity\StorageException;
 use Kris\Update\Migrator;
@@ -180,10 +181,6 @@ $DEFAULT_LANGS = [
 // Init Files/Dir
 if (!is_dir($uploadDir))
     mkdir($uploadDir, 0777, true);
-// Un sito nuovo parte con schema e contenuti vuoti nell'archivio
-foreach (['model', 'data'] as $doc) {
-    if (\Kris\Store\Stores::site()->read($doc)->rev === '') \Kris\Store\Stores::site()->write($doc, []);
-}
 
 // --- STATO DEL FRAMEWORK ---
 // Prima di leggere i contenuti: una migrazione puo cambiarli. Se
@@ -270,13 +267,13 @@ try {
     $models = getJson($modelFile, []);
     $settings = getJson($settingsFile, ['languages' => ['it', 'en']]);
     if ($stagingMode) {
-        $stagingState = $stagingNav->state();
+        $stagingState = editorFormat1($stagingNav->state());
         $data = $stagingState['data'];
         $models = $stagingState['model'];
-        // Le raccolte in Posts possono cambiare in attesa; le lingue si cambiano solo sul sito pubblico
         // Raccolte in Posts, nomi, descrizioni e ordine possono cambiare in attesa; le lingue solo sul sito pubblico
         foreach (['post_collections', 'collections', 'collection_order'] as $key) {
-            if (array_key_exists($key, $stagingState['settings'])) $settings[$key] = $stagingState['settings'][$key];
+            unset($settings[$key]);
+            if (array_key_exists($key, $stagingState['cms_settings'])) $settings[$key] = $stagingState['cms_settings'][$key];
         }
     }
     // Le immagini caricate e non ancora pubblicate si vedono attraverso l'anteprima, in entrambe le modalita

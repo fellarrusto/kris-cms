@@ -951,7 +951,8 @@ final class Operations
         if ($def['type'] === 'text' && !empty($def['localized']) && $value !== strip_tags($value)) {
             throw new StagingException("«{$def['name']}» è testo semplice: niente HTML (per l'HTML serve un campo richtext).");
         }
-        return $value;
+        // Il testo formattato si salva già filtrato: solo gli elementi e gli attributi ammessi
+        return $def['type'] === 'richtext' ? \Kris\Template\Richtext::clean($value) : $value;
     }
 
     /**
