@@ -5,6 +5,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 use Kris\Site\PageRenderer;
 use Kris\Site\Paths;
+use Kris\Site\Router;
 use Kris\Staging\Preview;
 use Kris\Staging\Staging;
 
@@ -53,8 +54,48 @@ if ($previewAdmin) {
     }
 }
 
-$page = PageRenderer::render($_GET, $_SERVER);
+// Indirizzi leggibili: il percorso (/en/progetto/3) diventa i parametri della pagina;
+// i vecchi indirizzi index.php?page=… rispondono con un 301 al percorso nuovo.
+$query = $_GET;
+$routes = PageRenderer::routes();
+$basePath = Router::basePath($_SERVER);
+if ($routes !== null) {
+    [, $langs] = PageRenderer::language([]);
+    $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+    $relative = '/' . ltrim(substr($requestPath, strlen($basePath)), '/');
+    $pageParams = ['page', 'key', 'id', 'path', 'ln'];
+    if ($relative !== '/' && $relative !== '/index.php') {
+        $resolved = Router::resolve($routes, $relative, $langs, $langs[0]);
+        // Il cambio lingua (kris/core/scripts/script.js) aggiunge ?ln= all'indirizzo: si va alla stessa pagina nell'altra lingua
+        if ($resolved !== null && is_string($query['ln'] ?? null) && in_array($query['ln'], $langs, true) && $query['ln'] !== ($resolved['ln'] ?? $langs[0])) {
+            $target = Router::path($routes, $resolved['page'], $resolved['key'] ?? 'homepage', (int) ($resolved['id'] ?? 0),
+                ($resolved['path'] ?? '') === '' ? [] : explode('/', $resolved['path']), $query['ln'], $langs[0]);
+            if ($target !== null) {
+                $rest = array_diff_key($query, array_flip($pageParams));
+                header('Location: ' . $basePath . $target . ($rest ? '?' . http_build_query($rest) : ''), true, 302);
+                exit;
+            }
+        }
+        // Un percorso che non è di nessuna pagina è una 404
+        $query = ($resolved ?? ['page' => '404']) + array_diff_key($query, array_flip($pageParams));
+    } elseif ($preview === null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && array_intersect_key($query, array_flip($pageParams))) {
+        $pretty = Router::path(
+            $routes,
+            (string) ($query['page'] ?? 'homepage'), (string) ($query['key'] ?? 'homepage'), (int) ($query['id'] ?? 0),
+            ($query['path'] ?? '') === '' ? [] : explode('/', (string) $query['path']),
+            (string) ($query['ln'] ?? $langs[0]), $langs[0]
+        );
+        if ($pretty !== null) {
+            $rest = array_diff_key($query, array_flip($pageParams));
+            header('Location: ' . $basePath . $pretty . ($rest ? '?' . http_build_query($rest) : ''), true, 301);
+            exit;
+        }
+    }
+}
+
+$page = PageRenderer::render($query, $_SERVER);
 http_response_code($page['status']);
-echo $preview !== null
+$html = $preview !== null
     ? Preview::decorate($page['html'], $preview, 'editor/index.php?action=staging', Preview::exitUrl($_GET))
     : $page['html'];
+echo $routes !== null ? Router::rewriteLinks($html, $routes, $basePath, PageRenderer::language([])[1][0]) : $html;

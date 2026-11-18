@@ -35,7 +35,7 @@ RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^assets/ - [R=404,L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule !\.(?:css|js|map|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|mp4|webm|pdf|txt|xml|json)$ index.php?page=404 [L]
+RewriteRule !\.(?:css|js|map|png|jpe?g|gif|webp|avif|svg|ico|woff2?|ttf|mp4|webm|pdf|txt|xml|json)$ index.php [L,QSA]
 </IfModule>
 
 HTACCESS;
@@ -48,6 +48,11 @@ HTACCESS;
         $htaccess = rtrim($root, '/\\') . '/.htaccess';
         if (!file_exists($htaccess) && @file_put_contents($htaccess, self::HTACCESS) !== false) {
             $created[] = '.htaccess';
+        } elseif (is_file($htaccess)) {
+            // La regola di Kris fino alla 1.9 mandava tutto alla 404: ora passa il percorso a index.php (indirizzi leggibili)
+            $rules = (string) file_get_contents($htaccess);
+            $updated = str_replace(' index.php?page=404 [L]', ' index.php [L,QSA]', $rules);
+            if ($updated !== $rules && @file_put_contents($htaccess, $updated) !== false) $created[] = '.htaccess';
         }
         foreach (self::STUBS as $stub => $target) {
             $file = rtrim($root, '/\\') . '/' . $stub;

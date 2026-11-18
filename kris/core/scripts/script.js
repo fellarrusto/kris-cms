@@ -6,7 +6,7 @@ function setLanguage(lang) {
 
 function updateActiveLanguage() {
     const params = new URLSearchParams(location.search);
-    const currentLang = params.get('ln') || 'it';
+    const currentLang = params.get('ln') || document.documentElement.lang || 'it';
   
     document.querySelectorAll('.lang-btn').forEach(btn => {
         btn.classList.remove('active');

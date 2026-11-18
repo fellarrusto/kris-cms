@@ -39,5 +39,6 @@ header('X-Robots-Tag: noindex');
 echo Seo::sitemapXml(
     Seo::sitemapEntries($data, $config['sitemap'], $allowedPages),
     Seo::baseUrl($config, $_SERVER),
-    $langs
+    $langs,
+    \Kris\Site\PageRenderer::routes()
 );
