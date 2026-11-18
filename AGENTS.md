@@ -170,7 +170,7 @@ La griglia resta nel template della pagina; il frammento contiene una sola card.
 
 ## Contratto dei template
 
-- `{{campo}}` legge dall'entità corrente. `{{id}}` è l'ID corrente e `{{language}}` la lingua attiva. Non sono supportati filtri tipo Twig, accessi `parent.title`, espressioni JavaScript o loop `for`.
+- `{{campo}}` legge dall'entità corrente. `{{id}}` è l'ID corrente e `{{language}}` la lingua attiva. `{{raccolta.campo}}` legge il primo contenuto di un'altra raccolta da qualunque template (impostazioni, footer, contatti), anche nelle condizioni (`{{#if impostazioni.dark_mode}}`). Non sono supportati filtri tipo Twig, accessi al contenuto padre (`parent.title`), indici di elenchi, espressioni JavaScript o loop `for`.
 - I valori `text`, `plain` e `image` vengono escapati per HTML, comprese le virgolette negli attributi. `richtext` emette HTML senza sanitizzazione: usalo soltanto nel corpo della pagina con contenuti fidati, mai in attributi, script o CSS. L'escaping HTML non valida gli schemi degli URL: controlla gli URL editoriali e non interpolare valori dentro codice JavaScript.
 - Per una traduzione vuota o assente, `Entity` cerca il primo valore non vuoto disponibile. La stringa `"0"` è valida. Le lingue si configurano in `cms_settings.json` tramite l'editor; disabilitarne una conserva i valori già salvati.
 - `k-array="services"` cerca prima un campo array dell'entità corrente. Se il campo non esiste, cerca una raccolta root omonima; un array locale vuoto resta vuoto. Il contenitore resta nel DOM e i frammenti vengono aggiunti al suo contenuto: deve essere inizialmente vuoto.
