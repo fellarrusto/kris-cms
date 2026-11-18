@@ -215,7 +215,7 @@ Al salvataggio (editor, staging, agente) e al rendering il richtext passa da un 
 
 ### 2.6 Migrazione dal formato 1
 
-Una sola migrazione, `0007_formato_2.php`, funzione pura sui file attuali → documenti nuovi:
+Una sola migrazione, `0009_formato_2.php` (0007 e 0008 sono già lavori in corso e proprietà del sito), funzione pura sui documenti attuali → documenti nuovi. Confermato da Filippo il 2026-11-18: elenchi con dettaglio promossi a tipo, filtro del richtext (2.5), `media` per lingua come oggi. Il formato 1 della 2.0 ha già `boolean` e `select` con `localized` e `multiple`, `slug_from` nelle regole della sitemap e i reindirizzamenti in `seo.json`: la migrazione li porta in `schema`.
 
 | Da | A |
 | --- | --- |
