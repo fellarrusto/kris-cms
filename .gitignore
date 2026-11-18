@@ -14,3 +14,4 @@
 /config/agent.php
 /data/agent_nonces.json
 /config/auth_attempts.json
+/config/setup_code.php

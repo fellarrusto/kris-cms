@@ -28,6 +28,13 @@ function kris_credentials(): Credentials
     return new Credentials(KRIS_AUTH_FILE);
 }
 
+const KRIS_SETUP_CODE_FILE = KRIS_ROOT . '/config/setup_code.php';
+
+function kris_setup_code(): \Kris\Auth\SetupCode
+{
+    return new \Kris\Auth\SetupCode(KRIS_SETUP_CODE_FILE);
+}
+
 function kris_password_reset(): PasswordReset
 {
     return new PasswordReset(KRIS_RESET_FILE);
@@ -346,12 +353,16 @@ function kris_render_setup(string $error = ''): void // termina sempre con exit
         <h2>Crea l'accesso</h2>
         <p class="hint">Non ci sono ancora credenziali configurate: scegli adesso quelle
         dell'amministratore del sito.</p>
+        <p class="hint">Per dimostrare che il sito è tuo, apri con l'FTP o il pannello dell'hosting il file
+        <strong>config/setup_code.php</strong> e copia qui il codice che contiene.</p>
         {$err}
         <form method="POST">
             {$csrf}
             <input type="hidden" name="do_setup" value="1">
+            <label for="setup_code">Codice di primo avvio</label>
+            <input id="setup_code" type="text" name="setup_code" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX" required autofocus>
             <label for="user">Username</label>
-            <input id="user" type="text" name="user" autocomplete="username" required autofocus>
+            <input id="user" type="text" name="user" autocomplete="username" required>
             <label for="email">Email (per recuperare la password)</label>
             <input id="email" type="email" name="email" autocomplete="email" required>
             <label for="pass">Password (almeno 10 caratteri)</label>

@@ -162,3 +162,19 @@ test('troppi errori da molti indirizzi fermano l accesso per tutti', function ()
     for ($i = 0; $i < \Kris\Auth\LoginThrottle::MAX_TOTAL; $i++) $t->fail("10.0.0.{$i}", $now);
     assertTrue($t->waitSeconds('192.168.1.1', $now + 1) > 0);
 });
+
+test('il codice di primo avvio si crea una volta, si verifica e si elimina', function () {
+    $file = sys_get_temp_dir() . '/kris-setup-' . bin2hex(random_bytes(4)) . '/config/setup_code.php';
+    register_shutdown_function(fn() => @unlink($file));
+    $s = new \Kris\Auth\SetupCode($file);
+    $code = $s->ensure();
+    assertTrue(is_string($code) && preg_match('/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/', $code) === 1, (string) $code);
+    assertSame($code, $s->ensure(), 'non cambia a ogni visita');
+    assertTrue(str_starts_with((string) file_get_contents($file), '<?php'), 'un file PHP: non si scarica');
+    assertTrue($s->verify($code));
+    assertTrue($s->verify(strtolower(str_replace('-', ' ', $code))), 'trattini, spazi e minuscole non contano');
+    assertSame(false, $s->verify('AAAA-BBBB-CCCC'));
+    assertSame(false, $s->verify(''));
+    $s->remove();
+    assertSame(false, $s->verify($code), 'creato l accesso il codice non vale piu');
+});
