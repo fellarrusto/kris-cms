@@ -268,7 +268,7 @@ final class PageRenderer
     /** Ultimi ritocchi di ogni pagina, 404 compresa: favicon e versione dei file del tema. */
     public static function finish(string $html, string $lang): string
     {
-        return Assets::version(self::withFavicon($html, $lang), KRIS_ROOT);
+        return \Kris\Entity\MediaStore::srcset(Assets::version(self::withFavicon($html, $lang), KRIS_ROOT), KRIS_ROOT);
     }
 
     /** La favicon scelta nell'editor (raccolta kris_site), se c'e. */
