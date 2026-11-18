@@ -87,7 +87,7 @@ Il rendering esegue prima variabili e condizioni, poi gli array, poi i component
 | Navigazione, footer e contenuti riutilizzati su più pagine | Raccolta dedicata con entità condivisa e `k-component`. |
 | Griglie, spaziature, breakpoint, decorazioni e animazioni | HTML/CSS/JS del tema; non campi editoriali generici. |
 
-Gli unici tipi implementati sono `plain`, `text`, `richtext`, `image`, `array`. Non inventare tipi come `boolean`, `select`, `date` o relazioni senza implementarne anche editor e rendering. Usa nomi tecnici stabili in `snake_case` con lettere minuscole, numeri e underscore. Non usare `id` e `language` come nomi di campi: sono esposti dal motore. I nomi di raccolta che iniziano con `kris_` sono riservati al framework.
+I tipi implementati sono `plain`, `text`, `richtext`, `image`, `array`, `boolean` e `select`. `boolean` vale `"1"` o `""`; `select` ha `options` (lista di stringhe senza virgole) e, con `multiple: true`, salva più opzioni come `"web,seo"`, da controllare nei template con `has`. Entrambi sono condivisi fra le lingue, o per lingua con `localized: true` (un interruttore per lingua non ricade su un'altra lingua). Non inventare tipi come `date` o relazioni senza implementarne anche editor e rendering. Usa nomi tecnici stabili in `snake_case` con lettere minuscole, numeri e underscore. Non usare `id` e `language` come nomi di campi: sono esposti dal motore. I nomi di raccolta che iniziano con `kris_` sono riservati al framework.
 
 Un campo `array` di primo livello può avere `"posts": true` (in Struttura: “Mostra in Posts”). Rendering e dati non cambiano: l'elenco compare nella sezione **Posts** dell'editor, con un accesso rapido per ogni entità della raccolta, e i nuovi elementi vengono inseriti in cima. Usalo per blog, news o eventi aggiornati spesso; negli elenchi annidati il flag viene rimosso al salvataggio. Il sito demo lo mostra con `homepage.posts`, `template/post-card.html` e la pagina `post`.
 
@@ -177,7 +177,7 @@ La griglia resta nel template della pagina; il frammento contiene una sola card.
 - Inserisci gli array annidati nel frammento del padre, ciascuno con il proprio `k-template`. Non scrivere il markup dei figli direttamente nel contenitore della pagina: le variabili verrebbero risolte nel contesto sbagliato.
 - Un componente, ad esempio `<div k-component="navbar" k-template="navbar" k-index="0"></div>`, carica l'entità root `navbar` con ID `0`. Il segnaposto viene **sostituito** dal frammento: metti tag semantico, classi e attributi sul markup di `template/navbar.html`, non sul segnaposto. Crea anche schema e dati della raccolta condivisa.
 - Un frammento può contenere più elementi fratelli. Non introdurre inclusioni ricorsive o cicliche tra componenti e liste.
-- Le condizioni supportano `#if`, `#elif`, `#else`, `/if` e gli operatori `==`, `!=`, `>`, `<`, `>=`, `<=`, `has`. `has` controlla un valore in una stringa di tag separati da virgole. Per campi opzionali inizializza il valore e verifica il risultato con campo vuoto e assente.
+- Le condizioni supportano `#if`, `#elif`, `#else`, `/if`, la forma semplice `{{#if campo}}` (vera con un valore non vuoto: un interruttore acceso) e gli operatori `==`, `!=`, `>`, `<`, `>=`, `<=`, `has`. `has` controlla un valore in una stringa di tag separati da virgole. Per campi opzionali inizializza il valore e verifica il risultato con campo vuoto e assente.
 
 ```html
 {{#if category == "featured"}}

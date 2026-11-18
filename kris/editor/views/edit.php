@@ -59,7 +59,7 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
             $label = $f['label'] ?? $f['description'] ?? editorLabel($n);
             $fieldId = 'field-' . $fieldIndex;
         ?>
-        <section class="card field-card" id="<?= $fieldId ?>"><header class="card-header"><span class="section-number"><?= str_pad((string) ($fieldIndex+1), 2, '0', STR_PAD_LEFT) ?></span><div><h2><?= h($label) ?></h2><p><?= h($n) ?> <span aria-hidden="true">&middot;</span> <?= h(['plain'=>'Testo condiviso','text'=>'Testo multilingua','richtext'=>'Testo formattato','image'=>'Media multilingua','array'=>'Elenco di contenuti'][$t] ?? $t) ?></p></div></header><div class="card-body">
+        <section class="card field-card" id="<?= $fieldId ?>"><header class="card-header"><span class="section-number"><?= str_pad((string) ($fieldIndex+1), 2, '0', STR_PAD_LEFT) ?></span><div><h2><?= h($label) ?></h2><p><?= h($n) ?> <span aria-hidden="true">&middot;</span> <?= h(['plain'=>'Testo condiviso','text'=>'Testo multilingua','richtext'=>'Testo formattato','image'=>'Media multilingua','array'=>'Elenco di contenuti','boolean'=>\Kris\Entity\Entity::isShared($f)?'Interruttore condiviso':'Interruttore per lingua','select'=>\Kris\Entity\Entity::isShared($f)?'Scelta condivisa':'Scelta per lingua'][$t] ?? $t) ?></p></div></header><div class="card-body">
         <?php if ($t === 'array'):
             $children = is_array($saved) ? $saved : [];
             $prefix = $pathRaw === '' ? $n : $pathRaw . '/' . $n;
@@ -71,12 +71,16 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
                 <tr id="item-<?= h($n) ?>-<?= $chId ?>" draggable="true" data-id="<?= $chId ?>" class="<?= isHiddenItem($ch) ? 'is-hidden' : '' ?>"><td><strong><?= h($childTitle) ?></strong><small>Elemento #<?= $chId ?></small></td><td><?= visibilityToggle('vis_' . $n . '_' . $chId, !isHiddenItem($ch), $childTitle) ?></td><td><div class="order-actions"><button type="button" class="icon-button" data-move="-1" aria-label="Sposta <?= h($childTitle) ?> in alto" <?= $childIndex === 0 ? 'disabled' : '' ?>><?= uiIcon('up') ?></button><button type="button" class="icon-button" data-move="1" aria-label="Sposta <?= h($childTitle) ?> in basso" <?= $childIndex === count($children)-1 ? 'disabled' : '' ?>><?= uiIcon('down') ?></button></div></td><td><div class="row-actions"><a class="btn btn-white" href="<?= h($editUrl . '&path=' . urlencode($prefix . '/' . $chId)) ?>">Modifica</a><button type="submit" form="del_nested_<?= h($n) ?>_<?= $chId ?>" class="icon-button danger" aria-label="Elimina <?= h($childTitle) ?>"><?= uiIcon('trash') ?></button></div></td></tr>
             <?php endforeach; ?></tbody></table></div><?php endif; ?>
             <p class="hint">Aggiunta, eliminazione e ordine si salvano subito. Se hai modificato i testi, potrai salvarli prima di continuare.</p>
+        <?php elseif (in_array($t, ['boolean', 'select'], true) && \Kris\Entity\Entity::isShared($f)): ?>
+            <?= editorChoiceInput($f, 'f[' . $n . '][val]', 'input-' . $fieldIndex, $label, $saved) ?>
         <?php elseif ($t === 'plain'): ?>
             <label class="sr-only" for="input-<?= $fieldIndex ?>"><?= h($label) ?></label><textarea id="input-<?= $fieldIndex ?>" name="f[<?= h($n) ?>][val]" rows="3"><?= h(is_array($saved) ? '' : $saved) ?></textarea>
         <?php else: foreach ($activeLangs as $i => $lang): $v = is_array($saved) ? ($saved[$lang] ?? '') : ''; $inputId = 'input-' . $fieldIndex . '-' . $lang; ?>
             <div class="localized-field" data-language-panel="<?= h($lang) ?>" <?= $i ? 'hidden' : '' ?>>
             <label class="sr-only" for="<?= $inputId ?>"><?= h($label . ' · ' . ($DEFAULT_LANGS[$lang] ?? $lang)) ?></label>
-            <?php if ($t === 'image'): ?>
+            <?php if (in_array($t, ['boolean', 'select'], true)): ?>
+                <?= editorChoiceInput($f, 'f[' . $n . '][' . $lang . ']', $inputId, $label . ' · ' . ($DEFAULT_LANGS[$lang] ?? $lang), $v) ?>
+            <?php elseif ($t === 'image'): ?>
                 <div class="media-field"><div class="media-preview" data-preview-for="<?= $inputId ?>"><?php $src = editorMediaSource((string) $v); if ($src !== ''): ?><?= editorMediaThumb($src, (string) $v, 'Anteprima di ' . $label) ?><?php else: ?><?= uiIcon('media') ?><?php endif; ?></div><div class="media-field-controls"><input type="text" id="<?= $inputId ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" value="<?= h($v) ?>" placeholder="URL del file" data-media-input><button type="button" class="btn btn-white" data-pick-media="<?= $inputId ?>"><?= uiIcon('media') ?>Scegli dalla libreria</button></div></div>
             <?php else: ?><textarea id="<?= $inputId ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" rows="<?= $t === 'richtext' ? 8 : 3 ?>" <?= $t === 'richtext' ? 'class="richtext"' : '' ?>><?= h($v) ?></textarea><?php endif; ?>
             </div>

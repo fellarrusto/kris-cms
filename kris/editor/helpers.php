@@ -306,6 +306,33 @@ function visibilityForm(string $formId, string $group, int $id, string $path): s
 }
 
 /** Interruttore "Visibile" collegato a un form di visibilityForm(). */
+/** Controllo di un interruttore o di una scelta nella modifica di un contenuto. $name: nome del campo nel form. */
+function editorChoiceInput(array $def, string $name, string $id, string $label, mixed $value): string
+{
+    $value = is_string($value) ? $value : '';
+    if ($def['type'] === 'boolean') {
+        // Il campo nascosto manda "" quando la casella è spenta
+        return '<input type="hidden" name="' . h($name) . '" value=""><label class="setting-row" for="' . h($id) . '">'
+            . '<input type="checkbox" id="' . h($id) . '" name="' . h($name) . '" value="1"' . ($value === '1' ? ' checked' : '') . '>'
+            . '<span><strong>' . h($label) . '</strong><small>Acceso o spento</small></span></label>';
+    }
+    $picked = $value === '' ? [] : explode(',', $value);
+    if (!empty($def['multiple'])) {
+        $out = '<fieldset class="choice-group"><legend class="sr-only">' . h($label) . '</legend><input type="hidden" name="' . h($name) . '[]" value="">';
+        foreach ((array) ($def['options'] ?? []) as $i => $option) {
+            $optId = $id . '-' . $i;
+            $out .= '<label class="setting-row" for="' . h($optId) . '"><input type="checkbox" id="' . h($optId) . '" name="' . h($name) . '[]" value="' . h((string) $option) . '"'
+                . (in_array((string) $option, $picked, true) ? ' checked' : '') . '><span><strong>' . h((string) $option) . '</strong></span></label>';
+        }
+        return $out . '</fieldset>';
+    }
+    $out = '<label class="sr-only" for="' . h($id) . '">' . h($label) . '</label><select id="' . h($id) . '" name="' . h($name) . '"><option value="">—</option>';
+    foreach ((array) ($def['options'] ?? []) as $option) {
+        $out .= '<option value="' . h((string) $option) . '"' . (in_array((string) $option, $picked, true) ? ' selected' : '') . '>' . h((string) $option) . '</option>';
+    }
+    return $out . '</select>';
+}
+
 function visibilityToggle(string $formId, bool $visible, string $title): string
 {
     return '<label class="visibility-toggle" title="Mostra o sospendi sul sito">'
@@ -528,8 +555,8 @@ function buildSkeleton(array $schema, array $activeLangs): array
     foreach ($schema as $f) {
         if (($f['type'] ?? null) === 'array') {
             $out[] = ['name' => $f['name'], 'type' => 'array', 'value' => []];
-        } elseif ($f['type'] === 'plain') {
-            $out[] = ['name' => $f['name'], 'type' => 'plain', 'value' => ''];
+        } elseif (\Kris\Entity\Entity::isShared($f)) {
+            $out[] = ['name' => $f['name'], 'type' => $f['type'], 'value' => ''];
         } else {
             $out[] = ['name' => $f['name'], 'type' => $f['type'], 'value' => array_fill_keys($activeLangs, '')];
         }
@@ -552,7 +579,7 @@ const RESERVED_FIELD_NAMES = ['id', 'group', 'path', 'save_entity', 'create_inst
  */
 function validateSchema(array $schema, array $previous, string $where = ''): array
 {
-    $allowedTypes = ['text', 'richtext', 'image', 'plain', 'array'];
+    $allowedTypes = ['text', 'richtext', 'image', 'plain', 'array', 'boolean', 'select'];
     $problems = [];
     $seen = [];
 
@@ -575,6 +602,9 @@ function validateSchema(array $schema, array $previous, string $where = ''): arr
 
         if (!in_array($type, $allowedTypes, true)) {
             $problems[] = "il tipo del campo {$label} non e riconosciuto.";
+        }
+        if ($type === 'select' && !array_filter((array) ($f['options'] ?? []), fn($o) => is_string($o) && trim($o) !== '' && !str_contains($o, ','))) {
+            $problems[] = "la scelta {$label} non ha opzioni valide (una per riga, senza virgole).";
         }
         if ($type === 'array') {
             $problems = array_merge(
@@ -757,14 +787,14 @@ function applyPostToData(array $existing, array $schema, array $post, array $act
         if ($ftype === 'array') {
             // preserve existing nested value, or start empty
             $out[] = ['name' => $fname, 'type' => 'array', 'value' => $byName[$fname]['value'] ?? []];
-        } elseif ($ftype === 'plain') {
-            $out[] = ['name' => $fname, 'type' => 'plain', 'value' => $fields[$fname]['val'] ?? ''];
+        } elseif (\Kris\Entity\Entity::isShared($def)) {
+            $out[] = ['name' => $fname, 'type' => $ftype, 'value' => \Kris\Entity\Entity::normalizeChoice($def, $fields[$fname]['val'] ?? '')];
         } else {
             // Si parte dalle traduzioni gia salvate: una lingua disattivata
             // nelle impostazioni non compare nel form, e non deve sparire
             // dal file solo perche non e stata reinviata.
             $vals = is_array($byName[$fname]['value'] ?? null) ? $byName[$fname]['value'] : [];
-            foreach ($activeLangs as $l) $vals[$l] = $fields[$fname][$l] ?? '';
+            foreach ($activeLangs as $l) $vals[$l] = \Kris\Entity\Entity::normalizeChoice($def, $fields[$fname][$l] ?? '');
             $out[] = ['name' => $fname, 'type' => $ftype, 'value' => $vals];
         }
     }
@@ -806,6 +836,8 @@ function renderSchemaFields(array $schema, int $depth = 0, array $sections = [],
         'image'    => 'Media / File',
         'plain'    => 'Testo Semplice',
         'array'    => 'Array (lista innestata)',
+        'boolean'  => 'Interruttore',
+        'select'   => 'Scelta fra opzioni',
     ];
     foreach ($schema as $f):
         $isArray = ($f['type'] ?? '') === 'array'; ?>
@@ -822,6 +854,14 @@ function renderSchemaFields(array $schema, int $depth = 0, array $sections = [],
             </div>
             <label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" value="<?= h($f['description'] ?? '') ?>" placeholder="Aiuta chi modifica il contenuto"></label>
             <?php if ($depth === 0): ?><label class="sf-section-label">Sezione<select class="sf-move"><?php foreach ($sections as $key => $name): ?><option value="<?= h($key) ?>" <?= $key === $current ? 'selected' : '' ?>><?= $name === '' ? 'Nessuna sezione' : h($name) ?></option><?php endforeach; ?></select></label><?php endif; ?>
+            <?php $type = $f['type'] ?? ''; ?>
+            <div class="sf-choice" <?= in_array($type, ['boolean', 'select'], true) ? '' : 'hidden' ?>>
+                <label class="setting-row"><input type="checkbox" class="sf-localized" <?= !empty($f['localized']) ? 'checked' : '' ?>><span><strong>Diverso per lingua</strong><small>Spento: un solo valore per tutte le lingue.</small></span></label>
+                <div class="sf-options" <?= $type === 'select' ? '' : 'hidden' ?>>
+                    <label>Opzioni, una per riga<textarea class="sf-options-list" rows="4"><?= h(implode("\n", (array) ($f['options'] ?? []))) ?></textarea></label>
+                    <label class="setting-row"><input type="checkbox" class="sf-multiple" <?= !empty($f['multiple']) ? 'checked' : '' ?>><span><strong>Più opzioni insieme</strong><small>Per tag e categorie: nei template si controllano con «has».</small></span></label>
+                </div>
+            </div>
             <?php if ($depth === 0): ?><label class="sf-posts-label" <?= $isArray ? '' : 'hidden' ?>><input type="checkbox" class="sf-posts" <?= ($f['posts'] ?? false) === true ? 'checked' : '' ?>><span><strong>Mostra in Posts</strong><small>Accesso rapido dalla barra laterale; i nuovi elementi vengono aggiunti in cima.</small></span></label><?php endif; ?>
             <div class="sf-nested" <?= $isArray ? '' : 'style="display:none"' ?>>
                 <?php if ($isArray): renderSchemaFields($f['of'] ?? [], $depth + 1); endif; ?>

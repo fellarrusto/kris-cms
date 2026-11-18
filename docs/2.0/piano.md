@@ -240,7 +240,9 @@ Elenco iniziale, ricavato dai primi casi d'uso:
 
 ### 6.4 Installazione e sicurezza
 
-- Fonte unica: la repository pubblica, con indice firmato Ed25519 come `releases.json`. La revisione di ciò che entra nella repo è il confine di sicurezza.
+- Fonte unica: le repository GitHub del proprietario di Kris (account `fellarrusto`), una per plugin. Kris non installa da altri account né da zip caricati a mano.
+- Versioni: i tag della repo (`v1.2.0`). Nella scheda del plugin si sceglie la versione; predefinita l'ultima release. Le versioni si leggono senza API di GitHub, come il canale del core: un `releases.json` firmato nella repo del plugin elenca tag, zip e versione minima di Kris.
+- Ogni pacchetto è firmato Ed25519 con le chiavi del core (`kris/update/keys.php`): anche se un account GitHub venisse compromesso, uno zip non firmato non si installa. La revisione di ciò che entra nelle repo è il confine di sicurezza.
 - Installa, aggiorna, disattiva e rimuove solo l'admin dall'editor. L'agente non può installare né attivare plugin.
 - Un errore fatale in un plugin non deve rendere inaccessibile l'editor: gli agganci sono isolati e un file in `config/` disattiva tutti i plugin (modalità sicura).
 - Su hosting condiviso non esiste una sandbox PHP: un plugin installato ha gli stessi permessi di Kris. Va scritto chiaramente nell'editor al momento dell'installazione.
