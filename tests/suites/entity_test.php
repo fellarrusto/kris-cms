@@ -24,17 +24,17 @@ test('getData su campo inesistente restituisce null', function () {
     assertSame(null, makeEntity([])->getData('boh'));
 });
 
-test('getArray restituisce i figli di un campo array', function () {
+test('children restituisce gli elementi di un elenco', function () {
     $e = makeEntity([[
         'name' => 'figli',
         'type' => 'array',
         'value' => [['id' => 0, 'data' => []], ['id' => 1, 'data' => []]],
     ]]);
-    assertSame(2, count($e->getArray('figli')));
+    assertSame(2, count($e->children('figli')));
 });
 
-test('getArray su campo non-array restituisce null', function () {
-    assertSame(null, makeEntity([fieldPlain('x', 'y')])->getArray('x'));
+test('children su un campo che non è un elenco restituisce null', function () {
+    assertSame(null, makeEntity([fieldPlain('x', 'y')])->children('x'));
 });
 
 test("l'id dell'entita e leggibile come campo", function () {

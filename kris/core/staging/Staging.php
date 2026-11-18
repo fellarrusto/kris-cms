@@ -40,7 +40,7 @@ final class Staging
         'model' => 'data/k_model.json',
         'pages' => 'config/allowed_pages.json',
         'seo' => 'config/seo.json',
-        'settings' => 'data/cms_settings.json',
+        'cms_settings' => 'data/cms_settings.json',
     ];
 
     /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
@@ -893,7 +893,7 @@ final class Staging
         if ($ops) {
             $docs = ['data', 'model'];
             if (self::touches($ops, self::PAGE_OPS)) array_push($docs, 'pages', 'seo');
-            if (self::touches($ops, self::SETTINGS_OPS)) $docs[] = 'settings';
+            if (self::touches($ops, self::SETTINGS_OPS)) $docs[] = 'cms_settings';
         }
         $uploads = array_keys($this->manifest()['uploads']);
         $fonts = array_values(array_filter(array_keys($this->manifest()['fonts']), fn($n) => is_file("{$this->dir}/assets/fonts/{$n}")));
@@ -927,7 +927,7 @@ final class Staging
                     $new = [
                         'data' => $state['data'], 'model' => $state['model'],
                         'pages' => ['allowed_pages' => array_values($state['pages'])],
-                        'seo' => $state['seo'], 'settings' => $state['settings'],
+                        'seo' => $state['seo'], 'cms_settings' => $state['settings'],
                     ];
                     return array_intersect_key($new, array_flip($docs));
                 });
@@ -1035,7 +1035,7 @@ final class Staging
             'model' => $read('model', []),
             'pages' => is_array($pages['allowed_pages'] ?? null) ? array_values($pages['allowed_pages']) : ['homepage'],
             'seo' => $read('seo', []),
-            'settings' => $read('settings', []),
+            'settings' => $read('cms_settings', []),
         ];
     }
 
@@ -1047,8 +1047,7 @@ final class Staging
     /** Le lingue attive del sito, come le legge il sito pubblico. */
     private function languages(): array
     {
-        $settings = \Kris\Store\Stores::site($this->root)->read('settings')->value;
-        return !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+        return \Kris\Store\Site::languages($this->root);
     }
 
     private function templateExists(string $page): bool

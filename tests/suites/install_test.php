@@ -172,12 +172,12 @@ test('torna alla versione precedente con contenuti e framework di allora', funct
 test('una migrazione con modifiche ai dati viene applicata e registrata', function () {
     $site = updateSite();
     $zip = updatePackage($site, '1.1.0', function (string $kris) {
-        testMigration($kris, 'aggiunge_campo', "\$f['k_model']['homepage'][] = ['name' => 'campo_nuovo', 'type' => 'plain']; return \$f;");
+        testMigration($kris, 'aggiunge_campo', "\$f['schema']['types']['homepage']['fields'][] = ['name' => 'campo_nuovo', 'type' => 'text', 'localized' => false]; return \$f;");
     });
     $r = runUpdate($site, 'install', $zip);
     assertSame(true, $r['ok'] ?? null, 'esito: ' . json_encode($r));
     assertSame(nextMigration()[1], siteState($site)['data_version']);
-    assertContains('campo_nuovo', file_get_contents($site . '/data/k_model.json'));
+    assertContains('campo_nuovo', file_get_contents($site . '/data/schema.json'));
 });
 
 // --- guasti: il sito deve tornare com'era -----------------------------------

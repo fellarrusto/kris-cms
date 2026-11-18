@@ -104,7 +104,13 @@ final class PdoStore implements Store
 
     public function import(array $documents): void
     {
-        $this->transaction(array_keys($documents), fn(): array => $documents);
+        $this->locked(function () use ($documents): void {
+            $this->transaction(array_keys($documents), fn(): array => $documents);
+            foreach (array_diff(Store::DOCUMENTS, array_keys($documents)) as $doc) {
+                $this->pdo->prepare("DELETE FROM {$this->table} WHERE name = ?")->execute([$doc]);
+            }
+            Site::forget();
+        });
     }
 
     /** @return array{0: array, 1: string} */
@@ -134,6 +140,7 @@ final class PdoStore implements Store
             : "UPDATE {$this->table} SET rev = ?, body = ? WHERE name = ?";
         try {
             $this->pdo->prepare($sql)->execute([$rev, $body, $doc]);
+            Site::forget();
         } catch (Throwable $e) {
             error_log('Kris store: ' . $e->getMessage());
             throw new StoreException("Il database non ha salvato «{$doc}».");

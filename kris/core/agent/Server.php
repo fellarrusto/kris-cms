@@ -275,17 +275,21 @@ final class Server
     private function siteConfig(): array
     {
         $state = $this->staging->state();
-        $settings = \Kris\Store\Stores::site($this->root)->read('settings')->value;
-        $langs = !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+        $langs = \Kris\Store\Site::languages($this->root);
         $seo = \Kris\Template\Seo::config($this->root);
-        $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : $seo['sitemap'];
+        $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : [];
         $robots = $this->root . '/robots.txt';
         return [
             'pages' => $state['pages'],
             'seo' => $state['seo'] ?: (object) [],
             'robots_txt' => is_file($robots) ? (string) file_get_contents($robots) : null,
             'sitemap_xml' => \Kris\Template\Seo::sitemapXml(
-                \Kris\Template\Seo::sitemapEntries($state['data'], $sitemap, $state['pages']),
+                // shortcut: lo staging è ancora nel formato 1, convertito qui finché non passa al formato 2
+                \Kris\Template\Seo::sitemapEntries(...(function () use ($state): array {
+                    $f2 = ((require KRIS_DIR . '/migrations/0009_formato_2.php')['up'])(['k_data' => $state['data'], 'k_model' => $state['model'], 'cms_settings' => $state['settings'],
+                        'allowed_pages' => ['allowed_pages' => $state['pages']], 'seo' => $state['seo'], 'templates' => []]);
+                    return [$f2['schema'], $f2['content']];
+                })()),
                 \Kris\Template\Seo::baseUrl($seo, $_SERVER),
                 $langs
             ),
@@ -297,8 +301,7 @@ final class Server
     {
         // Un solo replay delle operazioni per stato e riepilogo: sui siti grandi ogni replay costa
         [$state, $report] = $this->staging->stateAndReport();
-        $settings = \Kris\Store\Stores::site($this->root)->read('settings')->value;
-        $languages = !empty($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+        $languages = \Kris\Store\Site::languages($this->root);
 
         $entities = [];
         foreach ($state['data'] as $entity) {

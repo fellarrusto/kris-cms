@@ -19,9 +19,43 @@ use Kris\Entity\Entity;
 use Kris\Template\TemplateEngine;
 
 /** Entita costruita al volo, senza toccare il filesystem. */
+/**
+ * Un contenuto del formato 2 costruito a mano da campi scritti come nel
+ * formato 1 ({name, type, value}): plain è un testo condiviso, un valore per
+ * lingua un campo localizzato, array un elenco.
+ */
 function makeEntity(array $fields, int $id = 0, string $name = 'test'): Entity
 {
-    return Entity::fromArray(['id' => $id, 'data' => $fields], $name);
+    [$values, $defs] = entityParts($fields);
+    return new Entity($name, $id, $values, $defs);
+}
+
+/** @return array{0: array, 1: array} valori e definizioni per nome */
+function entityParts(array $fields): array
+{
+    $values = [];
+    $defs = [];
+    foreach ($fields as $f) {
+        $name = $f['name'];
+        if ($f['type'] === 'array') {
+            $of = [];
+            $items = [];
+            foreach ($f['value'] as $child) {
+                [$v, $d] = entityParts($child['data'] ?? []);
+                $of += $d;
+                $items[] = ['id' => $child['id']] + (!empty($child['hidden']) ? ['hidden' => true] : []) + ['values' => $v];
+            }
+            $defs[$name] = ['name' => $name, 'type' => 'list', 'of' => array_values($of)];
+            $values[$name] = $items;
+            continue;
+        }
+        $localized = is_array($f['value']);
+        $type = ['plain' => 'text', 'image' => 'media'][$f['type']] ?? $f['type'];
+        $defs[$name] = ['name' => $name, 'type' => $type, 'localized' => $localized];
+        $one = fn($v) => $type === 'boolean' ? $v === '1' : $v;
+        $values[$name] = $localized ? array_map($one, $f['value']) : $one($f['value']);
+    }
+    return [$values, $defs];
 }
 
 function fieldPlain(string $name, string $value): array

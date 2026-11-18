@@ -7,7 +7,7 @@ use Exception;
 use Kris\Entity\Entity;
 use Kris\Template\Assets;
 use Kris\Template\Seo;
-use Kris\Store\Stores;
+use Kris\Store\Site;
 use Kris\Template\TemplateEngine;
 use Throwable;
 
@@ -35,18 +35,21 @@ final class PageRenderer
         $rawPath = is_string($query['path'] ?? null) ? $query['path'] : '';
         $path = $rawPath === '' ? [] : array_values(array_filter(explode('/', $rawPath), fn($s) => $s !== ''));
 
-        $pagesDoc = Stores::site(null, true)->read('pages');
-        $pages = $pagesDoc->rev === '' ? ['homepage'] : ($pagesDoc->value['allowed_pages'] ?? ['homepage']);
+        $schema = Site::load(null, true)['schema'];
+        $entry = $schema['pages'][$page] ?? null;
         // La 404 del tema non e una pagina navigabile: si vede solo come 404
-        if ($page === '404' || !in_array($page, (array) $pages, true)) {
+        if ($page === '404' || !is_array($entry)) {
             return ['status' => 404, 'html' => self::notFound($lang), 'lang' => $lang];
         }
+        // Un vecchio link a un elemento di un elenco promosso a tipo: il contenuto del tipo
+        [$key, $id, $path] = Site::normalize($schema, $key, $id, $path);
         try {
-            $entity = Entity::fromPath('k_data', $key, $id, $path);
+            $entity = Entity::fromPath($key, $id, $path);
         } catch (Exception $e) {
             return ['status' => 404, 'html' => self::notFound($lang), 'lang' => $lang];
         }
-        $html = (new TemplateEngine($lang))->render((string) file_get_contents(Paths::template($page)), $entity);
+        $template = is_string($entry['template'] ?? null) ? $entry['template'] : $page;
+        $html = (new TemplateEngine($lang))->render((string) file_get_contents(Paths::template($template)), $entity);
 
         // Canonical e alternative per lingua, se il template non li ha gia.
         $seo = Seo::config(KRIS_ROOT);
@@ -61,28 +64,18 @@ final class PageRenderer
     public static function routes(): ?array
     {
         if (!Seo::config(KRIS_ROOT)['pretty_urls']) return null;
-        $store = Stores::site(null, true);
-        $pages = $store->read('pages');
-        $routes = Router::routes(
-            $pages->rev === '' ? ['homepage'] : (array) ($pages->value['allowed_pages'] ?? ['homepage']),
-            Seo::config(KRIS_ROOT)['sitemap'],
-            $store->read('model')->value
-        );
-        // Gli slug dei contenuti, per lingua, dal campo indicato nella regola della sitemap
+        $site = Site::load(null, true);
+        $routes = Router::routes($site['schema']);
+        // Gli slug dei contenuti, per lingua, dal campo indicato nella pagina
         $langs = self::language([])[1];
-        $data = null;
         foreach ($routes as &$route) {
             if (!isset($route['slug'])) continue;
-            $data ??= $store->read('data')->value;
             $route['slugs'] = [];
-            foreach ($data as $entity) {
-                if (($entity['name'] ?? null) !== $route['key'] || Entity::isHidden($entity)) continue;
-                $value = null;
-                foreach ((array) ($entity['data'] ?? []) as $field) {
-                    if (($field['name'] ?? null) === $route['slug']) $value = $field['value'] ?? null;
-                }
+            foreach ($site['content'] as $item) {
+                if (($item['type'] ?? null) !== $route['key'] || Entity::isHidden($item)) continue;
+                $value = $item['values'][$route['slug']] ?? null;
                 foreach ($langs as $lang) {
-                    $route['slugs'][(int) $entity['id']][$lang] = Router::slug((string) (is_array($value) ? ($value[$lang] ?? '') : ($value ?? '')));
+                    $route['slugs'][(int) $item['id']][$lang] = Router::slug((string) (is_array($value) ? ($value[$lang] ?? '') : ($value ?? '')));
                 }
             }
         }
@@ -97,15 +90,11 @@ final class PageRenderer
      */
     public static function language(array $query): array
     {
-        $langs = ['it', 'en'];
         try {
-            $settings = Stores::site()->read('settings')->value;
+            $langs = Site::languages();
         } catch (\Kris\Entity\StorageException $e) {
-            // Impostazioni illeggibili: le lingue predefinite, la pagina si vede comunque
-            $settings = [];
-        }
-        if (!empty($settings['languages']) && is_array($settings['languages'])) {
-            $langs = array_values($settings['languages']);
+            // Archivio illeggibile: le lingue predefinite, la pagina si vede comunque
+            $langs = ['it', 'en'];
         }
         $lang = $query['ln'] ?? $langs[0];
         return [in_array($lang, $langs, true) ? (string) $lang : $langs[0], $langs];
@@ -126,13 +115,13 @@ final class PageRenderer
         if (is_file($template)) {
             try {
                 try {
-                    $entity = new Entity('k_data', 'not_found', 0);
+                    $entity = Entity::load('not_found');
                 } catch (Exception $e) {
                     try {
-                        $entity = new Entity('k_data', 'kris_notfound', 0);
+                        $entity = Entity::load('kris_notfound');
                     } catch (Exception $e) {
                         // Il template puo non avere testi propri: entita vuota
-                        $entity = new Entity('k_data', 'not_found', 0, ['name' => 'not_found', 'id' => 0, 'data' => []]);
+                        $entity = new Entity('not_found', 0);
                     }
                 }
                 return self::finish(self::withHead((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $entity, $lang), $lang);
@@ -155,7 +144,7 @@ final class PageRenderer
     public static function workInProgress(string $lang): ?string
     {
         try {
-            $entity = new Entity('k_data', 'kris_wip', 0);
+            $entity = Entity::load('kris_wip');
         } catch (Throwable $e) {
             return null; // sito senza la sezione (migrazione non ancora applicata)
         }
@@ -182,7 +171,7 @@ final class PageRenderer
     public static function notFoundTexts(string $lang): array
     {
         try {
-            $entity = new Entity('k_data', 'kris_notfound', 0);
+            $entity = Entity::load('kris_notfound');
         } catch (Throwable $e) {
             return [];
         }
@@ -205,9 +194,9 @@ final class PageRenderer
         $pos = stripos($html, '</head>');
         if ($pos === false) return $html;
         try {
-            $site = new Entity('k_data', 'kris_site', 0);
+            $site = Entity::load('kris_site');
         } catch (Throwable $e) {
-            $site = Entity::fromArray(['id' => 0, 'data' => []], 'kris_site');
+            $site = new Entity('kris_site', 0);
         }
         $text = fn(Entity $e, string $field): string => is_string($v = $e->getData($field, $lang)) ? trim($v) : '';
         $esc = fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
@@ -275,7 +264,7 @@ final class PageRenderer
     private static function withFavicon(string $html, string $lang): string
     {
         try {
-            $url = (new Entity('k_data', 'kris_site', 0))->getData('favicon', $lang);
+            $url = Entity::load('kris_site')->getData('favicon', $lang);
         } catch (Throwable $e) {
             // Siti senza la raccolta (migrazione non ancora applicata): niente favicon
             return $html;

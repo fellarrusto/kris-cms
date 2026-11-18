@@ -198,8 +198,7 @@ class ElementProcessor
         if (!str_contains($name, '.')) return [$entity, $name];
         [$type, $field] = explode('.', $name, 2);
         if (!array_key_exists($type, $this->globals)) {
-            $first = array_values((new \Kris\Entity\JsonRepository())->findAll('k_data', $type))[0] ?? null;
-            $this->globals[$type] = $first === null ? null : Entity::fromArray($first, $type);
+            $this->globals[$type] = Entity::first($type);
         }
         return [$this->globals[$type], $field];
     }
