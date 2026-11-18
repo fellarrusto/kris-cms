@@ -544,13 +544,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         }
     }
     // 8. Elimina Media
+    // Varianti per gli schermi diversi delle immagini già caricate, a blocchi per non superare il tempo dell'hosting
+    if (isset($_POST['optimize_media'])) {
+        $start = microtime(true);
+        $made = 0;
+        $left = 0;
+        foreach (editorMediaFiles($uploadDir) as $file) {
+            if (microtime(true) - $start > 20) { $left++; continue; }
+            $made += \Kris\Entity\MediaStore::makeVariants($uploadDir, basename($file));
+        }
+        $msg = $left > 0
+            ? "Create {$made} versioni ottimizzate. Restano {$left} immagini: premi di nuovo «Ottimizza le immagini»."
+            : ($made > 0 ? "Create {$made} versioni ottimizzate: le pagine ora caricano la misura adatta allo schermo." : 'Le immagini sono già tutte ottimizzate.');
+    }
     if (isset($_POST['delete_media'])) {
         // basename() è fondamentale per la sicurezza (impedisce di cancellare file di sistema con ../)
         $filename = basename($_POST['file_name']); 
         $targetFile = $uploadDir . $filename;
         
         if (file_exists($targetFile)) {
-            if (@unlink($targetFile)) $msg = "File eliminato con successo.";
+            if (\Kris\Entity\MediaStore::deleteWithVariants($uploadDir, $filename)) $msg = "File eliminato con successo.";
             else $error = 'Non è stato possibile eliminare il file. Riprova.';
         } else {
             $error = "Il file non è più disponibile. La libreria potrebbe essere stata aggiornata.";

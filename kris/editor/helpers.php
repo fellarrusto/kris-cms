@@ -222,7 +222,8 @@ function editorMediaFiles(string $directory): array
 {
     $extensions = [...\Kris\Entity\MediaStore::allowedExtensions(), 'svg'];
     $files = array_values(array_filter(glob($directory . '*') ?: [],
-        fn($file) => is_file($file) && in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $extensions, true)));
+        fn($file) => is_file($file) && in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), $extensions, true)
+            && !\Kris\Entity\MediaStore::isVariant(basename($file))));
     usort($files, fn($a, $b) => filemtime($b) <=> filemtime($a));
     return $files;
 }

@@ -953,6 +953,8 @@ final class Staging
                 if (!@copy("{$this->dir}/uploads/{$name}", "{$this->root}/assets/uploads/{$name}")) {
                     throw new StagingException("Non riesco a copiare l'immagine {$name} in assets/uploads/.");
                 }
+                // Le varianti per gli schermi diversi si creano sul sito, una volta pubblicata
+                \Kris\Entity\MediaStore::makeVariants("{$this->root}/assets/uploads/", $name);
             }
         } catch (StagingException $e) {
             $this->restore($meta);

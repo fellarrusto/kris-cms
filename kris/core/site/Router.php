@@ -99,7 +99,7 @@ final class Router
      */
     public static function rewriteLinks(string $html, array $routes, string $basePath, string $defaultLang): string
     {
-        return (string) preg_replace_callback(
+        $html = (string) preg_replace_callback(
             '#\b(href|src|poster|action)=(["\'])(\./)?((?:assets|kris)/[^"\']*|(?:index\.php)?\?[^"\'\#]*(?:\#[^"\']*)?|index\.php(?:\#[^"\']*)?|sitemap\.php)\2#i',
             function (array $m) use ($routes, $basePath, $defaultLang): string {
                 $url = $m[4];
@@ -127,6 +127,9 @@ final class Router
             },
             $html
         );
+        // srcset: ogni indirizzo della lista che inizia con assets/
+        return (string) preg_replace_callback('#\bsrcset=(["\'])([^"\']*)\1#i', fn(array $m): string => 'srcset=' . $m[1]
+            . preg_replace('#(^|,\s*)(?:\./)?(assets/)#', '$1' . $basePath . '/$2', $m[2]) . $m[1], $html);
     }
 
     /**

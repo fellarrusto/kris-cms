@@ -129,7 +129,9 @@ final class MediaStore
             throw new StorageException('Non siamo riusciti a salvare il file.');
         }
 
-        return $this->publicPrefix . $this->processImage($name);
+        $name = $this->processImage($name);
+        self::makeVariants($this->uploadDir, $name);
+        return $this->publicPrefix . $name;
     }
 
     /**
@@ -149,7 +151,9 @@ final class MediaStore
             throw new StorageException('Non siamo riusciti a salvare il file.');
         }
 
-        return $this->publicPrefix . $this->processImage($name);
+        $name = $this->processImage($name);
+        self::makeVariants($this->uploadDir, $name);
+        return $this->publicPrefix . $name;
     }
 
     /**
@@ -276,6 +280,95 @@ final class MediaStore
         }
         if ($outName !== $name) @unlink($path);
         return $outName;
+    }
+
+    /** Larghezze delle varianti per gli schermi diversi (srcset). */
+    public const VARIANT_WIDTHS = [480, 960, 1600];
+
+    /** Nome della variante larga $width di un file: foto.jpg → foto-960w.webp. */
+    public static function variantName(string $name, int $width): string
+    {
+        return pathinfo($name, PATHINFO_FILENAME) . "-{$width}w.webp";
+    }
+
+    /** Vero se il file è una variante creata da Kris, non un caricamento. */
+    public static function isVariant(string $name): bool
+    {
+        return preg_match('/-\d+w\.webp$/', $name) === 1;
+    }
+
+    /** @return array<int, string> larghezza => nome delle varianti che esistono */
+    public static function variants(string $dir, string $name): array
+    {
+        $out = [];
+        foreach (self::VARIANT_WIDTHS as $width) {
+            if (is_file($dir . self::variantName($name, $width))) $out[$width] = self::variantName($name, $width);
+        }
+        return $out;
+    }
+
+    /**
+     * Crea le varianti WebP più strette dell'originale che mancano, accanto al
+     * file. Senza GD o WebP, o con una foto troppo grande per la memoria, non
+     * fa nulla. Restituisce quante ne ha create.
+     */
+    public static function makeVariants(string $dir, string $name): int
+    {
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $path = $dir . $name;
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true) || self::isVariant($name) || !is_file($path) || !self::canWriteWebp()) return 0;
+        $info = @getimagesize($path);
+        if (!is_array($info) || !self::fitsInMemory((int) $info[0], (int) $info[1])) return 0;
+        $missing = array_filter(self::VARIANT_WIDTHS, fn($w) => $w < (int) $info[0] && !is_file($dir . self::variantName($name, $w)));
+        if (!$missing) return 0;
+        $image = match ($ext) {
+            'png' => @imagecreatefrompng($path),
+            'webp' => @imagecreatefromwebp($path),
+            default => @imagecreatefromjpeg($path),
+        };
+        if ($image === false) return 0;
+        $made = 0;
+        foreach ($missing as $width) {
+            $scaled = imagescale($image, $width, max(1, (int) round(imagesy($image) * $width / imagesx($image))), IMG_BICUBIC);
+            if ($scaled === false) continue;
+            imagealphablending($scaled, false);
+            imagesavealpha($scaled, true);
+            $tmp = $dir . self::variantName($name, $width) . '.tmp';
+            if (@imagewebp($scaled, $tmp, 80) && @rename($tmp, $dir . self::variantName($name, $width))) $made++;
+            else @unlink($tmp);
+        }
+        return $made;
+    }
+
+    /** Elimina un file caricato e le sue varianti. */
+    public static function deleteWithVariants(string $dir, string $name): bool
+    {
+        foreach (self::variants($dir, $name) as $variant) @unlink($dir . $variant);
+        return @unlink($dir . $name);
+    }
+
+    /**
+     * Gli <img> che mostrano un file caricato ricevono srcset con le varianti,
+     * e width e height dell'originale (niente salti durante il caricamento),
+     * se il tag non li ha già. $root: la cartella del sito.
+     */
+    public static function srcset(string $html, string $root): string
+    {
+        $dir = rtrim($root, '/\\') . '/assets/uploads/';
+        return (string) preg_replace_callback('#<img\b[^>]*>#i', function (array $m) use ($dir): string {
+            $tag = $m[0];
+            if (preg_match('#\bsrc=(["\'])(?:\./)?assets/uploads/([A-Za-z0-9][A-Za-z0-9._-]*)\1#i', $tag, $src) !== 1 || stripos($tag, 'srcset=') !== false) return $tag;
+            $variants = self::variants($dir, $src[2]);
+            $info = @getimagesize($dir . $src[2]);
+            if (!$variants || !is_array($info)) return $tag;
+            $set = [];
+            foreach ($variants as $width => $variant) $set[] = "assets/uploads/{$variant} {$width}w";
+            $set[] = "assets/uploads/{$src[2]} {$info[0]}w";
+            $add = ' srcset="' . htmlspecialchars(implode(', ', $set), ENT_QUOTES, 'UTF-8') . '"';
+            if (stripos($tag, 'sizes=') === false) $add .= ' sizes="100vw"';
+            if (!preg_match('#\swidth=#i', $tag) && !preg_match('#\sheight=#i', $tag)) $add .= ' width="' . (int) $info[0] . '" height="' . (int) $info[1] . '"';
+            return (string) preg_replace('#\s*/?>$#', $add . '$0', $tag, 1);
+        }, $html);
     }
 
     /** Stima prudente della memoria che serve a GD per una foto di queste dimensioni. */
