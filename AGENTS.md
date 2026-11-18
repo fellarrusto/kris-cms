@@ -291,7 +291,8 @@ Le pagine sono HTML completo generato sul server: i motori di ricerca le leggono
 - Senza `id`: una voce per ogni entità della raccolta. Con `id`: quella sola entità. Con `children`: una voce per ogni elemento della lista indicata (`path=lista/ID`). Si elencano solo pagine autorizzate e contenuti esistenti, in tutte le lingue attive.
 - **Regola:** quando aggiungi una pagina navigabile o un tipo di pagina, aggiungila a `config/seo.json` e verifica che compaia in `sitemap.php`. Senza file, la sitemap contiene la sola homepage.
 - `base_url` va impostato in produzione: senza, l'indirizzo si ricava dalla richiesta. `"head": false` disattiva canonical e hreflang automatici.
-- Al deploy crea `robots.txt` nella root con l'URL assoluto della sitemap, che dipende dal dominio:
+- Una regola può avere `"priority"` (0–1), che va nella sitemap.
+- `robots.txt` lo genera Kris (regola del `.htaccess` verso `sitemap.php?robots=1`): esclude `/editor/` e `/kris-admin/`, aggiunge le righe di `"robots"` in `seo.json` (testo, una regola per riga) e la sitemap assoluta. Un `robots.txt` fisico nella root vince. Se lo scrivi a mano, al deploy, usa l'URL assoluto della sitemap:
 
 ```text
 User-agent: *

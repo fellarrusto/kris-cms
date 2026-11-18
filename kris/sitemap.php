@@ -20,6 +20,18 @@ if ($maintenance !== null && !$maintenance['stale']) {
     exit;
 }
 
+// robots.txt generato (il .htaccess di Kris manda qui /robots.txt se il file non esiste):
+// editor escluso, sitemap assoluta, righe aggiuntive di config/seo.json ("robots")
+if (isset($_GET['robots'])) {
+    $config = Seo::config(KRIS_ROOT);
+    $raw = \Kris\Store\Stores::site()->read('seo')->value['robots'] ?? '';
+    header('Content-Type: text/plain; charset=utf-8');
+    echo "User-agent: *\nDisallow: /editor/\nDisallow: /kris-admin/\n"
+        . (is_string($raw) && trim($raw) !== '' ? trim(str_replace("\r", '', $raw)) . "\n" : '')
+        . 'Sitemap: ' . Seo::baseUrl($config, $_SERVER) . "/sitemap.php\n";
+    exit;
+}
+
 // Sito in lavorazione: anche la sitemap aspetta
 if (\Kris\Site\PageRenderer::workInProgress('it') !== null) {
     http_response_code(503);
