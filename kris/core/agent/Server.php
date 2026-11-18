@@ -260,6 +260,11 @@ final class Server
         }
         try {
             $page = \Kris\Site\PageRenderer::render($query, $_SERVER);
+            // Con gli indirizzi leggibili i link escono come li vedono i visitatori
+            $routes = \Kris\Site\PageRenderer::routes();
+            if ($routes !== null) {
+                $page['html'] = \Kris\Site\Router::rewriteLinks($page['html'], $routes, \Kris\Site\Router::basePath($_SERVER), \Kris\Site\PageRenderer::language([])[1][0]);
+            }
         } finally {
             \Kris\Site\Paths::useOverlay(null);
         }

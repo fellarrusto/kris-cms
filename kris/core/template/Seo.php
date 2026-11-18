@@ -42,6 +42,8 @@ final class Seo
         return [
             'base_url' => is_string($config['base_url'] ?? null) ? rtrim($config['base_url'], '/') : null,
             'head' => ($config['head'] ?? true) !== false,
+            // Indirizzi leggibili (/menu, /en/progetto/3): servono la riscrittura sul server (.htaccess)
+            'pretty_urls' => ($config['pretty_urls'] ?? false) === true,
             'sitemap' => is_array($sitemap) ? $sitemap : [['page' => 'homepage']],
         ];
     }
@@ -65,8 +67,12 @@ final class Seo
     }
 
     /** URL di una pagina, con i soli parametri diversi dal valore predefinito. */
-    public static function url(string $base, string $page, string $key, int $id, array $path, string $lang, string $defaultLang): string
+    public static function url(string $base, string $page, string $key, int $id, array $path, string $lang, string $defaultLang, ?array $routes = null): string
     {
+        if ($routes !== null) {
+            $pretty = \Kris\Site\Router::path($routes, $page, $key, $id, $path, $lang, $defaultLang);
+            if ($pretty !== null) return $base . $pretty;
+        }
         $query = [];
         if ($page !== 'homepage') $query[] = 'page=' . rawurlencode($page);
         if ($key !== 'homepage') $query[] = 'key=' . rawurlencode($key);
@@ -77,18 +83,18 @@ final class Seo
     }
 
     /** Tag <link> canonical e hreflang per la pagina corrente. */
-    public static function headTags(string $base, string $page, string $key, int $id, array $path, string $lang, array $langs): string
+    public static function headTags(string $base, string $page, string $key, int $id, array $path, string $lang, array $langs, ?array $routes = null): string
     {
         $default = (string) ($langs[0] ?? $lang);
         $esc = fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
-        $tags = '<link rel="canonical" href="' . $esc(self::url($base, $page, $key, $id, $path, $lang, $default)) . '">';
+        $tags = '<link rel="canonical" href="' . $esc(self::url($base, $page, $key, $id, $path, $lang, $default, $routes)) . '">';
         if (count($langs) > 1) {
             foreach ($langs as $l) {
                 $tags .= "\n" . '<link rel="alternate" hreflang="' . $esc((string) $l) . '" href="'
-                    . $esc(self::url($base, $page, $key, $id, $path, (string) $l, $default)) . '">';
+                    . $esc(self::url($base, $page, $key, $id, $path, (string) $l, $default, $routes)) . '">';
             }
             $tags .= "\n" . '<link rel="alternate" hreflang="x-default" href="'
-                . $esc(self::url($base, $page, $key, $id, $path, $default, $default)) . '">';
+                . $esc(self::url($base, $page, $key, $id, $path, $default, $default, $routes)) . '">';
         }
         return $tags;
     }
@@ -181,7 +187,7 @@ final class Seo
     }
 
     /** Documento sitemap XML, con le alternative per lingua. */
-    public static function sitemapXml(array $entries, string $base, array $langs): string
+    public static function sitemapXml(array $entries, string $base, array $langs, ?array $routes = null): string
     {
         $default = (string) ($langs[0] ?? 'it');
         $esc = fn(string $s): string => htmlspecialchars($s, ENT_XML1 | ENT_QUOTES, 'UTF-8');
@@ -189,11 +195,11 @@ final class Seo
             . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
         foreach ($entries as [$page, $key, $id, $path]) {
             foreach ($langs as $lang) {
-                $xml .= '  <url>' . "\n" . '    <loc>' . $esc(self::url($base, $page, $key, $id, $path, (string) $lang, $default)) . '</loc>' . "\n";
+                $xml .= '  <url>' . "\n" . '    <loc>' . $esc(self::url($base, $page, $key, $id, $path, (string) $lang, $default, $routes)) . '</loc>' . "\n";
                 if (count($langs) > 1) {
                     foreach ($langs as $alt) {
                         $xml .= '    <xhtml:link rel="alternate" hreflang="' . $esc((string) $alt) . '" href="'
-                            . $esc(self::url($base, $page, $key, $id, $path, (string) $alt, $default)) . '"/>' . "\n";
+                            . $esc(self::url($base, $page, $key, $id, $path, (string) $alt, $default, $routes)) . '"/>' . "\n";
                     }
                 }
                 $xml .= '  </url>' . "\n";

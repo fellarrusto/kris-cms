@@ -51,9 +51,22 @@ final class PageRenderer
         // Canonical e alternative per lingua, se il template non li ha gia.
         $seo = Seo::config(KRIS_ROOT);
         if ($seo['head']) {
-            $html = Seo::inject($html, Seo::headTags(Seo::baseUrl($seo, $server), $page, $key, $id, $path, $lang, $langs));
+            $html = Seo::inject($html, Seo::headTags(Seo::baseUrl($seo, $server), $page, $key, $id, $path, $lang, $langs, self::routes()));
         }
         return ['status' => 200, 'html' => self::finish($html, $lang), 'lang' => $lang];
+    }
+
+    /** Le rotte degli indirizzi leggibili, o null se il sito non li usa (seo.json, pretty_urls). */
+    public static function routes(): ?array
+    {
+        if (!Seo::config(KRIS_ROOT)['pretty_urls']) return null;
+        $store = Stores::site(null, true);
+        $pages = $store->read('pages');
+        return Router::routes(
+            $pages->rev === '' ? ['homepage'] : (array) ($pages->value['allowed_pages'] ?? ['homepage']),
+            Seo::config(KRIS_ROOT)['sitemap'],
+            $store->read('model')->value
+        );
     }
 
     /**

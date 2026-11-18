@@ -169,11 +169,20 @@ test('l aggiornamento crea il .htaccess con la regola 404 solo se non c e gia', 
     register_shutdown_function(fn() => rrmdir($root));
     assertTrue(in_array('.htaccess', \Kris\Update\Stubs::ensure($root), true));
     $rules = (string) file_get_contents("{$root}/.htaccess");
-    assertContains('index.php?page=404 [L]', $rules);
+    assertContains('index.php [L,QSA]', $rules);
     assertNotContains('R=301', $rules);
     assertNotContains('R=302', $rules);
     assertContains('RewriteRule ^assets/ - [R=404,L]', $rules);
     file_put_contents("{$root}/.htaccess", "# del cliente\n");
     assertTrue(!in_array('.htaccess', \Kris\Update\Stubs::ensure($root), true));
     assertSame("# del cliente\n", file_get_contents("{$root}/.htaccess"));
+});
+
+test('l aggiornamento porta la regola 404 della 1.x agli indirizzi leggibili, il resto del .htaccess resta', function () {
+    $root = sys_get_temp_dir() . '/kris-htaccess-' . bin2hex(random_bytes(3));
+    mkdir($root);
+    register_shutdown_function(fn() => rrmdir($root));
+    file_put_contents("{$root}/.htaccess", "# del cliente\nRewriteRule !\.(?:css)$ index.php?page=404 [L]\n");
+    \Kris\Update\Stubs::ensure($root);
+    assertSame("# del cliente\nRewriteRule !\.(?:css)$ index.php [L,QSA]\n", file_get_contents("{$root}/.htaccess"));
 });

@@ -89,6 +89,7 @@ function renderPage(array $query, ?string $sandbox = null, string $script = 'ind
     $env = getenv();
     $env['KRIS_QUERY'] = http_build_query($query);
     $env['KRIS_SCRIPT'] = $script;
+    $env['KRIS_REQUEST_URI'] = $GLOBALS['KRIS_TEST_REQUEST_URI'] ?? '';
     $env['KRIS_TEST_ADMIN'] = $asAdmin ? '1' : '0';
     $env['KRIS_COOKIES'] = http_build_query($cookies);
 

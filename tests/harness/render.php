@@ -40,5 +40,7 @@ $script = getenv('KRIS_SCRIPT') ?: 'index.php';
 $script = in_array($script, ['index.php', 'sitemap.php'], true) ? $script : 'index.php';
 // Come una richiesta web alla root di http://localhost.
 $_SERVER['SCRIPT_NAME'] = '/' . $script;
+// Il percorso richiesto, per gli indirizzi leggibili: senza, la richiesta va a index.php con la query
+$_SERVER['REQUEST_URI'] = getenv('KRIS_REQUEST_URI') ?: '/' . $script . ($query ? '?' . http_build_query($query) : '');
 $_SERVER['HTTP_HOST'] = 'localhost';
 include $script;
