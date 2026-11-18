@@ -54,6 +54,34 @@ class Entity
     }
 
     /**
+     * Vero se il campo ha un solo valore per tutte le lingue (una stringa,
+     * non un oggetto per lingua): plain sempre, interruttore e scelta salvo
+     * "localized": true.
+     */
+    public static function isShared(array $def): bool
+    {
+        $type = $def['type'] ?? '';
+        return $type === 'plain' || (in_array($type, ['boolean', 'select'], true) && empty($def['localized']));
+    }
+
+    /**
+     * Il valore da salvare per un interruttore ("1" o "") o una scelta (le
+     * opzioni ammesse, separate da virgole se multipla: l'operatore has dei
+     * template funziona già). Gli altri tipi restano come sono.
+     */
+    public static function normalizeChoice(array $def, mixed $value): mixed
+    {
+        if (($def['type'] ?? '') === 'boolean') {
+            return in_array($value, [true, 1, '1', 'true', 'on'], true) ? '1' : '';
+        }
+        if (($def['type'] ?? '') !== 'select') return $value;
+        $picked = is_array($value) ? $value : explode(',', (string) $value);
+        $options = array_map('strval', (array) ($def['options'] ?? []));
+        $picked = array_values(array_intersect($options, array_map(fn($v) => trim((string) $v), $picked)));
+        return implode(',', !empty($def['multiple']) ? $picked : array_slice($picked, 0, 1));
+    }
+
+    /**
      * Vero se l'elemento (entita root o figlio di una lista) e sospeso:
      * resta nei dati e nell'editor, ma il sito non lo mostra.
      */
@@ -118,6 +146,10 @@ class Entity
     {
         foreach ($this->data['data'] as $item) {
             if ($item['name'] === $name) {
+                if ($lang && \is_array($item['value']) && ($item['type'] ?? null) === 'boolean') {
+                    // Un interruttore spento in una lingua resta spento: niente ripiego su un'altra lingua
+                    return $item['value'][$lang] ?? '';
+                }
                 if ($lang && \is_array($item['value']) && ($item['type'] ?? null) !== 'array') {
                     // Attenzione a empty(): la stringa "0" e un contenuto
                     // legittimo (un prezzo, una quantita) e non va trattata

@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Kris\Staging;
 
+use Kris\Entity\Entity;
+
 /**
  * Operazioni su contenuti, schema e pagine, applicate a uno stato in memoria:
  *
@@ -23,7 +25,7 @@ namespace Kris\Staging;
  */
 final class Operations
 {
-    public const TYPES = ['plain', 'text', 'richtext', 'image', 'array'];
+    public const TYPES = ['plain', 'text', 'richtext', 'image', 'array', 'boolean', 'select'];
 
 
     // Gli stessi nomi che l'editor riserva ai propri controlli, piu quelli esposti dal motore dei template
@@ -203,8 +205,8 @@ final class Operations
             throw new StagingException("«{$def['name']}» è un elenco: usa add_item, remove_item o move_item.");
         }
         $lang = isset($op['lang']) ? (string) $op['lang'] : null;
-        if ($lang !== null && $def['type'] === 'plain') {
-            throw new StagingException("«{$def['name']}» è un campo plain: non ha lingue.");
+        if ($lang !== null && Entity::isShared($def)) {
+            throw new StagingException("«{$def['name']}» ha un solo valore per tutte le lingue: togli \"lang\".");
         }
         if ($lang !== null && !in_array($lang, $ctx['languages'], true)) {
             throw new StagingException("La lingua '{$lang}' non è attiva sul sito. Lingue attive: " . implode(', ', $ctx['languages']) . '.');
@@ -589,21 +591,25 @@ final class Operations
             $op['from'] = $from;
         }
         if ($from === $type) return [$state, $op];
-        if ($from === 'array' || $type === 'array') {
+        $choices = ['array', 'boolean', 'select'];
+        if (in_array($from, $choices, true) || in_array($type, $choices, true)) {
+            if ($type === 'select') {
+                throw new StagingException("Per un campo a scelta servono le opzioni: aggiungilo con add_field invece di convertire «{$name}».");
+            }
             $filled = false;
             self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($name, &$filled): void {
                 $i = self::fieldIndex($entity, $name);
                 if ($i !== null && !self::isEmptyValue($entity['data'][$i]['value'] ?? null)) $filled = true;
             });
             if ($filled) {
-                throw new StagingException("«{$name}» contiene valori: un campo si converte da o verso un elenco solo quando è vuoto in tutti i contenuti.");
+                throw new StagingException("«{$name}» contiene valori: un campo si converte da o verso un elenco o un interruttore solo quando è vuoto in tutti i contenuti.");
             }
         }
         $schema[$pos]['type'] = $type;
         if ($type === 'array') {
             $schema[$pos]['of'] = [];
         } else {
-            unset($schema[$pos]['of'], $schema[$pos]['posts']);
+            unset($schema[$pos]['of'], $schema[$pos]['posts'], $schema[$pos]['options'], $schema[$pos]['multiple'], $schema[$pos]['localized']);
         }
         unset($schema);
         $languages = $ctx['languages'];
@@ -619,6 +625,7 @@ final class Operations
     private static function convertValue(mixed $value, string $from, string $to, array $languages): mixed
     {
         if ($to === 'array') return [];
+        if ($to === 'boolean') return '';
         if ($from === 'array') return $to === 'plain' ? '' : array_fill_keys($languages, '');
         $convert = function (string $text) use ($from, $to): string {
             if ($from === 'richtext' && $to !== 'richtext') {
@@ -870,11 +877,16 @@ final class Operations
     /** Valore completo di un campo non array, controllato rispetto al tipo. */
     private static function value(array $def, mixed $value, array $ctx): mixed
     {
-        if ($def['type'] === 'plain') {
+        if (Entity::isShared($def)) {
+            if (in_array($def['type'], ['boolean', 'select'], true)) return self::choice($def, $value);
             if (!is_scalar($value) && $value !== null) {
                 throw new StagingException("«{$def['name']}» è un campo plain: serve un valore semplice.");
             }
             return $value === null ? '' : (is_bool($value) ? ($value ? '1' : '0') : (string) $value);
+        }
+        if (in_array($def['type'], ['boolean', 'select'], true) && !is_array($value)) {
+            // Interruttore o scelta per lingua: un valore solo vale per tutte le lingue
+            $value = array_fill_keys($ctx['languages'], $value);
         }
         // Una stringa sola vale per la lingua principale; per le altre serve un oggetto per lingua
         if (is_string($value)) {
@@ -898,8 +910,30 @@ final class Operations
         return $out;
     }
 
+    /** Interruttore ("1" o "") o scelta fra le opzioni dello schema; un'opzione sconosciuta è un errore. */
+    private static function choice(array $def, mixed $value): string
+    {
+        if ($def['type'] === 'boolean') {
+            if (!in_array($value, [true, false, 1, 0, '1', '0', '', null], true)) {
+                throw new StagingException("«{$def['name']}» è un interruttore: true o false.");
+            }
+            return Entity::normalizeChoice($def, $value);
+        }
+        $picked = is_array($value) ? $value : ($value === null || $value === '' ? [] : explode(',', (string) $value));
+        $picked = array_map(fn($v) => trim((string) $v), $picked);
+        $unknown = array_diff($picked, array_map('strval', (array) ($def['options'] ?? [])));
+        if ($unknown) {
+            throw new StagingException("«{$def['name']}» non ha l'opzione «" . implode('», «', $unknown) . '». Opzioni: ' . implode(', ', (array) ($def['options'] ?? [])) . '.');
+        }
+        if (count($picked) > 1 && empty($def['multiple'])) {
+            throw new StagingException("«{$def['name']}» ammette una sola opzione.");
+        }
+        return Entity::normalizeChoice($def, $picked);
+    }
+
     private static function langString(array $def, mixed $text, array $ctx): string
     {
+        if (in_array($def['type'], ['boolean', 'select'], true)) return self::choice($def, $text);
         if (!is_string($text)) {
             throw new StagingException("Il valore di «{$def['name']}» deve essere un testo.");
         }
@@ -952,11 +986,7 @@ final class Operations
 
     private static function emptyValue(array $def, array $languages): array
     {
-        $value = match ($def['type']) {
-            'array' => [],
-            'plain' => '',
-            default => array_fill_keys($languages, ''),
-        };
+        $value = $def['type'] === 'array' ? [] : (Entity::isShared($def) ? '' : array_fill_keys($languages, ''));
         return ['name' => $def['name'], 'type' => $def['type'], 'value' => $value];
     }
 
@@ -975,6 +1005,16 @@ final class Operations
         if (isset($def['description'])) $out['description'] = mb_substr((string) $def['description'], 0, 300);
         $section = self::section($def['section'] ?? null);
         if ($section !== '') $out['section'] = $section;
+        if (in_array($type, ['boolean', 'select'], true) && !empty($def['localized'])) $out['localized'] = true;
+        if ($type === 'select') {
+            $options = array_values(array_unique(array_filter(array_map(fn($o) => trim((string) $o), (array) ($def['options'] ?? [])), fn($o) => $o !== '')));
+            if (!$options) throw new StagingException("«{$name}» è una scelta: servono le opzioni, per esempio \"options\": [\"web\", \"app\"].");
+            foreach ($options as $option) {
+                if (str_contains($option, ',')) throw new StagingException("L'opzione «{$option}» di «{$name}» non può contenere virgole.");
+            }
+            $out['options'] = $options;
+            if (!empty($def['multiple'])) $out['multiple'] = true;
+        }
         if ($type === 'array') {
             $of = [];
             foreach ((array) ($def['of'] ?? []) as $child) {

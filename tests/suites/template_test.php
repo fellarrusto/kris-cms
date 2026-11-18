@@ -117,3 +117,10 @@ test('i caratteri non ASCII restano tali, anche dentro script e style', function
     assertContains("content:\"\u{2014}\"", $out);
     assertNotContains('&nbsp;', $out);
 });
+
+test('{{#if campo}} e vero solo con un valore: interruttore acceso, testo non vuoto', function () {
+    $e = makeEntity([fieldPlain('acceso', '1'), fieldPlain('spento', ''), ['name' => 'per_lingua', 'type' => 'boolean', 'value' => ['it' => '1', 'en' => '']]]);
+    $html = '{{#if acceso}}A{{/if}}{{#if spento}}B{{#else}}C{{/if}}{{#if per_lingua}}D{{/if}}';
+    assertSame('ACD', trim(strip_tags(renderTemplate($html, $e, 'it'))));
+    assertSame('AC', trim(strip_tags(renderTemplate($html, $e, 'en'))));
+});
