@@ -214,7 +214,7 @@ final class Operations
 
         // Fra le raccolte di Kris si scrivono i valori di kris_site (favicon), kris_legal (titolare, informative, banner) e kris_notfound (pagina 404); lo schema no
         $key = (string) $op['key'];
-        $writable = in_array($key, ['kris_site', 'kris_legal', 'kris_notfound'], true);
+        $writable = in_array($key, ['kris_site', 'kris_legal', 'kris_notfound', 'kris_wip'], true);
         $entity = &self::entity($state['data'], $key, (int) ($op['id'] ?? 0), $path, $writable);
         $index = self::fieldIndex($entity, $def['name']);
         $current = $index === null ? null : $entity['data'][$index]['value'];

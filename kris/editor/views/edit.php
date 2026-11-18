@@ -38,6 +38,8 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
 <div class="container">
     <?php if ($group === 'kris_notfound'): ?>
     <header class="page-heading"><div><h1>Pagina 404</h1><p>Quello che vede chi apre un indirizzo che non esiste. Se il tema ha un suo <code>404.html</code> usa questi testi, altrimenti li usa la pagina di serie di Kris.</p></div></header>
+    <?php elseif ($group === 'kris_wip'): ?>
+    <header class="page-heading"><div><h1>Lavori in corso</h1><p>Con l'interruttore acceso i visitatori vedono solo questa pagina (stato 503, i motori di ricerca tornano più tardi). Tu, con l'editor aperto, continui a vedere il sito. Se il tema ha un suo <code>kris_wip.html</code> usa questi testi, altrimenti li usa la pagina di serie di Kris.</p></div></header>
     <?php elseif ($group === 'kris_site'): ?>
     <header class="page-heading"><div><h1>Favicon</h1><p>L’icona del sito nella scheda del browser e nei preferiti. Kris la aggiunge a tutte le pagine; usa un PNG quadrato di almeno 48×48 pixel.</p></div></header>
     <?php elseif (isReservedCollection($group)): ?>

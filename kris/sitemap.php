@@ -20,6 +20,13 @@ if ($maintenance !== null && !$maintenance['stale']) {
     exit;
 }
 
+// Sito in lavorazione: anche la sitemap aspetta
+if (\Kris\Site\PageRenderer::workInProgress('it') !== null) {
+    http_response_code(503);
+    header('Retry-After: 3600');
+    exit;
+}
+
 try {
     $store = \Kris\Store\Stores::site(null, true);
     $data = $store->read('data')->value;

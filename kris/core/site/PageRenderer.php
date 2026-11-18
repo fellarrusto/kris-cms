@@ -146,6 +146,37 @@ final class PageRenderer
         return self::finish((string) ob_get_clean(), $lang);
     }
 
+    /**
+     * La pagina «Lavori in corso» se l'interruttore della sezione (kris_wip) è
+     * acceso, altrimenti null: template/kris_wip.html del tema, resa con i campi
+     * della sezione, o quella di serie di Kris.
+     */
+    public static function workInProgress(string $lang): ?string
+    {
+        try {
+            $entity = new Entity('k_data', 'kris_wip', 0);
+        } catch (Throwable $e) {
+            return null; // sito senza la sezione (migrazione non ancora applicata)
+        }
+        if ($entity->getData('enabled') !== '1') return null;
+        $template = Paths::template('kris_wip');
+        if (is_file($template)) {
+            try {
+                return self::finish(self::withHead((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $entity, $lang), $lang);
+            } catch (Throwable $e) {
+                // Template rotto: la pagina di serie
+            }
+        }
+        $wip = [];
+        foreach (['title', 'text'] as $field) {
+            $value = $entity->getData($field, $lang);
+            if (is_string($value) && trim($value) !== '') $wip[$field] = trim($value);
+        }
+        ob_start();
+        require KRIS_DIR . '/wip.php';
+        return self::finish((string) ob_get_clean(), $lang);
+    }
+
     /** I testi della sezione Pagina 404 per la 404 di serie; vuoti se mancano (valgono quelli predefiniti). */
     public static function notFoundTexts(string $lang): array
     {
