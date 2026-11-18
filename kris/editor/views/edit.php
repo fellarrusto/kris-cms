@@ -41,7 +41,7 @@ $canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path ||
     <?php elseif ($group === 'kris_wip'): ?>
     <header class="page-heading"><div><h1>Lavori in corso</h1><p>Con l'interruttore acceso i visitatori vedono solo questa pagina (stato 503, i motori di ricerca tornano più tardi). Tu, con l'editor aperto, continui a vedere il sito. Se il tema ha un suo <code>kris_wip.html</code> usa questi testi, altrimenti li usa la pagina di serie di Kris.</p></div></header>
     <?php elseif ($group === 'kris_site'): ?>
-    <header class="page-heading"><div><h1>Favicon</h1><p>L’icona del sito nella scheda del browser e nei preferiti. Kris la aggiunge a tutte le pagine; usa un PNG quadrato di almeno 48×48 pixel.</p></div></header>
+    <header class="page-heading"><div><h1>Proprietà del sito</h1><p>Icona, nome, titolo e condivisione del sito, codici di verifica dei motori di ricerca. Kris li aggiunge a ogni pagina solo dove il template non li ha già; una pagina con i campi seo_title, seo_description o seo_image usa i suoi.</p></div></header>
     <?php elseif (isReservedCollection($group)): ?>
     <header class="page-heading"><div><h1>Privacy e cookie</h1><p>Dati del titolare, informative e testi del banner. Il sito li mostra dove i suoi template li usano.</p></div></header>
     <?php else: ?>

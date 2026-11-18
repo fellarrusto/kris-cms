@@ -351,7 +351,7 @@ $stagingCount = count($stagingNav->changes()) + count($stagingNav->operations())
 $stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
 $sectionLabel = match ($action) {
     'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts', 'staging' => 'Modifiche in attesa',
-    'edit' => $inLegal ? 'Privacy e cookie' : ($inSite ? 'Favicon' : ($inNotFound ? 'Pagina 404' : ($inWip ? 'Lavori in corso' : 'Contenuti'))),
+    'edit' => $inLegal ? 'Privacy e cookie' : ($inSite ? 'Proprietà del sito' : ($inNotFound ? 'Pagina 404' : ($inWip ? 'Lavori in corso' : 'Contenuti'))),
     'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
 };
 
