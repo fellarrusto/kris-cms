@@ -59,6 +59,15 @@ if ($previewAdmin) {
 $query = $_GET;
 $routes = PageRenderer::routes();
 $basePath = Router::basePath($_SERVER);
+
+// Reindirizzamenti di config/seo.json: vecchi indirizzi, QR già stampati, cambi di struttura
+$requested = '/' . ltrim(substr((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), strlen($basePath)), '/');
+$redirects = \Kris\Template\Seo::config(KRIS_ROOT)['redirects'];
+$to = $redirects[$requested] ?? $redirects[rtrim($requested, '/')] ?? null;
+if ($to !== null && $preview === null) {
+    header('Location: ' . (str_starts_with($to, '/') ? $basePath . $to : $to), true, 301);
+    exit;
+}
 if ($routes !== null) {
     [, $langs] = PageRenderer::language([]);
     $requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);

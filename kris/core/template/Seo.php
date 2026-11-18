@@ -44,6 +44,9 @@ final class Seo
             'head' => ($config['head'] ?? true) !== false,
             // Indirizzi leggibili (/menu, /en/progetto/3): servono la riscrittura sul server (.htaccess)
             'pretty_urls' => ($config['pretty_urls'] ?? false) === true,
+            // Reindirizzamenti 301: {"/vecchio": "/nuovo"}, percorsi dalla cartella del sito o indirizzi https
+            'redirects' => array_filter(is_array($config['redirects'] ?? null) ? $config['redirects'] : [], fn($to, $from) => is_string($from) && str_starts_with($from, '/')
+                && is_string($to) && (str_starts_with($to, '/') || preg_match('#^https?://#', $to) === 1), ARRAY_FILTER_USE_BOTH),
             'sitemap' => is_array($sitemap) ? $sitemap : [['page' => 'homepage']],
         ];
     }

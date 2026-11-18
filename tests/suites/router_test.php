@@ -112,3 +112,39 @@ test('il cambio lingua su un percorso leggibile porta alla stessa pagina nell al
         unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
     }
 });
+
+test('gli slug vengono dal campo della regola; vuoto vale l id, un doppione riceve -id', function () {
+    $routes = Router::routes(['progetto'], [['page' => 'progetto', 'key' => 'progetti', 'slug' => 'url']], []);
+    $routes['progetto']['slugs'] = [
+        3 => ['it' => Router::slug('Casa Rossi, è qui'), 'en' => 'rossi-house'],
+        5 => ['it' => '', 'en' => ''],
+        7 => ['it' => 'casa-rossi-e-qui', 'en' => ''],
+    ];
+    assertSame('/progetto/casa-rossi-e-qui', Router::path($routes, 'progetto', 'progetti', 3, [], 'it', 'it'));
+    assertSame('/en/progetto/rossi-house', Router::path($routes, 'progetto', 'progetti', 3, [], 'en', 'it'));
+    assertSame('/progetto/5', Router::path($routes, 'progetto', 'progetti', 5, [], 'it', 'it'));
+    assertSame('/progetto/casa-rossi-e-qui-7', Router::path($routes, 'progetto', 'progetti', 7, [], 'it', 'it'));
+    $langs = ['it', 'en'];
+    assertSame('3', Router::resolve($routes, '/progetto/casa-rossi-e-qui', $langs, 'it')['id']);
+    assertSame('7', Router::resolve($routes, '/progetto/casa-rossi-e-qui-7', $langs, 'it')['id']);
+    assertSame('3', Router::resolve($routes, '/en/progetto/rossi-house', $langs, 'it')['id']);
+    assertSame('3', Router::resolve($routes, '/progetto/3', $langs, 'it')['id'], 'l id funziona sempre');
+    assertSame(null, Router::resolve($routes, '/progetto/rossi-house', $langs, 'it'), 'slug di un altra lingua');
+    assertSame('', Router::slug('2026'), 'solo cifre: si confonderebbe con un id');
+});
+
+test('i reindirizzamenti di seo.json rispondono con un 301', function () {
+    $root = sys_get_temp_dir() . '/kris-router-' . bin2hex(random_bytes(4));
+    rcopy(projectSandbox(), $root);
+    register_shutdown_function(fn() => rrmdir($root));
+    $seo = json_decode((string) file_get_contents("{$root}/config/seo.json"), true);
+    file_put_contents("{$root}/config/seo.json", json_encode($seo + ['redirects' => ['/menu' => '/?ln=en', '/x' => 'javascript:alert(1)']]));
+    try {
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/menu/';
+        assertSame(301, renderPage([], $root)['status']);
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/x';
+        assertTrue(renderPage([], $root)['status'] !== 301, 'solo percorsi del sito o https');
+    } finally {
+        unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
+    }
+});
