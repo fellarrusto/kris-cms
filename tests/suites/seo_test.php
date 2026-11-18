@@ -210,3 +210,19 @@ test('0005 aggiunge a kris_legal i testi delle categorie cookie, senza toccare q
     assertSame('Conferma', array_column($twice['k_data'][0]['data'], 'value', 'name')['banner_save']['it']);
     assertSame(['k_data' => [], 'k_model' => []], ($m['up'])(['k_data' => [], 'k_model' => []]), 'senza kris_legal non fa nulla');
 });
+
+test('sitemap con priorita e robots.txt generato con la sitemap assoluta e le righe di seo.json', function () {
+    $entries = Seo::sitemapEntries([['name' => 'homepage', 'id' => 0, 'data' => []]], [['page' => 'homepage', 'priority' => 1.5]], ['homepage']);
+    assertSame([['homepage', 'homepage', 0, [], 1.0]], $entries, 'priorita fra 0 e 1');
+    assertContains('<priority>1.0</priority>', Seo::sitemapXml($entries, SEO_BASE, ['it']));
+
+    $root = sys_get_temp_dir() . '/kris-robots-' . bin2hex(random_bytes(4));
+    rcopy(projectSandbox(), $root);
+    register_shutdown_function(fn() => rrmdir($root));
+    $seo = json_decode((string) file_get_contents("{$root}/config/seo.json"), true);
+    file_put_contents("{$root}/config/seo.json", json_encode($seo + ['robots' => "Disallow: /bozze/"]));
+    $robots = renderPage(['robots' => '1'], $root, 'sitemap.php')['output'];
+    assertContains("Disallow: /editor/\n", $robots);
+    assertContains("Disallow: /bozze/\n", $robots);
+    assertContains('Sitemap: http://localhost/sitemap.php', $robots);
+});

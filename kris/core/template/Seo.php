@@ -154,11 +154,13 @@ final class Seo
             }
             $page = $rule['page'];
             $key = is_string($rule['key'] ?? null) ? $rule['key'] : 'homepage';
+            // "priority" (0–1) facoltativa: va in fondo alla voce solo se c'è
+            $extra = is_numeric($rule['priority'] ?? null) ? [max(0.0, min(1.0, (float) $rule['priority']))] : [];
             $roots = array_values(array_filter($data, fn($e) => is_array($e) && ($e['name'] ?? null) === $key && !Entity::isHidden($e)));
 
             if (!array_key_exists('id', $rule) && !isset($rule['children'])) {
                 foreach ($roots as $entity) {
-                    $entries[] = [$page, $key, (int) ($entity['id'] ?? 0), []];
+                    $entries[] = array_merge([$page, $key, (int) ($entity['id'] ?? 0), []], $extra);
                 }
                 continue;
             }
@@ -174,7 +176,7 @@ final class Seo
                 continue;
             }
             if (!is_string($rule['children'] ?? null)) {
-                $entries[] = [$page, $key, $id, []];
+                $entries[] = array_merge([$page, $key, $id, []], $extra);
                 continue;
             }
             foreach (is_array($entity['data'] ?? null) ? $entity['data'] : [] as $field) {
@@ -183,7 +185,7 @@ final class Seo
                         if (!is_array($child) || Entity::isHidden($child)) {
                             continue;
                         }
-                        $entries[] = [$page, $key, $id, [$rule['children'], (string) (int) ($child['id'] ?? 0)]];
+                        $entries[] = array_merge([$page, $key, $id, [$rule['children'], (string) (int) ($child['id'] ?? 0)]], $extra);
                     }
                 }
             }
@@ -198,9 +200,11 @@ final class Seo
         $esc = fn(string $s): string => htmlspecialchars($s, ENT_XML1 | ENT_QUOTES, 'UTF-8');
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n"
             . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' . "\n";
-        foreach ($entries as [$page, $key, $id, $path]) {
+        foreach ($entries as $entry) {
+            [$page, $key, $id, $path] = $entry;
             foreach ($langs as $lang) {
                 $xml .= '  <url>' . "\n" . '    <loc>' . $esc(self::url($base, $page, $key, $id, $path, (string) $lang, $default, $routes)) . '</loc>' . "\n";
+                if (isset($entry[4])) $xml .= '    <priority>' . number_format((float) $entry[4], 1, '.', '') . '</priority>' . "\n";
                 if (count($langs) > 1) {
                     foreach ($langs as $alt) {
                         $xml .= '    <xhtml:link rel="alternate" hreflang="' . $esc((string) $alt) . '" href="'

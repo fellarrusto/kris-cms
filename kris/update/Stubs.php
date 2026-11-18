@@ -31,6 +31,8 @@ final class Stubs
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^robots\.txt$ sitemap.php?robots=1 [L]
+RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^assets/ - [R=404,L]
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -52,6 +54,10 @@ HTACCESS;
             // La regola di Kris fino alla 1.9 mandava tutto alla 404: ora passa il percorso a index.php (indirizzi leggibili)
             $rules = (string) file_get_contents($htaccess);
             $updated = str_replace(' index.php?page=404 [L]', ' index.php [L,QSA]', $rules);
+            // robots.txt generato da Kris (dalla 2.0), solo nei .htaccess che hanno già la regola di Kris
+            if (str_contains($updated, 'index.php [L,QSA]') && !str_contains($updated, 'sitemap.php?robots=1')) {
+                $updated = str_replace("RewriteEngine On\n", "RewriteEngine On\nRewriteCond %{REQUEST_FILENAME} !-f\nRewriteRule ^robots\\.txt$ sitemap.php?robots=1 [L]\n", $updated);
+            }
             if ($updated !== $rules && @file_put_contents($htaccess, $updated) !== false) $created[] = '.htaccess';
         }
         foreach (self::STUBS as $stub => $target) {
