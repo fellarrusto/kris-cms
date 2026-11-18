@@ -47,7 +47,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
-| `kris/core/store/` | Archivio dei dati (`Kris\Store\Store`): documenti `data`, `model`, `settings`, `pages`, `seo` con revisione, transazioni sotto lock, esportazione e importazione. `Stores::site()` sceglie l'adapter da `config/store.php` (predefinito `json`, `FileStore` sui file di sempre). Vedi `docs/2.0/specifica.md`. |
+| `kris/core/store/` | Archivio dei dati (`Kris\Store\Store`): documenti `data`, `model`, `settings`, `pages`, `seo` con revisione, transazioni sotto lock, esportazione e importazione. `Stores::site()` sceglie l'adapter da `config/store.php` (privato, escluso da Git): `json` predefinito (`FileStore` sui file di sempre) oppure `pdo` (`PdoStore`, SQLite o MySQL/MariaDB, un documento per riga nella tabella `<prefisso>documents`, creata al primo uso; un percorso SQLite relativo vale dalla root, per esempio `sqlite:data/kris.sqlite`). Il passaggio si fa con `php tools/store.php convert --to=pdo --dsn=…` (o `--to=json`): copia, rilegge e confronta, solo allora scrive `config/store.php`; l'archivio vecchio resta come copia. Con il database le copie di sicurezza degli aggiornamenti conservano un'esportazione (`store.json` nello snapshot). Vedi `docs/2.0/specifica.md`. |
 | `kris/core/staging/` | Staging (`Staging`), operazioni su contenuti, schema e pagine (`Operations`), file ammessi e controlli sul contenuto (`FilePolicy`), anteprima per gli admin (`Preview`), differenze per il riepilogo (`Diff`), traduzione delle azioni dell'editor in operazioni (`EditorChanges`). |
 | `tools/staging.php` | Le operazioni sullo staging da riga di comando: `status`, `read`, `edit`, `write`, `delete`, `approve`, `op`, `upload`, `promote`, `discard`, `undo`. |
 | `kris/core/site/Paths.php` | Unico punto da cui il rendering pubblico legge template, `data/` e pagine autorizzate. Con una sovrapposizione attiva (l'anteprima dello staging) un file presente lì vince su quello del sito. Solo letture: le scritture vanno sempre ai file del sito. |
@@ -58,7 +58,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `kris/editor/` | Autenticazione, azioni, viste, partial, CSS e JS del pannello. È servito all'indirizzo `/kris-admin/` tramite lo stub (fino alla 1.x `/editor/`: l'aggiornamento alla 2.0 crea `kris-admin/` e trasforma gli stub di `editor/` in un rimando; i link di reset salvati con il vecchio indirizzo si correggono da soli). |
 | `tests/` | Test PHP e snapshot pubblici con dati isolati in fixture. |
 
-`Entity` legge i valori e risolve le traduzioni. `JsonRepository` recupera le entità per nome e ID. `JsonStore` verifica il JSON, scrive tramite file temporaneo e conserva copie precedenti; non garantisce il rilevamento di conflitti tra editor concorrenti. Per letture e scritture dei dati del sito usa l'archivio (`Kris\Store\Stores::site()`), mai i file di `data/` direttamente: dalla 2.0 dietro può esserci un database. Fanno eccezione, per contratto con le versioni installate, installer e migrazioni.
+`Entity` legge i valori e risolve le traduzioni. `JsonRepository` recupera le entità per nome e ID. `JsonStore` verifica il JSON, scrive tramite file temporaneo e conserva copie precedenti; non garantisce il rilevamento di conflitti tra editor concorrenti. Per letture e scritture dei dati del sito usa l'archivio (`Kris\Store\Stores::site()`), mai i file di `data/` direttamente: dalla 2.0 dietro può esserci un database. Anche le migrazioni passano dall'archivio; l'installer, prima dello scambio, usa solo funzioni del suo file.
 
 Il rendering esegue prima variabili e condizioni, poi gli array, poi i componenti. Ogni frammento viene renderizzato con la propria entità. Il frontend legge i tipi presenti nei dati: modificare soltanto lo schema non converte automaticamente i dati già salvati.
 
@@ -374,7 +374,7 @@ php -S 127.0.0.1:8000 -t .
 php tests/run.php
 ```
 
-Le suite dei pacchetti e dell'installazione richiedono le estensioni `sodium` e `zip`: se mancano vengono saltate e il riepilogo lo dice (`SALTATA`). Con un PHP che non le carica dal php.ini: `php -d extension=sodium -d extension=zip tests/run.php`. Una suite saltata non è una suite passata.
+La suite dell'archivio nel database richiede `pdo_sqlite`. Le suite dei pacchetti e dell'installazione richiedono le estensioni `sodium` e `zip`: se mancano vengono saltate e il riepilogo lo dice (`SALTATA`). Con un PHP che non le carica dal php.ini: `php -d extension=sodium -d extension=zip tests/run.php`. Una suite saltata non è una suite passata.
 
 Apri `http://127.0.0.1:8000/` e `/kris-admin/`. Il setup crea l'account se manca `config/auth.php`. Il server PHP integrato serve solo allo sviluppo locale.
 

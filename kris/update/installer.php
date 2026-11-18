@@ -99,6 +99,7 @@ namespace Kris\Install {
 
         // 5. Migrazioni e verifica, con il framework nuovo.
         try {
+            snapshot_store($root, $snapshot);
             $state = read_json($root . STATE_FILE) ?? [];
             $migrator = new \Kris\Update\Migrator($root, $root . '/kris/migrations');
             if ($migrator->dataIsNewer($state)) {
@@ -176,6 +177,7 @@ namespace Kris\Install {
                 'id' => $parkedId, 'from' => $current, 'to' => $meta['from'], 'user' => $user,
                 'created_at' => date('c'), 'outcome' => 'parked',
             ]);
+            snapshot_store($root, $parked);
         } catch (\Throwable $e) {
             remove_tree($parked);
             maintenance_off($root);
@@ -332,6 +334,21 @@ namespace Kris\Install {
         write_json($snapshot . '/meta.json', $meta);
     }
 
+    /**
+     * Con l'archivio nel database (config/store.php) i file di data/ non
+     * bastano: lo snapshot ne conserva un'esportazione. Usa le classi del
+     * framework, quindi nell'installazione si chiama dopo lo scambio e prima
+     * delle migrazioni.
+     */
+    function snapshot_store(string $root, string $snapshot): void
+    {
+        $file = $root . '/config/store.php';
+        $config = is_file($file) ? require $file : [];
+        if (is_array($config) && ($config['driver'] ?? 'json') !== 'json') {
+            write_json($snapshot . '/store.json', \Kris\Store\Stores::site($root)->export());
+        }
+    }
+
     /** File del sito che uno snapshot conserva: i JSON di data/ e i file di config/. */
     function snapshot_sources(string $root): array
     {
@@ -373,6 +390,11 @@ namespace Kris\Install {
             if ($name !== basename(MAINTENANCE_FILE) && !isset($saved['data/' . $name])) {
                 @unlink($file);
             }
+        }
+        // I documenti nel database tornano dall'esportazione (vedi snapshot_store)
+        if (is_file($snapshot . '/store.json') && class_exists(\Kris\Store\Stores::class)) {
+            \Kris\Store\Stores::reset();
+            \Kris\Store\Stores::site($root)->import(read_json($snapshot . '/store.json') ?? []);
         }
     }
 
