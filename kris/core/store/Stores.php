@@ -22,11 +22,20 @@ final class Stores
     private static function open(string $root, bool $preview): Store
     {
         $config = is_file("{$root}/config/store.php") ? require "{$root}/config/store.php" : [];
-        $driver = is_array($config) ? (string) ($config['driver'] ?? 'json') : 'json';
+        $config = is_array($config) ? $config : [];
+        $driver = (string) ($config['driver'] ?? 'json');
         return match ($driver) {
             'json' => new FileStore($root, $preview),
+            'pdo' => new PdoStore($root, $config, $preview),
             default => throw new StoreException("Archivio «{$driver}» non disponibile in questa versione di Kris."),
         };
+    }
+
+    /** Il driver scelto da config/store.php: json o pdo. */
+    public static function driver(string $root): string
+    {
+        $config = is_file("{$root}/config/store.php") ? require "{$root}/config/store.php" : [];
+        return is_array($config) ? (string) ($config['driver'] ?? 'json') : 'json';
     }
 
     /** Solo per i test: dimentica gli archivi aperti. */

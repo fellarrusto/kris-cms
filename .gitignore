@@ -15,3 +15,5 @@
 /data/agent_nonces.json
 /config/auth_attempts.json
 /config/setup_code.php
+/config/store.php
+/data/*.sqlite

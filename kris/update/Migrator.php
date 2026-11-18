@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace Kris\Update;
 
-use Kris\Entity\JsonStore;
 
 /**
  * Migrazioni del formato dei dati.
@@ -26,11 +25,8 @@ use Kris\Entity\JsonStore;
  */
 final class Migrator
 {
-    private const FILES = [
-        'k_data'       => ['/data/k_data.json', []],
-        'k_model'      => ['/data/k_model.json', []],
-        'cms_settings' => ['/data/cms_settings.json', null],
-    ];
+    /** Chiave vista dalle migrazioni => documento dell'archivio. */
+    private const DOCS = ['k_data' => 'data', 'k_model' => 'model', 'cms_settings' => 'settings'];
 
     private ?array $migrations = null;
 
@@ -112,32 +108,33 @@ final class Migrator
             return $state;
         }
 
-        $stores = [];
-        $files = [];
-        foreach (self::FILES as $key => [$path, $default]) {
-            $stores[$key] = new JsonStore($this->root . $path);
-            $files[$key] = $stores[$key]->exists() ? $stores[$key]->read() : $default;
-        }
-        $original = $files;
-
+        // Sotto il lock dell'archivio, tutto o niente: anche con il database
+        $store = \Kris\Store\Stores::site($this->root);
         $applied = is_array($state['migrations'] ?? null) ? $state['migrations'] : [];
         $version = is_int($state['data_version'] ?? null) ? $state['data_version'] : 0;
-        foreach ($pending as $name) {
-            $def = $this->all()[$name];
-            $result = ($def['up'])($files);
-            if (!is_array($result) || !is_array($result['k_data'] ?? null) || !is_array($result['k_model'] ?? null)) {
-                throw new UpdateException("La migrazione {$name} ha prodotto dati non validi.");
+        $store->transaction(array_values(self::DOCS), function (array $docs) use ($pending, $store, &$applied, &$version): array {
+            $files = [];
+            foreach (self::DOCS as $key => $doc) {
+                // cms_settings che non esiste: null, come nella 1.x
+                $files[$key] = $key === 'cms_settings' && $store->read($doc)->rev === '' ? null : $docs[$doc];
             }
-            $files = $result;
-            $applied[] = $name;
-            $version = $def['version'];
-        }
-
-        foreach (self::FILES as $key => $_) {
-            if ($files[$key] !== null && $files[$key] !== $original[$key]) {
-                $stores[$key]->write($files[$key]);
+            $original = $files;
+            foreach ($pending as $name) {
+                $def = $this->all()[$name];
+                $result = ($def['up'])($files);
+                if (!is_array($result) || !is_array($result['k_data'] ?? null) || !is_array($result['k_model'] ?? null)) {
+                    throw new UpdateException("La migrazione {$name} ha prodotto dati non validi.");
+                }
+                $files = $result;
+                $applied[] = $name;
+                $version = $def['version'];
             }
-        }
+            $changed = [];
+            foreach (self::DOCS as $key => $doc) {
+                if ($files[$key] !== null && $files[$key] !== $original[$key]) $changed[$doc] = $files[$key];
+            }
+            return $changed;
+        });
 
         $state['migrations'] = $applied;
         $state['data_version'] = $version;

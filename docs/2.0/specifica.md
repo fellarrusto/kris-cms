@@ -109,6 +109,8 @@ kris_slugs (type VARCHAR(64), lang VARCHAR(8), slug VARCHAR(190), id INT, curren
   PRIMARY KEY (type, lang, slug))
 ```
 
+**Implementato in 2.0 (fase 5):** solo `kris_documents`, con tutti i documenti (`data` compreso) uno per riga; revisione intera, scritture serializzate (`BEGIN IMMEDIATE` su SQLite, `GET_LOCK` su MySQL). `kris_items` e `kris_slugs` arrivano con il livello `Content`, quando servirà scrivere un contenuto senza riscrivere il documento. Il testo che segue descrive quel passo.
+
 I documenti `schema` e `settings` stanno in `kris_documents`. Il documento `content` non è salvato come documento: `read('content')` lo compone da `kris_items`, `write('content')` lo scompone in righe nella stessa transazione. Così staging e migrazioni funzionano identici sui due adapter.
 
 Prefisso delle tabelle configurabile (`kris_` predefinito), per database condivisi.
