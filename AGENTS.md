@@ -47,6 +47,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
+| `kris/core/store/` | Archivio dei dati (`Kris\Store\Store`): documenti `data`, `model`, `settings`, `pages`, `seo` con revisione, transazioni sotto lock, esportazione e importazione. `Stores::site()` sceglie l'adapter da `config/store.php` (predefinito `json`, `FileStore` sui file di sempre). Vedi `docs/2.0/specifica.md`. |
 | `kris/core/staging/` | Staging (`Staging`), operazioni su contenuti, schema e pagine (`Operations`), file ammessi e controlli sul contenuto (`FilePolicy`), anteprima per gli admin (`Preview`), differenze per il riepilogo (`Diff`), traduzione delle azioni dell'editor in operazioni (`EditorChanges`). |
 | `tools/staging.php` | Le operazioni sullo staging da riga di comando: `status`, `read`, `edit`, `write`, `delete`, `approve`, `op`, `upload`, `promote`, `discard`, `undo`. |
 | `kris/core/site/Paths.php` | Unico punto da cui il rendering pubblico legge template, `data/` e pagine autorizzate. Con una sovrapposizione attiva (l'anteprima dello staging) un file presente lì vince su quello del sito. Solo letture: le scritture vanno sempre ai file del sito. |
@@ -57,7 +58,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `kris/editor/` | Autenticazione, azioni, viste, partial, CSS e JS del pannello. È servito all'indirizzo `/editor/` tramite lo stub. |
 | `tests/` | Test PHP e snapshot pubblici con dati isolati in fixture. |
 
-`Entity` legge i valori e risolve le traduzioni. `JsonRepository` recupera le entità per nome e ID. `JsonStore` verifica il JSON, scrive tramite file temporaneo e conserva copie precedenti; non garantisce il rilevamento di conflitti tra editor concorrenti. Per scritture applicative usa questo servizio, senza introdurre un secondo sistema di persistenza.
+`Entity` legge i valori e risolve le traduzioni. `JsonRepository` recupera le entità per nome e ID. `JsonStore` verifica il JSON, scrive tramite file temporaneo e conserva copie precedenti; non garantisce il rilevamento di conflitti tra editor concorrenti. Per letture e scritture dei dati del sito usa l'archivio (`Kris\Store\Stores::site()`), mai i file di `data/` direttamente: dalla 2.0 dietro può esserci un database. Fanno eccezione, per contratto con le versioni installate, installer e migrazioni.
 
 Il rendering esegue prima variabili e condizioni, poi gli array, poi i componenti. Ogni frammento viene renderizzato con la propria entità. Il frontend legge i tipi presenti nei dati: modificare soltanto lo schema non converte automaticamente i dati già salvati.
 
@@ -363,7 +364,7 @@ Le suite dei pacchetti e dell'installazione richiedono le estensioni `sodium` e 
 
 Apri `http://127.0.0.1:8000/` e `/editor/`. Il setup crea l'account se manca `config/auth.php`. Il server PHP integrato serve solo allo sviluppo locale.
 
-Serve almeno PHP 8.0, che molti hosting condivisi hanno ancora: niente sintassi o funzioni introdotte dopo (per esempio il tipo `never`, `enum`, `readonly`; `array_is_list` ha un rimpiazzo in `kris/bootstrap.php`). La CI lo verifica su 8.0, 8.1 e 8.3. Servono DOM/libxml, mbstring e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`. Per aggiornare dall'editor servono anche `sodium` e `zip`, e cURL (o `allow_url_fopen`) con i certificati configurati: senza, resta il caricamento manuale del pacchetto oppure l'aggiornamento via FTP.
+Sulla linea 2.0 serve almeno PHP 8.3 (la 1.x resta su 8.0): `readonly`, `enum` e il resto di 8.3 sono ammessi, niente di 8.4. La CI verifica 8.3 e 8.4. Servono DOM/libxml, mbstring e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`. Per aggiornare dall'editor servono anche `sodium` e `zip`, e cURL (o `allow_url_fopen`) con i certificati configurati: senza, resta il caricamento manuale del pacchetto oppure l'aggiornamento via FTP.
 
 Prima di consegnare una conversione:
 
