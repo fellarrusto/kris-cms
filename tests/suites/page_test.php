@@ -44,7 +44,7 @@ test('la homepage elenca le tre feature', function () {
 test('ogni feature linka il proprio dettaglio', function () {
     $out = renderPage([])['output'];
     foreach ([0, 1, 2] as $i) {
-        assertContains('path=features/' . $i, $out);
+        assertContains('key=features&amp;id=' . $i . '&amp;', $out);
     }
 });
 
@@ -68,7 +68,7 @@ test('la lingua richiesta cambia i contenuti', function () {
 test("la homepage elenca i post nell'ordine dei dati", function () {
     $out = renderPage([])['output'];
     assertSame(3, substr_count($out, 'class="post-card"'));
-    assertTrue(strpos($out, 'path=posts/2') < strpos($out, 'path=posts/0'), 'il post piu recente non e in cima');
+    assertTrue(strpos($out, 'key=posts&amp;id=2&amp;') < strpos($out, 'key=posts&amp;id=0&amp;'), 'il post piu recente non e in cima');
 });
 
 test('un post risponde 200 e mostra il testo formattato', function () {

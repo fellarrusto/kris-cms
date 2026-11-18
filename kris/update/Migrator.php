@@ -12,9 +12,12 @@ namespace Kris\Update;
  *   ['version' => int, 'description' => string, 'auto' => bool,
  *    'up' => fn(array $files): array]
  *
- * $files contiene 'k_data', 'k_model' e 'cms_settings' (null se il sito non
- * ha il file). Regole, perche una migrazione scritta oggi deve funzionare
- * anche tra molte versioni:
+ * Fino alla 0009 i dati sono nel formato 1: $files contiene 'k_data',
+ * 'k_model' e 'cms_settings' (null se il sito non ha il file), e in sola
+ * lettura 'allowed_pages', 'seo' (null se mancano) e 'templates' (nome =>
+ * HTML). La 0009 restituisce il formato 2: da lì in poi $files contiene
+ * 'schema', 'content' e 'settings'. Regole, perche una migrazione scritta
+ * oggi deve funzionare anche tra molte versioni:
  *  - solo in avanti: per tornare indietro si ripristina uno snapshot
  *  - funzione pura sugli array: niente file, niente rete
  *  - autosufficiente: non usa Entity, JsonRepository o altre classi del core
@@ -25,9 +28,9 @@ namespace Kris\Update;
  */
 final class Migrator
 {
-    /** Chiave vista dalle migrazioni => documento dell'archivio. */
-    private const DOCS = ['k_data' => 'data', 'k_model' => 'model', 'cms_settings' => 'settings'];
-
+    /** Chiave vista dalle migrazioni => documento dell'archivio, nel formato 1 e nel formato 2. */
+    private const LEGACY = ['k_data' => 'data', 'k_model' => 'model', 'cms_settings' => 'cms_settings', 'allowed_pages' => 'pages', 'seo' => 'seo'];
+    private const FORMAT2 = ['schema' => 'schema', 'content' => 'content', 'settings' => 'settings'];
     private ?array $migrations = null;
 
     public function __construct(private string $root, private string $dir)
@@ -76,15 +79,52 @@ final class Migrator
         return array_values(array_filter(array_keys($this->all()), fn($n) => !isset($applied[$n])));
     }
 
-    /** Vero se ogni migrazione in sospeso si puo applicare senza chiedere. */
+    /**
+     * Vero se ogni migrazione in sospeso si puo applicare senza chiedere: è
+     * automatica, oppure sui dati di questo sito non cambierebbe niente (un
+     * sito nuovo, già nel formato 2, non deve sentirsi chiedere la 0009).
+     */
     public function pendingAreAutomatic(array $state): bool
     {
-        foreach ($this->pending($state) as $name) {
-            if (!$this->all()[$name]['auto']) {
-                return false;
+        $pending = $this->pending($state);
+        $manual = array_filter($pending, fn($name) => !$this->all()[$name]['auto']);
+        if (!$manual) return true;
+        try {
+            $store = \Kris\Store\Stores::site($this->root);
+            $current = [];
+            foreach (array_merge(self::LEGACY, self::FORMAT2) as $doc) $current[$doc] = $store->read($doc)->value;
+            $files = $this->files($store, $current)[0];
+            foreach ($pending as $name) {
+                $before = $files;
+                $files = ($this->all()[$name]['up'])($files);
+                if (!$this->all()[$name]['auto'] && $files !== $before) return false;
             }
+        } catch (\Throwable $e) {
+            return false;
         }
         return true;
+    }
+
+    /**
+     * I documenti come li vedono le migrazioni: quelli del formato 2 se il
+     * sito li ha, altrimenti quelli della 1.x con i template in lettura.
+     *
+     * @return array{0: array, 1: bool} documenti e formato 2 sì o no
+     */
+    private function files(\Kris\Store\Store $store, array $current): array
+    {
+        // Un documento che non esiste: null, come un file che manca nella 1.x
+        $exists = fn(string $doc): bool => $store->read($doc)->rev !== '';
+        $format2 = $exists('schema') && $current['schema'] !== [];
+        $files = [];
+        foreach ($format2 ? self::FORMAT2 : self::LEGACY as $key => $doc) {
+            $files[$key] = $exists($doc) || in_array($key, ['k_data', 'k_model', 'content'], true) ? $current[$doc] : null;
+        }
+        if (!$format2) {
+            $files['templates'] = [];
+            foreach (glob($this->root . '/template/*.html') ?: [] as $file) $files['templates'][basename($file, '.html')] = (string) file_get_contents($file);
+        }
+        return [$files, $format2];
     }
 
     /**
@@ -112,30 +152,48 @@ final class Migrator
         $store = \Kris\Store\Stores::site($this->root);
         $applied = is_array($state['migrations'] ?? null) ? $state['migrations'] : [];
         $version = is_int($state['data_version'] ?? null) ? $state['data_version'] : 0;
-        $store->transaction(array_values(self::DOCS), function (array $docs) use ($pending, $store, &$applied, &$version): array {
-            $files = [];
-            foreach (self::DOCS as $key => $doc) {
-                // cms_settings che non esiste: null, come nella 1.x
-                $files[$key] = $key === 'cms_settings' && $store->read($doc)->rev === '' ? null : $docs[$doc];
-            }
+        $docs = array_values(array_merge(self::LEGACY, self::FORMAT2));
+        $converted = null;
+        $store->transaction($docs, function (array $current) use ($pending, $store, &$applied, &$version, &$converted): array {
+            $exists = fn(string $doc): bool => $store->read($doc)->rev !== '';
+            [$files, $format2] = $this->files($store, $current);
             $original = $files;
             foreach ($pending as $name) {
                 $def = $this->all()[$name];
                 $result = ($def['up'])($files);
-                if (!is_array($result) || !is_array($result['k_data'] ?? null) || !is_array($result['k_model'] ?? null)) {
+                $valid = is_array($result) && (isset($result['schema'])
+                    ? is_array($result['schema']) && is_array($result['content'] ?? null) && is_array($result['settings'] ?? null)
+                    : is_array($result['k_data'] ?? null) && is_array($result['k_model'] ?? null));
+                if (!$valid) {
                     throw new UpdateException("La migrazione {$name} ha prodotto dati non validi.");
                 }
                 $files = $result;
                 $applied[] = $name;
                 $version = $def['version'];
             }
+            // Dal formato 1 al formato 2: i documenti vecchi si tolgono dall'archivio (ne resta una copia, vedi sotto)
+            if (!$format2 && isset($files['schema'])) {
+                $converted = [];
+                foreach (self::LEGACY as $key => $doc) {
+                    if ($exists($doc)) $converted[$doc] = $current[$doc];
+                }
+            }
             $changed = [];
-            foreach (self::DOCS as $key => $doc) {
-                if ($files[$key] !== null && $files[$key] !== $original[$key]) $changed[$doc] = $files[$key];
+            foreach (isset($files['schema']) ? self::FORMAT2 : self::LEGACY as $key => $doc) {
+                if (!in_array($key, ['allowed_pages', 'seo'], true) && ($files[$key] ?? null) !== null && $files[$key] !== ($original[$key] ?? null)) $changed[$doc] = $files[$key];
             }
             return $changed;
         });
-
+        if ($converted) {
+            // Copia in data/format1/ (per chi la cerca, e per tornare indietro a mano), poi fuori dall'archivio:
+            // un k_data.json rimasto accanto a content.json sarebbe il file sbagliato da modificare
+            $dir = $this->root . '/data/format1';
+            if (!is_dir($dir)) @mkdir($dir, 0775, true);
+            foreach ($converted as $doc => $value) {
+                @file_put_contents($dir . '/' . basename(\Kris\Store\FileStore::relativePath($doc)), json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            }
+            $store->remove(array_keys($converted));
+        }
         $state['migrations'] = $applied;
         $state['data_version'] = $version;
         return $state;

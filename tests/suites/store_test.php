@@ -79,7 +79,7 @@ test('esportazione e importazione passano tutti i documenti da un sito a un altr
     $from = new FileStore(storeSite());
     $from->write('settings', ['languages' => ['it', 'de']]);
     $docs = $from->export();
-    assertSame(['data', 'model', 'settings', 'pages'], array_keys($docs));
+    assertSame(['settings', 'data', 'model', 'pages'], array_keys($docs));
 
     $toRoot = sys_get_temp_dir() . '/kris-store-vuoto-' . bin2hex(random_bytes(4));
     register_shutdown_function(fn() => rrmdir($toRoot));

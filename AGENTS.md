@@ -30,24 +30,23 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `template/*.html` | Pagine complete e frammenti HTML di liste e componenti. |
 | `assets/css/`, `assets/js/`, `assets/images/`, `assets/fonts/` | Stili, interazioni e risorse del tema. Crea le sottocartelle solo quando servono. |
 | `assets/uploads/` | File editoriali caricati dal CMS, da preservare nei deploy successivi. |
-| `data/k_model.json` | Oggetto che associa ogni raccolta allo schema dei suoi campi. |
-| `data/k_data.json` | Lista delle entità con i valori effettivi dei contenuti. |
-| `data/cms_settings.json` | Lingue abilitate; opzionale, default `it` e `en`. |
+| `data/schema.json` | Schema del sito (formato 2): tipi con i loro campi e attributi, pagine pubbliche con il tipo che rendono e la sitemap, elenchi promossi, reindirizzamenti. Vedi "Il formato dei dati". |
+| `data/content.json` | Lista dei contenuti, nell'ordine, con i valori per nome. |
+| `data/settings.json` | Lingue attive (predefinite `it` e `en`), caricamenti, opzioni SEO del sito (`seo`). |
+| `data/format1/` | Copia dei file della 1.x (`k_data.json`, `k_model.json`, `cms_settings.json`, `allowed_pages.json`, `seo.json`) dopo la conversione della migrazione 0009. Non li legge più nessuno: non vanno modificati. |
 | `data/kris_state.json` | Stato del sito rispetto al framework: formato dei dati, migrazioni applicate, ultimo controllo e registro degli aggiornamenti. Appartiene al sito: non va copiato da un sito all'altro. |
 | `data/backups/` | Copie precedenti prodotte dalle scritture tramite `JsonStore`. |
 | `data/staging/`, `data/staging-backups/` | Modifiche al tema in attesa di pubblicazione e copie dei file sostituiti dalle ultime pubblicazioni (14 giorni). Gestite da `Kris\Staging\Staging`: vedi "Staging e anteprima". |
 | `data/updates/`, `data/snapshots/`, `data/kris_maintenance.json` | Pacchetti in preparazione, copie di sicurezza degli aggiornamenti (14 giorni) e segnale di manutenzione. Gestiti dall'updater: non modificarli a mano, se non per ripristinare a mano uno snapshot. |
-| `config/allowed_pages.json` | Nomi dei template autorizzati come pagine pubbliche. |
 | `config/auth.php` | Credenziali locali: utente, hash della password, email di recupero e indirizzo dell'editor da cui partono i link di reset. Generato dal setup, escluso da Git. |
 | `config/setup_code.php` | Codice di primo avvio, creato da Kris finché manca `config/auth.php` ed eliminato quando l'accesso è creato. Escluso da Git. |
 | `config/auth_reset.json` | Hash del link di reset in corso e richieste dell'ultima ora. Escluso da Git. |
 | `config/auth_attempts.json` | Accessi sbagliati degli ultimi 15 minuti (IP non in chiaro): dopo 5 dallo stesso indirizzo, o 50 in tutto, l'accesso aspetta (`Kris\Auth\LoginThrottle`). Escluso da Git. |
 | `config/agent.php` | Abbinamento con Kris Agent: indirizzo dell'API, id del sito, chiave pubblica del Worker, chiavi del sito. Creato dall'editor, escluso da Git, privato come `auth.php`. |
-| `config/seo.json` | Opzionale: indirizzo pubblico del sito, pagine della sitemap, canonical e hreflang automatici. Vedi "SEO: sitemap e indirizzi". |
 | `config/update.php` | Opzionale: `return ['enabled' => false];` toglie gli aggiornamenti dall'editor su un sito; `'channel'` cambia il canale. |
 | `kris/core/auth/` | Credenziali (`Credentials`) e link di reset della password (`PasswordReset`). |
 | `kris/core/entity/` | `Entity`, repository JSON, scritture atomiche e gestione dei media. |
-| `kris/core/store/` | Archivio dei dati (`Kris\Store\Store`): documenti `data`, `model`, `settings`, `pages`, `seo` con revisione, transazioni sotto lock, esportazione e importazione. `Stores::site()` sceglie l'adapter da `config/store.php` (privato, escluso da Git): `json` predefinito (`FileStore` sui file di sempre) oppure `pdo` (`PdoStore`, SQLite o MySQL/MariaDB, un documento per riga nella tabella `<prefisso>documents`, creata al primo uso; un percorso SQLite relativo vale dalla root, per esempio `sqlite:data/kris.sqlite`). Il passaggio si fa con `php tools/store.php convert --to=pdo --dsn=…` (o `--to=json`): copia, rilegge e confronta, solo allora scrive `config/store.php`; l'archivio vecchio resta come copia. Con il database le copie di sicurezza degli aggiornamenti conservano un'esportazione (`store.json` nello snapshot). Vedi `docs/2.0/specifica.md`. |
+| `kris/core/store/` | Archivio dei dati (`Kris\Store\Store`): documenti `schema`, `content`, `settings` con revisione (e quelli della 1.x, che legge solo la migrazione 0009), transazioni sotto lock, esportazione e importazione. `Kris\Store\Site::load()` dà a rendering, editor e staging i tre documenti, convertiti al volo se il sito è ancora nel formato 1. `Stores::site()` sceglie l'adapter da `config/store.php` (privato, escluso da Git): `json` predefinito (`FileStore` sui file di sempre) oppure `pdo` (`PdoStore`, SQLite o MySQL/MariaDB, un documento per riga nella tabella `<prefisso>documents`, creata al primo uso; un percorso SQLite relativo vale dalla root, per esempio `sqlite:data/kris.sqlite`). Il passaggio si fa con `php tools/store.php convert --to=pdo --dsn=…` (o `--to=json`): copia, rilegge e confronta, solo allora scrive `config/store.php`; l'archivio vecchio resta come copia. Con il database le copie di sicurezza degli aggiornamenti conservano un'esportazione (`store.json` nello snapshot). Vedi `docs/2.0/specifica.md`. |
 | `kris/core/staging/` | Staging (`Staging`), operazioni su contenuti, schema e pagine (`Operations`), file ammessi e controlli sul contenuto (`FilePolicy`), anteprima per gli admin (`Preview`), differenze per il riepilogo (`Diff`), traduzione delle azioni dell'editor in operazioni (`EditorChanges`). |
 | `tools/staging.php` | Le operazioni sullo staging da riga di comando: `status`, `read`, `edit`, `write`, `delete`, `approve`, `op`, `upload`, `promote`, `discard`, `undo`. |
 | `kris/core/site/Paths.php` | Unico punto da cui il rendering pubblico legge template, `data/` e pagine autorizzate. Con una sovrapposizione attiva (l'anteprima dello staging) un file presente lì vince su quello del sito. Solo letture: le scritture vanno sempre ai file del sito. |
@@ -67,75 +66,89 @@ Il rendering esegue prima variabili e condizioni, poi gli array, poi i component
 1. **Leggi il materiale di partenza.** Identifica pagine, componenti condivisi, breakpoint, font, colori, spaziature, immagini e stati delle interazioni. Se il file Figma non è accessibile, richiedi il link accessibile o gli export necessari; non dichiarare di averlo consultato. Non installare strumenti o dipendenze solo perché il progetto nasce da Figma.
 2. **Mappa contenuti e navigazione.** Per ogni pagina identifica template, raccolta, ID e URL. Elenca i campi che il cliente deve poter modificare e le liste che deve poter aggiungere, eliminare e riordinare.
 3. **Costruisci il tema reale.** Traduci il design in HTML semantico, CSS responsive e JS per le interazioni. Mantieni identità grafica, tipografia e gerarchia del riferimento; non imporre al sito pubblico il design dell'editor. Usa token CSS per i valori ricorrenti e componenti per gli elementi condivisi.
-4. **Definisci schema e contenuti insieme.** Ogni campo modificabile deve avere una definizione in `k_model.json`, un valore compatibile in `k_data.json` e un utilizzo nel template. Usa descrizioni comprensibili nell'editor. Inizializza le lingue previste con contenuti reali o chiaramente provvisori.
+4. **Definisci schema e contenuti insieme.** Ogni campo modificabile deve avere una definizione nel tipo in `data/schema.json`, un valore compatibile in `data/content.json` e un utilizzo nel template. Usa descrizioni comprensibili nell'editor. Inizializza le lingue previste con contenuti reali o chiaramente provvisori.
 5. **Collega il markup a Kris.** Sostituisci i contenuti editoriali con `{{campo}}`, estrai le liste ripetute in frammenti `k-array` e le sezioni condivise in `k-component`. Rimuovi le card statiche di esempio dai contenitori delle liste.
 6. **Completa i flussi.** Menu mobile, modali, accordion, filtri, CTA e link devono funzionare anche con tastiera e contenuti di lunghezza diversa. Gestisci liste vuote, immagini mancanti e testi lunghi. I moduli contatto richiedono un backend esplicito: Kris non offre già un servizio email, prenotazioni, pagamenti o ricerca server.
 7. **Verifica sito ed editor insieme.** Modifica un testo, un'immagine e l'ordine di una lista nell'editor e verifica l'effetto sul sito pubblico. Confronta le pagine renderizzate con il riferimento desktop e mobile.
-8. **Registra le pagine nella sitemap e decidi privacy e cookie.** Ogni tipo di pagina navigabile nuovo va in `config/seo.json` (vedi "SEO: sitemap e indirizzi"); controlla `sitemap.php`. Se il sito usa cookie non tecnici o raccoglie dati, collega banner e informative ai dati di `kris_legal` (vedi "Privacy e cookie"); i testi legali li compila il cliente, non l'agente.
+8. **Registra le pagine nella sitemap e decidi privacy e cookie.** Ogni pagina navigabile nuova va in `schema.pages`, con il tipo che rende e `"sitemap": true` se va nella sitemap (vedi "SEO: sitemap e indirizzi"); controlla `sitemap.php`. Se il sito usa cookie non tecnici o raccoglie dati, collega banner e informative ai dati di `kris_legal` (vedi "Privacy e cookie"); i testi legali li compila il cliente, non l'agente.
 9. **Prepara il deploy.** Applica le verifiche di pubblicazione qui sotto. Pubblica sull'ambiente richiesto solo nell'ambito dell'autorizzazione ricevuta; una richiesta di conversione non identifica da sola un server di destinazione.
 
 ### Cosa rendere modificabile
 
 | Elemento del design | Modellazione consigliata |
 | --- | --- |
-| Titoli, descrizioni, testo dei pulsanti, alt delle immagini | Campi `text` multilingua. |
-| Testo con paragrafi, elenchi e link editoriali | `richtext`, soltanto dove è previsto HTML. |
-| Immagini e documenti sostituibili | `image`; alt e didascalia sono campi separati. |
-| Valore condiviso tra lingue, URL comune, tag, prezzo | `plain` con valore scalare. Usa `text` se anche il valore deve cambiare per lingua. |
-| Card, servizi, FAQ o testimonianze appartenenti a una pagina | `array` con schema `of`. |
-| Articoli o progetti indipendenti con pagina di dettaglio | Raccolta di entità root, referenziata da un array globale. |
+| Titoli, descrizioni, testo dei pulsanti, alt delle immagini | `text` con `"localized": true`. |
+| Testo con paragrafi, elenchi e link editoriali | `richtext`, soltanto dove è previsto HTML: esce filtrato (vedi "Contratto dei template"). |
+| Immagini, video e documenti sostituibili | `media` (per lingua con `"localized": true`, come la 1.x); alt e didascalia sono campi separati. |
+| Valore condiviso tra lingue, URL comune, codice, prezzo | `text` con `"localized": false`. |
+| Card, servizi, FAQ o testimonianze appartenenti a una pagina | `list` con i campi in `of`. |
+| Articoli, news o progetti con pagina di dettaglio | Un tipo con i suoi contenuti e una pagina senza `item`; `"newest_first": true` per gli articoli (Posts). |
 | Navigazione, footer e contenuti riutilizzati su più pagine | Raccolta dedicata con entità condivisa e `k-component`. |
 | Griglie, spaziature, breakpoint, decorazioni e animazioni | HTML/CSS/JS del tema; non campi editoriali generici. |
 
-I tipi implementati sono `plain`, `text`, `richtext`, `image`, `array`, `boolean` e `select`. `boolean` vale `"1"` o `""`; `select` ha `options` (lista di stringhe senza virgole) e, con `multiple: true`, salva più opzioni come `"web,seo"`, da controllare nei template con `has`. Entrambi sono condivisi fra le lingue, o per lingua con `localized: true` (un interruttore per lingua non ricade su un'altra lingua). Non inventare tipi come `date` o relazioni senza implementarne anche editor e rendering. Usa nomi tecnici stabili in `snake_case` con lettere minuscole, numeri e underscore. Non usare `id` e `language` come nomi di campi: sono esposti dal motore. I nomi di raccolta che iniziano con `kris_` sono riservati al framework.
+I tipi di campo sono `text`, `richtext`, `media`, `select`, `boolean` e `list`. Tutti tranne `list` hanno `localized`: `true` vuol dire un valore per lingua (`{"it": "…", "en": "…"}`), `false` un valore solo. Un interruttore (`boolean`) vale `true` o `false` (nei template `"1"` o `""`, e nelle condizioni vero o falso); un interruttore per lingua spento non ricade su un'altra lingua. `select` ha `options` (lista di stringhe senza virgole) e, con `"multiple": true`, salva una lista di opzioni (`["web", "seo"]`), che nei template esce separata da virgole e si controlla con `has`. Le operazioni dello staging accettano anche i nomi della 1.x: `plain` (testo condiviso), `image` (media), `array` (list). Non inventare tipi come `date` o relazioni senza implementarne anche editor e rendering. Usa nomi tecnici stabili in `snake_case` con lettere minuscole, numeri e underscore. Non usare `id` e `language` come nomi di campi: sono esposti dal motore. I nomi di tipo che iniziano con `kris_` sono riservati al framework.
 
-Un campo `array` di primo livello può avere `"posts": true` (in Struttura: “Mostra in Posts”). Rendering e dati non cambiano: l'elenco compare nella sezione **Posts** dell'editor, con un accesso rapido per ogni entità della raccolta, e i nuovi elementi vengono inseriti in cima. Usalo per blog, news o eventi aggiornati spesso; negli elenchi annidati il flag viene rimosso al salvataggio. Il sito demo lo mostra con `homepage.posts`, `template/post-card.html` e la pagina `post`.
+Un tipo può stare in **Posts** (Struttura della raccolta › “Mostra in Posts”, `"newest_first": true` nello schema): ogni suo contenuto è un post e i nuovi vanno in cima. È il modo di fare blog, news o eventi aggiornati spesso; un elenco (`list`) non va in Posts. Il sito demo lo mostra con il tipo `posts`, `template/post-card.html` e la pagina `post`.
 
-Anche una raccolta intera può stare in **Posts** (Struttura della raccolta › “Mostra in Posts”): ogni suo contenuto è un post e i nuovi vanno in cima. L'elenco delle raccolte è in `data/cms_settings.json`, chiave `post_collections`; rendering e dati non cambiano. Per articoli o progetti con pagina di dettaglio è l'alternativa all'elenco `posts`.
 
-Ogni raccolta può avere, separati dal nome tecnico, un **nome visibile**, una **descrizione**, una **posizione** e l'opzione **contenuto unico** (Struttura › Nome e posizione; in `data/cms_settings.json`, chiavi `collections` e `collection_order`). Una raccolta a contenuto unico (una pagina, gli elementi comuni) apre direttamente la modifica, porta il nome della raccolta come titolo e non ha lista, «Nuovo contenuto» né cestino: il server rifiuta un secondo contenuto e l'eliminazione. Il nome tecnico resta quello dei template: per cambiare l'etichetta non si rinomina la raccolta. Lo staging li imposta con `set_collection_info` (`label`, `description`, `single`) e `move_collection` (`to`).
+Ogni tipo può avere, separati dal nome tecnico, un **nome visibile** (`label`), una **descrizione** (`description`), una **posizione** (l'ordine dei tipi nello schema) e l'opzione **contenuto unico** (`single`), da Struttura › Nome e posizione. Un tipo a contenuto unico (una pagina, gli elementi comuni) apre direttamente la modifica, porta il nome del tipo come titolo e non ha lista, «Nuovo contenuto» né cestino: il server rifiuta un secondo contenuto e l'eliminazione. Il nome tecnico resta quello dei template: per cambiare l'etichetta non si rinomina il tipo. Lo staging li imposta con `set_collection_info` (`label`, `description`, `single`) e `move_collection` (`to`).
 
 Ogni campo, a qualunque livello, può avere `"section": "Meta"` (al massimo 60 caratteri). In Struttura le sezioni dei campi di primo livello sono riquadri: «Aggiungi sezione», nome scritto una volta, campi trascinati dentro o spostati con il menu «Sezione»; le sezioni vuote non si salvano. Nell'editor i campi con la stessa sezione stanno in un pannello a scomparsa, nell'ordine in cui le sezioni compaiono; i campi senza sezione restano in testa. Serve solo a ordinare l'editor: dati, template e nomi dei campi non cambiano. Su una pagina con molti campi raggruppa per area (Meta, Intestazione, Contatti, Progetti…). Lo staging la imposta con `add_field` o `describe_field` (`section`, vuota per toglierla).
 
-## Esempio completo: pagina con servizi
+## Il formato dei dati
 
-In un sito nuovo, questo è un esempio minimo di `data/k_model.json`. Su un sito esistente integra le raccolte senza sostituire l'intero archivio.
+Tre documenti (formato 2, dalla 2.0; la migrazione `0009_formato_2.php` converte i siti della 1.x). In un sito nuovo questo è un esempio minimo di `data/schema.json`; su un sito esistente integra tipi e pagine senza sostituire l'intero schema.
 
 ```json
 {
-  "homepage": [
-    {"name": "page_title", "type": "text", "description": "Titolo principale"},
-    {"name": "services", "type": "array", "description": "Servizi in evidenza", "of": [
-      {"name": "title", "type": "text", "description": "Nome del servizio"},
-      {"name": "description", "type": "text", "description": "Descrizione breve"}
-    ]}
-  ]
+  "format": 2,
+  "types": {
+    "homepage": {
+      "single": true,
+      "fields": [
+        {"name": "page_title", "type": "text", "localized": true, "description": "Titolo principale"},
+        {"name": "services", "type": "list", "description": "Servizi in evidenza", "of": [
+          {"name": "title", "type": "text", "localized": true, "description": "Nome del servizio"},
+          {"name": "description", "type": "text", "localized": true, "description": "Descrizione breve"}
+        ]}
+      ]
+    }
+  },
+  "pages": {
+    "homepage": {"template": "homepage", "type": "homepage", "item": 0, "sitemap": true}
+  }
 }
 ```
 
-I dati corrispondenti in `data/k_data.json` sono una lista, non un oggetto indicizzato per raccolta:
+`data/content.json` è la lista dei contenuti, con i valori per nome. Il tipo di un campo sta solo nello schema:
 
 ```json
 [
-  {
-    "name": "homepage",
-    "id": 0,
-    "data": [
-      {"name": "page_title", "type": "text", "value": {"it": "Progettiamo il tuo futuro", "en": "Designing your future"}},
-      {"name": "services", "type": "array", "value": [
-        {"id": 0, "data": [
-          {"name": "title", "type": "text", "value": {"it": "Design", "en": "Design"}},
-          {"name": "description", "type": "text", "value": {"it": "Siti su misura", "en": "Tailored websites"}}
-        ]}
-      ]}
+  {"type": "homepage", "id": 0, "values": {
+    "page_title": {"it": "Progettiamo il tuo futuro", "en": "Designing your future"},
+    "services": [
+      {"id": 0, "values": {"title": {"it": "Design", "en": "Design"}, "description": {"it": "Siti su misura", "en": "Tailored websites"}}}
     ]
-  }
+  }}
 ]
 ```
 
-Ogni entità root e ogni elemento di una lista può avere `"hidden": true` accanto a `id` e `data`: l'editor lo imposta con l'interruttore **Visibile / Sospeso**. Il sito non lo mostra nelle liste `k-array`, la sua pagina di dettaglio risponde 404 e non compare nella sitemap; nei dati e nell'editor resta. Senza la chiave l'elemento è visibile. I template non devono fare nulla: non usare `hidden` per altri scopi, non impostarlo nei dati iniziali se non è voluto, e non scrivere link fissi a singoli elementi che il cliente potrebbe sospendere. I componenti `k-component` (navbar, footer, `kris_legal`) non si sospendono.
+`data/settings.json` ha le lingue (la prima è la principale), le opzioni dei caricamenti e quelle SEO del sito:
 
-Gli ID root sono univoci nella raccolta; gli ID dei figli nella singola lista. L'ordine è la sequenza degli elementi nel JSON, non il valore numerico degli ID. Riordinare non deve rinumerarli. Ogni campo contiene `name`, `type` e `value`; `text`, `richtext` e `image` usano valori per lingua, `plain` uno scalare, `array` una lista di figli.
+```json
+{"languages": ["it", "en"], "uploads": {"prefix": "", "max_width": 2560, "webp": true}, "seo": {"base_url": "https://www.esempio.it", "pretty_urls": true}}
+```
+
+Le pagine dello schema: la chiave è il nome della pagina (e dell'indirizzo), `template` il file in `template/`, `type` il tipo che rende. Con `item` rende sempre quel contenuto (homepage, privacy); senza `item` un contenuto del tipo per id (un progetto, un post); con `item` e `list` un elemento di quell'elenco (`path=list/ID`). `sitemap` (vero o falso) la mette nella sitemap, `priority` (0–1) va nella sitemap, `slug` è il campo che dà l'indirizzo leggibile. Lo schema può avere anche `redirects` (`{"/vecchio": "/nuovo"}`) e `promoted`: gli elenchi della 1.x con una pagina di dettaglio diventati tipi alla conversione (`{"from": "homepage", "id": 0, "list": "posts", "to": "posts"}`), per i vecchi link `key=homepage&id=0&path=posts/3`, che continuano a funzionare.
+
+Un valore il cui campo non c'è più nello schema resta nel contenuto e non si rende; lo toglie solo `remove_field`.
+Ogni contenuto e ogni elemento di un elenco può avere `"hidden": true` accanto a `id` e `values`: l'editor lo imposta con l'interruttore **Visibile / Sospeso**. Il sito non lo mostra nelle liste `k-array`, la sua pagina di dettaglio risponde 404 e non compare nella sitemap; nei dati e nell'editor resta. Senza la chiave l'elemento è visibile. I template non devono fare nulla: non usare `hidden` per altri scopi, non impostarlo nei dati iniziali se non è voluto, e non scrivere link fissi a singoli elementi che il cliente potrebbe sospendere. I componenti `k-component` (navbar, footer, `kris_legal`) non si sospendono.
+
+Gli id dei contenuti sono univoci nel tipo; quelli degli elementi nel singolo elenco. L'ordine è la sequenza nel JSON, non il valore numerico degli id. Riordinare non deve rinumerarli.
+
+## Esempio completo: pagina con servizi
+
+Con lo schema e i contenuti dell'esempio qui sopra:
 
 `template/homepage.html`:
 
@@ -166,16 +179,16 @@ Gli ID root sono univoci nella raccolta; gli ID dei figli nella singola lista. L
 </article>
 ```
 
-La griglia resta nel template della pagina; il frammento contiene una sola card. Gli stili sono in `assets/css/style.css`. Autorizza `homepage` in `config/allowed_pages.json`; il frammento `service-card` non va nella whitelist. L'URL è `index.php?page=homepage&key=homepage&id=0&ln=it`.
+La griglia resta nel template della pagina; il frammento contiene una sola card. Gli stili sono in `assets/css/style.css`. La pagina `homepage` è in `schema.pages`; il frammento `service-card` no. L'URL è `index.php?page=homepage&key=homepage&id=0&ln=it`.
 
 ## Contratto dei template
 
 - `{{campo}}` legge dall'entità corrente. `{{id}}` è l'ID corrente e `{{language}}` la lingua attiva. `{{raccolta.campo}}` legge il primo contenuto di un'altra raccolta da qualunque template (impostazioni, footer, contatti), anche nelle condizioni (`{{#if impostazioni.dark_mode}}`). Non sono supportati filtri tipo Twig, accessi al contenuto padre (`parent.title`), indici di elenchi, espressioni JavaScript o loop `for`.
-- I valori `text`, `plain` e `image` vengono escapati per HTML, comprese le virgolette negli attributi. `richtext` emette HTML senza sanitizzazione: usalo soltanto nel corpo della pagina con contenuti fidati, mai in attributi, script o CSS. L'escaping HTML non valida gli schemi degli URL: controlla gli URL editoriali e non interpolare valori dentro codice JavaScript.
-- Per una traduzione vuota o assente, `Entity` cerca il primo valore non vuoto disponibile. La stringa `"0"` è valida. Le lingue si configurano in `cms_settings.json` tramite l'editor; disabilitarne una conserva i valori già salvati.
-- `k-array="services"` cerca prima un campo array dell'entità corrente. Se il campo non esiste, cerca una raccolta root omonima; un array locale vuoto resta vuoto. Il contenitore resta nel DOM e i frammenti vengono aggiunti al suo contenuto: deve essere inizialmente vuoto.
+- I valori `text`, `media`, `select` e `boolean` vengono escapati per HTML, comprese le virgolette negli attributi. `richtext` emette HTML filtrato (`Kris\Template\Richtext`, al salvataggio e al rendering): restano `p br strong b em i u s a ul ol li h2–h6 blockquote code pre span img figure figcaption table thead tbody tr th td hr`, gli attributi `class`, `title`, `href` (http, https, mailto, tel, relativi, `#`), `target`, `rel`, `src` e `alt` delle immagini (del sito o https), `colspan` e `rowspan`; il resto si toglie (un `<div>` lascia il suo contenuto, uno `<script>` sparisce). Un embed o altro HTML libero va nel template, non in un campo. L'escaping HTML non valida gli schemi degli URL dei campi `text`: controlla gli URL editoriali e non interpolare valori dentro codice JavaScript.
+- Per una traduzione vuota o assente, `Entity` cerca il primo valore non vuoto disponibile. La stringa `"0"` è valida. Le lingue si configurano in `data/settings.json` tramite l'editor; disabilitarne una conserva i valori già salvati.
+- `k-array="services"` cerca prima un elenco del contenuto corrente. Se il tipo non ha quell'elenco, rende i contenuti del tipo omonimo (così `k-array="posts"` elenca i post); un elenco vuoto resta vuoto. Il contenitore resta nel DOM e i frammenti vengono aggiunti al suo contenuto: deve essere inizialmente vuoto.
 - Inserisci gli array annidati nel frammento del padre, ciascuno con il proprio `k-template`. Non scrivere il markup dei figli direttamente nel contenitore della pagina: le variabili verrebbero risolte nel contesto sbagliato.
-- Un componente, ad esempio `<div k-component="navbar" k-template="navbar" k-index="0"></div>`, carica l'entità root `navbar` con ID `0`. Il segnaposto viene **sostituito** dal frammento: metti tag semantico, classi e attributi sul markup di `template/navbar.html`, non sul segnaposto. Crea anche schema e dati della raccolta condivisa.
+- Un componente, ad esempio `<div k-component="navbar" k-template="navbar" k-index="0"></div>`, carica il contenuto `navbar` con id `0`. Il segnaposto viene **sostituito** dal frammento: metti tag semantico, classi e attributi sul markup di `template/navbar.html`, non sul segnaposto. Crea anche il tipo e il contenuto condiviso.
 - Un frammento può contenere più elementi fratelli. Non introdurre inclusioni ricorsive o cicliche tra componenti e liste.
 - Le condizioni supportano `#if`, `#elif`, `#else`, `/if`, la forma semplice `{{#if campo}}` (vera con un valore non vuoto: un interruttore acceso) e gli operatori `==`, `!=`, `>`, `<`, `>=`, `<=`, `has`. `has` controlla un valore in una stringa di tag separati da virgole. Per campi opzionali inizializza il valore e verifica il risultato con campo vuoto e assente.
 
@@ -191,7 +204,7 @@ La griglia resta nel template della pagina; il frammento contiene una sola card.
 
 ## Pagine, collegamenti e asset
 
-Una pagina pubblica richiede tre cose: template esistente, nome autorizzato in `config/allowed_pages.json` ed entità esistente. `page` sceglie il template; `key` la raccolta; `id` l'entità. I default sono `homepage`, `homepage`, `0`.
+Una pagina pubblica richiede tre cose: template esistente, pagina in `schema.pages` e contenuto esistente. `page` sceglie la pagina; `key` il tipo; `id` il contenuto. I default sono `homepage`, `homepage`, `0`.
 
 - Root: `index.php?page=project-detail&key=projects&id=3&ln=it`.
 - Figlio: `index.php?page=detail&key=homepage&id=0&path=services/0&ln=it`.
@@ -199,17 +212,17 @@ Una pagina pubblica richiede tre cose: template esistente, nome autorizzato in `
 
 Mantieni la lingua nei link con `ln={{language}}` e usa `&amp;` tra parametri negli attributi HTML. Nel frammento di un figlio `{{id}}` indica il figlio, non il padre: non usarlo come ID root. In un contesto riutilizzabile modella un URL esplicito o fornisci il contesto necessario; non presumere variabili parent inesistenti.
 
-**Indirizzi leggibili** (`"pretty_urls": true` in `config/seo.json`, `Kris\Site\Router`): `/` per la homepage, `/menu`, `/progetto/3`, `/en/menu` per le altre lingue. Le rotte vengono dalle regole della sitemap: con `id` una pagina fissa (`/privacy`), senza `id` un contenuto della raccolta per id (`/progetto/3`), con `children` un elemento dell'elenco (`/detail/2`); una pagina senza regola rende il contenuto 0 della raccolta omonima o della homepage. Kris riscrive da solo i link `index.php?page=…` e `?page=…` dei template nei percorsi leggibili, e fa partire `assets/`, `kris/` e `index.php` dalla cartella del sito (una pagina `/en/menu` li cercherebbe in `/en/`); canonical, hreflang e sitemap usano i percorsi. I vecchi indirizzi rispondono con un 301; `?ln=` su un percorso porta alla stessa pagina nell'altra lingua. Una regola senza `id` può avere `"slug": "<campo>"`: l'indirizzo del contenuto è il valore di quel campo come segmento (`/progetto/casa-rossi`), per lingua se il campo è multilingua; vuoto vale l'id, che resta sempre valido, e un doppione riceve `-id`. Non c'è storico: rinominando lo slug il vecchio indirizzo va in `"redirects"` (`{"/vecchio": "/nuovo"}`, percorsi dalla cartella del sito o indirizzi https), che rispondono con un 301 anche senza `pretty_urls`. Quello che una rotta non sa esprimere resta `index.php?…`. Serve la regola del `.htaccess` di Kris (`index.php [L,QSA]`): l'aggiornamento la crea, o aggiorna quella della 1.x. Senza `pretty_urls` valgono le route query string. La whitelist riguarda le pagine navigabili, non tutti i frammenti HTML.
+**Indirizzi leggibili** (`"pretty_urls": true` in `settings.seo`, `Kris\Site\Router`): `/` per la homepage, `/menu`, `/progetto/3`, `/en/menu` per le altre lingue. Le rotte vengono dalle pagine dello schema: con `item` una pagina fissa (`/privacy`), senza `item` un contenuto del tipo per id (`/progetto/3`), con `list` un elemento dell'elenco (`/detail/2`). Kris riscrive da solo i link `index.php?page=…` e `?page=…` dei template nei percorsi leggibili, e fa partire `assets/`, `kris/` e `index.php` dalla cartella del sito (una pagina `/en/menu` li cercherebbe in `/en/`); canonical, hreflang e sitemap usano i percorsi. I vecchi indirizzi rispondono con un 301; `?ln=` su un percorso porta alla stessa pagina nell'altra lingua. Una pagina senza `item` può avere `"slug": "<campo>"`: l'indirizzo del contenuto è il valore di quel campo come segmento (`/progetto/casa-rossi`), per lingua se il campo è multilingua; vuoto vale l'id, che resta sempre valido, e un doppione riceve `-id`. Non c'è storico: rinominando lo slug il vecchio indirizzo va in `schema.redirects` (`{"/vecchio": "/nuovo"}`, percorsi dalla cartella del sito o indirizzi https), che rispondono con un 301 anche senza `pretty_urls`. Quello che una rotta non sa esprimere resta `index.php?…`. Serve la regola del `.htaccess` di Kris (`index.php [L,QSA]`): l'aggiornamento la crea, o aggiorna quella della 1.x. Senza `pretty_urls` valgono le route query string. La whitelist riguarda le pagine navigabili, non tutti i frammenti HTML.
 
 **Head comune:** `template/kris_head.html`, se esiste, entra prima di `</head>` in ogni pagina e nella 404 del tema, reso con il contenuto della pagina: meta di verifica, script globali (bloccati con `data-kris-consent-script` se non tecnici), dati strutturati. Una modifica qui vale per tutte le pagine; non ripetere queste righe nei template.
 
-**Lingua automatica** (`"auto_language": true` in `config/seo.json`): la homepage senza lingua nell'indirizzo va (302) alla lingua scelta prima dal visitatore (cookie `kris_lang`, 180 giorni, impostato da `?ln=` o dal prefisso della lingua) o, la prima volta, alla prima lingua attiva di `Accept-Language`. I crawler vedono sempre la lingua principale. Le altre pagine non vengono reindirizzate.
+**Lingua automatica** (`"auto_language": true` in `settings.seo`): la homepage senza lingua nell'indirizzo va (302) alla lingua scelta prima dal visitatore (cookie `kris_lang`, 180 giorni, impostato da `?ln=` o dal prefisso della lingua) o, la prima volta, alla prima lingua attiva di `Accept-Language`. I crawler vedono sempre la lingua principale. Le altre pagine non vengono reindirizzate.
 
 Kris aggiunge da solo `?v=<data di modifica>` agli indirizzi `assets/css/…` e `assets/js/…` delle pagine (`Kris\Template\Assets`): dopo una pubblicazione browser e proxy scaricano subito i file nuovi. Non scrivere a mano versioni o query su questi file, salvo motivi precisi: un indirizzo che ha già una query resta com'è.
 
 I percorsi delle risorse si risolvono rispetto all'URL pubblico, non alla cartella `template/`. Usa `assets/...` per l'installazione corrente e verifica anche il deploy in sottocartella; `/assets/...` punta invece alla radice del dominio. Non lasciare link a file locali, export Figma o URL temporanei di preview.
 
-Esporta immagini e icone necessarie dal design, preserva le proporzioni, ottimizza peso e dimensioni e usa font disponibili per il progetto. Gli SVG fidati del tema possono essere asset statici verificati. L'upload editoriale accetta JPG/JPEG, PNG, GIF, WebP, AVIF e PDF fino a 8 MB, e video MP4 e WebM fino a 50 MB (o meno, se `upload_max_filesize` e `post_max_size` dell'hosting sono più bassi); non accetta nuovi SVG né `.mov`, che non si vedono in tutti i browser e Kris non converte. Un video si mette in un campo `image` come gli altri file: nell'editor l'anteprima è un `<video>`, nel template lo usa un `<video src="{{campo}}" muted loop playsinline autoplay>`. Non aggirare `MediaStore` per renderli caricabili. Impostazioni › Caricamenti (`cms_settings.json`, `uploads`): prefisso dei nomi (per la SEO; i nomi automatici delle fotocamere come `DSC_1234` vengono ignorati, il codice finale resta), larghezza massima delle foto (predefinita 2560 px, 0 = mai) e conversione in WebP. Con l'estensione GD i JPEG vengono raddrizzati secondo l'orientamento EXIF e ricodificati senza metadati (via la posizione GPS); PNG e WebP solo se vanno ridotti o convertiti; GIF, AVIF e PDF restano come sono. Senza GD, o se la foto non sta nella memoria di PHP, il file resta com'era. Valgono anche per i caricamenti dell'agente. **Immagini ottimizzate:** con GD e WebP ogni JPEG, PNG o WebP caricato riceve varianti accanto all'originale, `<nome>-480w.webp`, `-960w.webp`, `-1600w.webp` (solo quelle più strette dell'originale; per i file dello staging alla pubblicazione). La libreria non le mostra e le elimina con l'originale; «Ottimizza le immagini» le crea per i file già caricati. Al rendering ogni `<img src="assets/uploads/…">` senza `srcset` riceve `srcset`, `sizes="100vw"` e, se mancano, `width` e `height` dell'originale: i template non devono fare nulla, e un `srcset` o un `sizes` scritti nel tema restano.
+Esporta immagini e icone necessarie dal design, preserva le proporzioni, ottimizza peso e dimensioni e usa font disponibili per il progetto. Gli SVG fidati del tema possono essere asset statici verificati. L'upload editoriale accetta JPG/JPEG, PNG, GIF, WebP, AVIF e PDF fino a 8 MB, e video MP4 e WebM fino a 50 MB (o meno, se `upload_max_filesize` e `post_max_size` dell'hosting sono più bassi); non accetta nuovi SVG né `.mov`, che non si vedono in tutti i browser e Kris non converte. Un video si mette in un campo `media` come gli altri file: nell'editor l'anteprima è un `<video>`, nel template lo usa un `<video src="{{campo}}" muted loop playsinline autoplay>`. Non aggirare `MediaStore` per renderli caricabili. Impostazioni › Caricamenti (`cms_settings.json`, `uploads`): prefisso dei nomi (per la SEO; i nomi automatici delle fotocamere come `DSC_1234` vengono ignorati, il codice finale resta), larghezza massima delle foto (predefinita 2560 px, 0 = mai) e conversione in WebP. Con l'estensione GD i JPEG vengono raddrizzati secondo l'orientamento EXIF e ricodificati senza metadati (via la posizione GPS); PNG e WebP solo se vanno ridotti o convertiti; GIF, AVIF e PDF restano come sono. Senza GD, o se la foto non sta nella memoria di PHP, il file resta com'era. Valgono anche per i caricamenti dell'agente. **Immagini ottimizzate:** con GD e WebP ogni JPEG, PNG o WebP caricato riceve varianti accanto all'originale, `<nome>-480w.webp`, `-960w.webp`, `-1600w.webp` (solo quelle più strette dell'originale; per i file dello staging alla pubblicazione). La libreria non le mostra e le elimina con l'originale; «Ottimizza le immagini» le crea per i file già caricati. Al rendering ogni `<img src="assets/uploads/…">` senza `srcset` riceve `srcset`, `sizes="100vw"` e, se mancano, `width` e `height` dell'originale: i template non devono fare nulla, e un `srcset` o un `sizes` scritti nel tema restano.
 
 ## Pagina 404
 
@@ -217,7 +230,7 @@ Ogni sito ha la sezione riservata **Pagina 404** nell'editor: raccolta `kris_not
 
 La 404 del tema è `template/404.html`, un template come gli altri: lo rende il motore di Kris con lo stato 404, nella lingua richiesta. Navbar, footer e altri componenti li include il template con `k-component`, se servono. Come campi usa quelli di `kris_notfound` (`{{title}}`, `{{text}}`, `{{button_label}}`, `{{button_url}}`, `{{image}}`); se il tema ha una sua raccolta `not_found` (siti precedenti alla 1.8.0), vince quella. L'agente scrive i testi della sezione con `set_field`.
 
-Perché un indirizzo inventato (`/pagina-che-non-esiste`) arrivi a Kris serve una regola del server: l'aggiornamento crea nella root il `.htaccess` con la regola (`Stubs::HTACCESS`) **solo se non esiste**; se il sito ne ha già uno, va aggiunta a mano. La regola è una riscrittura interna, non un redirect: lo stato resta 404, funziona anche in sottocartella, e i file mancanti di `assets/` o con estensione di file rispondono con la 404 semplice di Apache. Su Nginx serve una regola equivalente (`try_files $uri $uri/ /index.php?page=404`, con `error_page` a 404 se si vuole lo stato corretto). Non va in `config/allowed_pages.json` né nella sitemap: `?page=404` risponde comunque 404. Si può preparare anche dallo staging e vedere in anteprima aprendo un indirizzo inesistente con `?kris_preview=1`. Se il template ha un errore, Kris usa la 404 di riserva invece di un errore 500.
+Perché un indirizzo inventato (`/pagina-che-non-esiste`) arrivi a Kris serve una regola del server: l'aggiornamento crea nella root il `.htaccess` con la regola (`Stubs::HTACCESS`) **solo se non esiste**; se il sito ne ha già uno, va aggiunta a mano. La regola è una riscrittura interna, non un redirect: lo stato resta 404, funziona anche in sottocartella, e i file mancanti di `assets/` o con estensione di file rispondono con la 404 semplice di Apache. Su Nginx serve una regola equivalente (`try_files $uri $uri/ /index.php?page=404`, con `error_page` a 404 se si vuole lo stato corretto). Non va in `schema.pages` né nella sitemap: `?page=404` risponde comunque 404. Si può preparare anche dallo staging e vedere in anteprima aprendo un indirizzo inesistente con `?kris_preview=1`. Se il template ha un errore, Kris usa la 404 di riserva invece di un errore 500.
 
 ## Lavori in corso
 
@@ -229,15 +242,15 @@ Ogni sito Kris ha la raccolta riservata `kris_legal`, con un solo contenuto (ID 
 
 | Campo | Tipo | Contenuto |
 | --- | --- | --- |
-| `owner_name`, `owner_address`, `owner_vat`, `privacy_email` | `plain` | Titolare del trattamento: nome o ragione sociale, indirizzo, P.IVA o codice fiscale, email per le richieste |
-| `updated_at` | `plain` | Data di ultimo aggiornamento delle informative |
+| `owner_name`, `owner_address`, `owner_vat`, `privacy_email` | `text` condiviso | Titolare del trattamento: nome o ragione sociale, indirizzo, P.IVA o codice fiscale, email per le richieste |
+| `updated_at` | `text` condiviso | Data di ultimo aggiornamento delle informative |
 | `privacy_policy`, `cookie_policy` | `richtext` | Testi delle informative |
 | `banner_title`, `banner_text`, `banner_accept`, `banner_reject`, `banner_more`, `banner_customize`, `banner_save` | `text` | Testi del banner cookie |
 | `category_thirdparty`, `category_statistics`, `category_marketing` e i loro `…_text` | `text` | Nome e descrizione delle categorie (migrazione `0005_categorie_cookie.php`) |
 
 Kris Agent può preparare tutti i valori di `kris_legal`, informative e banner compresi (vedi "Staging e anteprima"): le informative sono HTML `richtext`, vanno scritte su dati e indicazioni del cliente e le rivede e pubblica l'admin; l'agente non deve inventare dati societari né cookie che il sito non usa. Lo schema lo gestisce il framework con le migrazioni (`kris/migrations/0002_privacy_e_cookie.php`): non modificarlo a mano e non aggiungere campi a `kris_legal`. Per un dato legale che manca, proponi una migrazione del framework.
 
-**Pagine delle informative:** un template dedicato che legge l'entità `kris_legal`, per esempio `template/privacy.html` con `{{privacy_policy}}` (i `richtext` escono come HTML) e i dati del titolare. Autorizza la pagina in `config/allowed_pages.json`, linkala dal footer con `index.php?page=privacy&amp;key=kris_legal&amp;ln={{language}}` e aggiungila alla sitemap.
+**Pagine delle informative:** un template dedicato che legge l'entità `kris_legal`, per esempio `template/privacy.html` con `{{privacy_policy}}` (i `richtext` escono come HTML) e i dati del titolare. Registra la pagina in `schema.pages` (tipo `kris_legal`, `item` 0), linkala dal footer con `index.php?page=privacy&amp;key=kris_legal&amp;ln={{language}}` e aggiungila alla sitemap.
 
 **Banner cookie:** serve solo se il sito usa cookie o script non tecnici (analytics, mappe, video incorporati, pixel). Componente in `template/cookie-banner.html`, incluso con `<div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>`:
 
@@ -264,7 +277,7 @@ Dalla migrazione `0008_proprieta_del_sito.php` la raccolta `kris_site` (in edito
 
 ## Favicon
 
-La favicon la sceglie il cliente da **Favicon** nell'editor: raccolta riservata `kris_site` (contenuto con ID `0`), campo `favicon` di tipo `image`, creata dalla migrazione `0004_favicon.php`. Kris aggiunge da solo `<link rel="icon">` prima di `</head>` in ogni pagina e nella 404, a meno che il template non abbia già un `rel="icon"`: i template non devono fare nulla.
+La favicon la sceglie il cliente da **Favicon** nell'editor: raccolta riservata `kris_site` (contenuto con ID `0`), campo `favicon` di tipo `media`, creata dalla migrazione `0004_favicon.php`. Kris aggiunge da solo `<link rel="icon">` prima di `</head>` in ogni pagina e nella 404, a meno che il template non abbia già un `rel="icon"`: i template non devono fare nulla.
 
 - Vale solo un file caricato dal CMS (`assets/uploads/…`): PNG, WebP, AVIF, GIF o JPG. Niente `.ico` né SVG. Consigliato un PNG quadrato di almeno 48×48 pixel.
 - Una favicon fissa del tema si può ancora scrivere nel template (`assets/images/…`): in quel caso quella dell'editor viene ignorata. Non usare entrambe.
@@ -274,25 +287,20 @@ La favicon la sceglie il cliente da **Favicon** nell'editor: raccolta riservata 
 
 Le pagine sono HTML completo generato sul server: i motori di ricerca le leggono come pagine statiche. Kris aggiunge da solo, prima di `</head>`, il `<link rel="canonical">` e i `hreflang` per ogni lingua, a meno che il template non abbia già un canonical. Gli URL canonici omettono i parametri con il valore predefinito (`page` e `key` `homepage`, `id` 0, lingua principale).
 
-`sitemap.php` genera la sitemap dai contenuti a ogni richiesta: un post aggiunto dall'editor compare subito. Quali pagine elencare lo dice `config/seo.json`:
+`sitemap.php` genera la sitemap dai contenuti a ogni richiesta: un post aggiunto dall'editor compare subito. Elenca le pagine di `schema.pages` con `"sitemap": true`:
 
 ```json
-{
-  "base_url": "https://www.esempio.it",
-  "sitemap": [
-    {"page": "homepage"},
-    {"page": "progetto", "key": "progetti"},
-    {"page": "post", "key": "homepage", "id": 0, "children": "posts"},
-    {"page": "privacy", "key": "kris_legal", "id": 0}
-  ]
+"pages": {
+  "homepage": {"template": "homepage", "type": "homepage", "item": 0, "sitemap": true},
+  "progetto": {"template": "progetto", "type": "progetti", "sitemap": true, "priority": 0.8},
+  "privacy": {"template": "privacy", "type": "kris_legal", "item": 0, "sitemap": true}
 }
 ```
 
-- Senza `id`: una voce per ogni entità della raccolta. Con `id`: quella sola entità. Con `children`: una voce per ogni elemento della lista indicata (`path=lista/ID`). Si elencano solo pagine autorizzate e contenuti esistenti, in tutte le lingue attive.
-- **Regola:** quando aggiungi una pagina navigabile o un tipo di pagina, aggiungila a `config/seo.json` e verifica che compaia in `sitemap.php`. Senza file, la sitemap contiene la sola homepage.
-- `base_url` va impostato in produzione: senza, l'indirizzo si ricava dalla richiesta. `"head": false` disattiva canonical e hreflang automatici.
-- Una regola può avere `"priority"` (0–1), che va nella sitemap.
-- `robots.txt` lo genera Kris (regola del `.htaccess` verso `sitemap.php?robots=1`): esclude `/kris-admin/` (e il vecchio `/editor/`), aggiunge le righe di `"robots"` in `seo.json` (testo, una regola per riga) e la sitemap assoluta. Un `robots.txt` fisico nella root vince. Se lo scrivi a mano, al deploy, usa l'URL assoluto della sitemap:
+- Con `item`: quel contenuto. Senza: una voce per ogni contenuto visibile del tipo. Con `item` e `list`: una voce per ogni elemento dell'elenco. In tutte le lingue attive.
+- **Regola:** quando aggiungi una pagina navigabile, registrala in `schema.pages` (o con l'operazione `register_page`) e verifica che compaia in `sitemap.php`.
+- Le opzioni del sito stanno in `settings.seo`: `base_url` va impostato in produzione (senza, l'indirizzo si ricava dalla richiesta); `"head": false` disattiva canonical e hreflang automatici; `pretty_urls`, `auto_language`, `robots` (righe aggiuntive di robots.txt, una regola per riga).
+- `robots.txt` lo genera Kris (regola del `.htaccess` verso `sitemap.php?robots=1`): esclude `/kris-admin/` (e il vecchio `/editor/`), aggiunge le righe di `settings.seo.robots` e la sitemap assoluta. Un `robots.txt` fisico nella root vince. Se lo scrivi a mano, al deploy, usa l'URL assoluto della sitemap:
 
 ```text
 User-agent: *
@@ -304,7 +312,7 @@ Non bloccare `/kris/` né `/assets/`: contengono gli script e gli stili delle pa
 
 ## Editor e persistenza
 
-`kris/editor/index.php` gestisce sessione, autenticazione e dispatch; `actions.php` le mutazioni; `helpers.php` schema e percorsi; `views/` le pagine; `partials/` gli elementi condivisi. `scripts.js` gestisce i flussi UI e `structure.js` la modifica dello schema.
+`kris/editor/index.php` gestisce sessione, autenticazione e dispatch; `actions.php` le mutazioni; `helpers.php` schema e percorsi; `format1.php` passa dai documenti del formato 2 alla forma della 1.x con cui lavorano ancora le schermate, e ritorno (fino al rifacimento dell'editor: non usarla altrove); `views/` le pagine; `partials/` gli elementi condivisi. `scripts.js` gestisce i flussi UI e `structure.js` la modifica dello schema.
 
 Mantieni autenticazione e CSRF per ogni mutazione. I salvataggi asincroni confermano il risultato del server prima di mostrare successo; gli errori devono conservare i campi compilati. Il riordino salva senza ricarica e senza spostare lo scroll, anche con testi non ancora salvati. Non annidare form HTML: i controlli delle liste usano form separati associati tramite l'attributo `form`.
 
@@ -321,7 +329,7 @@ Le modifiche preparate senza pubblicarle subito (dall'agente di Kris Agent, dall
 - **Regola:** dallo staging (e quindi dall'agente) si cambia tutto ciò che è del sito, struttura dati e tema; non si tocca il core, cioè `kris/` (framework ed editor), gli stub e la configurazione privata.
 - **File del tema:** si possono scrivere ed eliminare `template/<nome>.html`, `assets/css/<nome>.css`, `assets/js/<nome>.js` e `assets/images/<nome>.svg`. Tutto il resto viene rifiutato da `FilePolicy`: framework, stub, PHP, `.htaccess`, `config/`, `data/`. Niente tag PHP nei contenuti (un SVG può aprirsi con la dichiarazione XML). Le immagini raster passano dall'upload e finiscono in `assets/uploads/`. I **font del tema** (solo `.woff2`, fino a 2 MB, con la firma `wOF2`) passano dallo stesso caricamento (`Staging::uploadFont`, scelto dall'estensione): nello staging stanno in `data/staging/assets/fonts/`, alla pubblicazione vanno in `assets/fonts/<nome>.woff2` con un nome leggibile e stabile da richiamare nel `@font-face`; un font con lo stesso nome viene sostituito. Ospitare i font sul sito evita di mandare l'IP dei visitatori a Google Fonts senza consenso. Un file eliminato resta nel sito fino alla pubblicazione; il template di una pagina pubblica non si elimina finché la pagina è registrata, e un frammento eliminato ma ancora usato da un `k-template` blocca la pubblicazione.
 - **Script da approvare:** JavaScript, SVG e template che aggiungono script, gestori di eventi o URL `javascript:`, e i testi `richtext` scritti dalle operazioni con gli stessi elementi, sono codice che gira nel browser dell'admin, con la sessione dell'editor aperta. Finché l'admin non lo approva, l'anteprima manda una `Content-Security-Policy` che lascia girare solo gli script di Kris (barra e popup, con nonce) e mostra un popup con l'elenco dei file: «Approva ed esegui gli script», dopo aver spuntato l'assunzione di responsabilità, oppure «Guarda senza script». L'approvazione (`Staging::approveCode`, in `data/staging/code_approval.json`) vale per quella versione del codice: se un file cambia, il popup torna. Si approva anche da Editor › Da pubblicare.
-- **Contenuti, schema e pagine:** non si copiano i file. Si registrano operazioni (`Kris\Staging\Operations`: `set_field`, `add_item`, `remove_item`, `move_item`, `create_entity`, `remove_entity`, `move_entity`, `set_hidden`, `add_field`, `remove_field`, `rename_field`, `describe_field`, `change_type`, `move_field`, `set_posts`, `create_collection`, `rename_collection`, `remove_collection`, `set_post_collection`, `register_page`, `unregister_page`, `set_sitemap`) in `data/staging/operations.json`. `register_page` accetta `sitemap`: assente lascia la sitemap com'è, `false` registra la pagina fuori dalla sitemap (raggiungibile solo da chi conosce l'indirizzo), `true` o una regola (`key`, `id`, `children`) la aggiunge; `set_sitemap` (`page`, `sitemap`) cambia o toglie le regole di una pagina già pubblica. `change_type` converte i valori (plain ↔ testo per lingua, text ↔ richtext) e da o verso `array` solo se il campo è vuoto ovunque; rinominare o eliminare una raccolta aggiorna anche Posts e sitemap, e un template che la usa ancora blocca la pubblicazione. Alla pubblicazione si rieseguono sui dati attuali del sito: le modifiche fatte intanto dall'editor restano. Se il cliente ha cambiato lo stesso valore, o l'elemento non esiste più, è un conflitto. Rinomine e rimozioni aggiornano anche i valori; un template che usa ancora un campo tolto blocca la pubblicazione. Il controllo considera solo i template che rendono la raccolta del campo, ricavata da sitemap, link `page=…&key=…`, `k-component` e `k-array` (`Kris\Staging\TemplateUsage`): un campo omonimo di un'altra raccolta non conta. Un template a cui non arriva nessun riferimento viene controllato comunque. Le raccolte `kris_` non si toccano, tranne con `set_field` i valori di `kris_site` (la favicon), di `kris_notfound` (la pagina 404) e tutti i valori di `kris_legal` (dati del titolare, informative, testi del banner e delle categorie cookie). Lo schema di `kris_legal` e di `kris_site`, la loro creazione ed eliminazione no. Un elemento o contenuto nuovo tiene alla pubblicazione l'id avuto nell'anteprima: se sul sito nel frattempo è stato preso, è un conflitto. Più modifiche consecutive dello stesso campo diventano una sola, che conserva il valore di partenza per il controllo dei conflitti; se il campo torna al valore di partenza, la modifica sparisce. `add_item` e `create_entity` rifiutano le chiavi che non conoscono (un `data` al posto di `fields` creerebbe un elemento vuoto); in `fields` un elenco annidato si passa come lista di elementi, ognuno con i suoi campi, e gli elementi ricevono gli id 0, 1, 2… nell'ordine dato. Un testo solo su un campo multilingua vale per la lingua principale e svuota le altre: l'operazione riesce, con un avviso che elenca le lingue rimaste vuote (`Staging::lastWarnings`). `Staging::operateAll` registra più operazioni insieme, tutte o nessuna; il rifiuto dice quale operazione del gruppo non è valida.
+- **Contenuti, schema e pagine:** non si copiano i file. Si registrano operazioni (`Kris\Staging\Operations`: `set_field`, `add_item`, `remove_item`, `move_item`, `create_entity`, `remove_entity`, `move_entity`, `set_hidden`, `add_field`, `remove_field`, `rename_field`, `describe_field`, `change_type`, `move_field`, `create_collection`, `rename_collection`, `remove_collection`, `set_post_collection`, `register_page`, `unregister_page`, `set_sitemap`) in `data/staging/operations.json`. `register_page` scrive la pagina in `schema.pages`: `sitemap` assente la lascia com'è (una pagina nuova rende il contenuto 0 del tipo con il suo nome, o della homepage, fuori dalla sitemap), `false` la toglie dalla sitemap, `true` ce la mette, una regola (`key`, `id`, `children`: tipo, contenuto fisso, elenco) dice anche cosa rende; `set_sitemap` (`page`, `sitemap`) fa lo stesso su una pagina già pubblica. `add_field` e `change_type` usano i tipi del formato 2 con `localized` (o i nomi della 1.x); `change_type` converte i valori (condiviso ↔ per lingua, text ↔ richtext) e da o verso `list`, `boolean` o `select` solo se il campo è vuoto ovunque. Posts è `set_post_collection` (un elenco non ci va più: `set_posts` è rifiutata); rinominare o eliminare una raccolta aggiorna anche le pagine che la rendono (eliminandola, le toglie) e gli elenchi promossi, e un template che la usa ancora blocca la pubblicazione. Alla pubblicazione si rieseguono sui dati attuali del sito: le modifiche fatte intanto dall'editor restano. Se il cliente ha cambiato lo stesso valore, o l'elemento non esiste più, è un conflitto. Rinomine e rimozioni aggiornano anche i valori; un template che usa ancora un campo tolto blocca la pubblicazione. Il controllo considera solo i template che rendono il tipo del campo, ricavato dalle pagine dello schema, dai link `page=…&key=…`, da `k-component` e `k-array` (`Kris\Staging\TemplateUsage`): un campo omonimo di un'altra raccolta non conta. Un template a cui non arriva nessun riferimento viene controllato comunque. I tipi `kris_` non si toccano, tranne con `set_field` i valori di `kris_site` (favicon e proprietà del sito), di `kris_notfound` (la pagina 404), di `kris_wip` e tutti i valori di `kris_legal` (dati del titolare, informative, testi del banner e delle categorie cookie). Lo schema di `kris_legal` e di `kris_site`, la loro creazione ed eliminazione no. Un elemento o contenuto nuovo tiene alla pubblicazione l'id avuto nell'anteprima: se sul sito nel frattempo è stato preso, è un conflitto. Più modifiche consecutive dello stesso campo diventano una sola, che conserva il valore di partenza per il controllo dei conflitti; se il campo torna al valore di partenza, la modifica sparisce. `add_item` e `create_entity` rifiutano le chiavi che non conoscono (un `data` al posto di `fields` creerebbe un elemento vuoto); in `fields` (valori per nome, come in `content.json`) un elenco annidato si passa come lista di elementi, ognuno con i suoi campi, e gli elementi ricevono gli id 0, 1, 2… nell'ordine dato. Il testo `richtext` si salva filtrato (vedi "Contratto dei template"). Un testo solo su un campo multilingua vale per la lingua principale e svuota le altre: l'operazione riesce, con un avviso che elenca le lingue rimaste vuote (`Staging::lastWarnings`). `Staging::operateAll` registra più operazioni insieme, tutte o nessuna; il rifiuto dice quale operazione del gruppo non è valida.
 - **Editor › In attesa:** il selettore in alto («Sito pubblico» / «In attesa») cambia dove salva l'editor. In attesa l'editor mostra lo staging, comprese le modifiche dell'agente, e ogni azione sui contenuti diventa operazioni (`staging_actions.php` con `EditorChanges`): salvataggio campo per campo e lingua per lingua, elementi aggiunti, eliminati, riordinati e sospesi. Gli upload vanno in `data/staging/uploads/` e l'editor li mostra attraverso l'anteprima. Struttura, lingue, eliminazione di file e «Privacy e cookie» restano solo sul sito pubblico.
 - **Immagini:** `Staging::upload()` usa `MediaStore::storeLocal()`, con gli stessi controlli dell'upload dell'editor, e salva in `data/staging/uploads/`. La pubblicazione le copia in `assets/uploads/`. `Staging::deleteUpload()` toglie dallo staging un file caricato e non ancora pubblicato (anche un font), senza buttare via il resto; non se è ancora il valore di un campo in attesa. I file già sul sito si tolgono dall'editor.
 - Ogni scrittura porta l'impronta (sha256) della versione letta: se il file è cambiato nel frattempo, la scrittura viene rifiutata, con l'impronta attuale nei dettagli (`current_hash`). `edit` sostituisce un testo che deve comparire una sola volta.
@@ -336,7 +344,7 @@ Un assistente AI esterno (via MCP, backend nella repository `kris-agent`) prepar
 
 - **Abbinamento:** Editor › Impostazioni › Kris Agent. L'admin incolla il codice generato nel pannello di Kris Agent: vale 30 minuti, una volta, e contiene indirizzo dell'API, id del sito e un segreto. Il sito crea le proprie chiavi Ed25519 (`sodium`), le scambia con il Worker e salva tutto in `config/agent.php`. Il Worker accetta solo se l'indirizzo del sito è quello registrato nel pannello. Dall'editor l'agente si spegne, si riaccende e si scollega.
 - **Richieste:** arrivano su `kris-agent.php` (`Kris\Agent\Server`), firmate dal Worker. La firma copre `KRIS-AGENT-1`, metodo, id del sito, ora, nonce e sha256 del corpo. Ora entro 5 minuti, nonce mai ripetuti (`data/agent_nonces.json`), chiave dell'abbinamento in corso.
-- **Azioni ammesse:** `ping`, `overview`, `read_file`, `search_theme`, `write_file`, `edit_file`, `delete_file`, `get_entity`, `operate`, `operate_batch` (fino a 100 operazioni, tutte o nessuna), `upload`, `delete_upload`, `render_page`, `site_config`, `status`, `discard`. `read_file` accetta `from_line` e `lines` (al massimo 400 righe), `search` (solo le righe che contengono il testo) e `hash_only`; l'impronta è sempre quella del file intero. `search_theme` cerca un testo in template, CSS, JS e SVG (al massimo 200 righe). `edit_file` senza `expected_hash` riesce se il testo da sostituire compare una volta sola. `render_page` (`page`, `key`, `id`, `path`, `ln`) restituisce stato e HTML finito della pagina con le modifiche in attesa, compreso quanto Kris aggiunge da solo, senza la barra dell'anteprima (`Kris\Site\PageRenderer`). `site_config` restituisce in sola lettura pagine, `seo.json` e sitemap con le modifiche in attesa e `robots.txt`. `operate` e `operate_batch` restituiscono gli avvisi in `warnings`; `status` e `overview` gli avvisi dello staging. Tutte lavorano sullo staging; non esiste un'azione per pubblicare né per approvare gli script.
+- **Azioni ammesse:** `ping`, `overview`, `read_file`, `search_theme`, `write_file`, `edit_file`, `delete_file`, `get_entity`, `operate`, `operate_batch` (fino a 100 operazioni, tutte o nessuna), `upload`, `delete_upload`, `render_page`, `site_config`, `status`, `discard`. `read_file` accetta `from_line` e `lines` (al massimo 400 righe), `search` (solo le righe che contengono il testo) e `hash_only`; l'impronta è sempre quella del file intero. `search_theme` cerca un testo in template, CSS, JS e SVG (al massimo 200 righe). `edit_file` senza `expected_hash` riesce se il testo da sostituire compare una volta sola. `render_page` (`page`, `key`, `id`, `path`, `ln`) restituisce stato e HTML finito della pagina con le modifiche in attesa, compreso quanto Kris aggiunge da solo, senza la barra dell'anteprima (`Kris\Site\PageRenderer`). `site_config` restituisce in sola lettura pagine, opzioni SEO, reindirizzamenti e sitemap con le modifiche in attesa e `robots.txt`. `overview` descrive lingue, pagine e tipi del formato 2 (con i loro attributi), contenuti e file del tema; `get_entity` restituisce il contenuto con i valori per nome. `operate` e `operate_batch` restituiscono gli avvisi in `warnings`; `status` e `overview` gli avvisi dello staging. Tutte lavorano sullo staging; non esiste un'azione per pubblicare né per approvare gli script.
 - **Chi può usare l'agente:** nella stessa scheda l'admin del sito vede gli utenti con un abbonamento sul sito (e gli admin di piattaforma, che possono sempre), li approva o li esclude, e reimposta l'accesso: tutti tornano in attesa e le chiavi di entrambe le parti cambiano. Sono richieste del sito al Worker (`Kris\Agent\WorkerClient`, rotte `/api/v1/site-api/*`), firmate con la chiave del sito con lo stesso protocollo. Le chiavi nuove si salvano solo se il Worker conferma.
 - Le richieste in uscita (abbinamento e richieste al Worker) passano da `Kris\Agent\HttpPost`: https obbligatorio, http solo verso localhost per lo sviluppo.
 
@@ -352,7 +360,7 @@ Da un sito installato l'admin aggiorna Kris da Impostazioni › Versione di Kris
 - **Contratto con le versioni installate:** `installer.php` espone `kris_update_install(array $ctx): array` e arriva dentro il pacchetto nuovo; i campi di `releases.json` e `RELEASE.json`, i percorsi in `data/` e il formato di `kris_maintenance.json` si possono estendere, mai rinominare. Un sito vecchio legge il canale con il suo codice.
 - **`bootstrap.php`** viene incluso di nuovo dall'installer dopo lo scambio: niente dichiarazioni che non tollerino la ripetizione.
 
-**Cambiare il formato dei dati richiede una migrazione** in `kris/migrations/`: numerata, solo in avanti, funzione pura su `['k_data', 'k_model', 'cms_settings']`, senza usare classi del core, idempotente, con un test fixture prima → fixture dopo. `'auto' => true` solo se non cambia i contenuti. Non è una migrazione la rinomina di un campo di un sito cliente: quella è contenuto del sito.
+**Cambiare il formato dei dati richiede una migrazione** in `kris/migrations/`: numerata, solo in avanti, funzione pura su `['schema', 'content', 'settings']` (fino alla 0009 i documenti della 1.x: `k_data`, `k_model`, `cms_settings`, più `allowed_pages`, `seo` e `templates` in lettura), senza usare classi del core, idempotente, con un test fixture prima → fixture dopo. `'auto' => true` solo se non cambia i contenuti. Non è una migrazione la rinomina di un campo di un sito cliente: quella è contenuto del sito.
 
 **Pubblicare una release** (solo lo sviluppatore, con la chiave privata):
 

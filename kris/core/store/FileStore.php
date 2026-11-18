@@ -18,9 +18,13 @@ use Kris\Site\Paths;
 final class FileStore implements Store
 {
     private const FILES = [
+        'schema' => 'data/schema.json',
+        'content' => 'data/content.json',
+        'settings' => 'data/settings.json',
+        // Formato 1: li legge la migrazione 0009
         'data' => 'data/k_data.json',
         'model' => 'data/k_model.json',
-        'settings' => 'data/cms_settings.json',
+        'cms_settings' => 'data/cms_settings.json',
         'pages' => 'config/allowed_pages.json',
         'seo' => 'config/seo.json',
     ];
@@ -49,6 +53,7 @@ final class FileStore implements Store
                 if (!hash_equals($current, $expectedRev)) throw new ConflictException($doc, $current);
             }
             (new JsonStore($file))->write($value);
+            Site::forget();
             return $this->revOf($file);
         });
     }
@@ -66,6 +71,7 @@ final class FileStore implements Store
                 }
             }
             foreach ($changed as $doc => $value) (new JsonStore($this->sitePath($doc)))->write($value);
+            Site::forget();
         });
     }
 
@@ -81,7 +87,23 @@ final class FileStore implements Store
 
     public function import(array $documents): void
     {
-        $this->transaction(array_keys($documents), fn(): array => $documents);
+        $this->locked(function () use ($documents): void {
+            $this->transaction(array_keys($documents), fn(): array => $documents);
+            foreach (array_diff(array_keys(self::FILES), array_keys($documents)) as $doc) {
+                if (is_file($this->sitePath($doc))) @unlink($this->sitePath($doc));
+            }
+            Site::forget();
+        });
+    }
+
+    public function remove(array $docs): void
+    {
+        $this->locked(function () use ($docs): void {
+            foreach ($docs as $doc) {
+                if (is_file($this->sitePath($doc))) @unlink($this->sitePath($doc));
+            }
+            Site::forget();
+        });
     }
 
     /** Il file di un documento, relativo alla root del sito: per snapshot, staging e messaggi. */

@@ -119,7 +119,7 @@ test('database: le migrazioni passano dall\'archivio, non dai file', function ()
     $store = Stores::site($root);
     $fields = $store->read('model')->value['homepage'];
     assertSame('nuovo', end($fields)['name']);
-    assertSame(['languages' => ['it']], $store->read('settings')->value);
+    assertSame(['languages' => ['it']], $store->read('cms_settings')->value);
     assertTrue(!is_file("{$root}/data/k_model.json"), 'nessun file JSON creato');
 });
 

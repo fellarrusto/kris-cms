@@ -44,19 +44,19 @@ test('l indirizzo dalla richiesta scarta host non validi', function () {
 });
 
 test('la sitemap segue le regole: pagina singola, intera raccolta, elementi di una lista', function () {
-    $data = [
-        ['id' => 0, 'name' => 'homepage', 'data' => [['name' => 'posts', 'type' => 'array', 'value' => [['id' => 4, 'data' => []], ['id' => 7, 'data' => []]]]]],
-        ['id' => 1, 'name' => 'progetti', 'data' => []],
-        ['id' => 5, 'name' => 'progetti', 'data' => []],
+    $content = [
+        ['type' => 'homepage', 'id' => 0, 'values' => ['posts' => [['id' => 4, 'values' => []], ['id' => 7, 'values' => []]]]],
+        ['type' => 'progetti', 'id' => 1, 'values' => []],
+        ['type' => 'progetti', 'id' => 5, 'values' => []],
     ];
-    $rules = [
-        ['page' => 'homepage'],
-        ['page' => 'progetto', 'key' => 'progetti'],
-        ['page' => 'post', 'key' => 'homepage', 'id' => 0, 'children' => 'posts'],
-        ['page' => 'segreta'],                                   // non autorizzata
-        ['page' => 'progetto', 'key' => 'progetti', 'id' => 9],  // inesistente
-    ];
-    $entries = Seo::sitemapEntries($data, $rules, ['homepage', 'progetto', 'post']);
+    $schema = ['pages' => [
+        'homepage' => ['template' => 'homepage', 'type' => 'homepage', 'item' => 0, 'sitemap' => true],
+        'progetto' => ['template' => 'progetto', 'type' => 'progetti', 'sitemap' => true],
+        'post' => ['template' => 'post', 'type' => 'homepage', 'item' => 0, 'list' => 'posts', 'sitemap' => true],
+        'segreta' => ['template' => 'segreta', 'type' => 'homepage', 'item' => 0, 'sitemap' => false],
+        'scheda' => ['template' => 'scheda', 'type' => 'progetti', 'item' => 9, 'sitemap' => true], // inesistente
+    ]];
+    $entries = Seo::sitemapEntries($schema, $content);
     assertSame([
         ['homepage', 'homepage', 0, []],
         ['progetto', 'progetti', 1, []],
@@ -212,7 +212,7 @@ test('0005 aggiunge a kris_legal i testi delle categorie cookie, senza toccare q
 });
 
 test('sitemap con priorita e robots.txt generato con la sitemap assoluta e le righe di seo.json', function () {
-    $entries = Seo::sitemapEntries([['name' => 'homepage', 'id' => 0, 'data' => []]], [['page' => 'homepage', 'priority' => 1.5]], ['homepage']);
+    $entries = Seo::sitemapEntries(['pages' => ['homepage' => ['type' => 'homepage', 'item' => 0, 'sitemap' => true, 'priority' => 1.5]]], [['type' => 'homepage', 'id' => 0, 'values' => []]]);
     assertSame([['homepage', 'homepage', 0, [], 1.0]], $entries, 'priorita fra 0 e 1');
     assertContains('<priority>1.0</priority>', Seo::sitemapXml($entries, SEO_BASE, ['it']));
 

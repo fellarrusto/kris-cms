@@ -17,3 +17,4 @@
 /config/setup_code.php
 /config/store.php
 /data/*.sqlite
+/data/format1/

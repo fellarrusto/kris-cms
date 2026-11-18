@@ -63,17 +63,17 @@ test('la pagina di un elemento sospeso risponde 404', function () {
 });
 
 test('gli elementi sospesi non sono nella sitemap', function () {
-    $data = [
-        ['id' => 0, 'name' => 'progetti', 'data' => []],
-        ['id' => 1, 'name' => 'progetti', 'hidden' => true, 'data' => []],
-        ['id' => 0, 'name' => 'homepage', 'data' => [['name' => 'posts', 'type' => 'array', 'value' => [
-            ['id' => 0, 'data' => []], ['id' => 1, 'hidden' => true, 'data' => []],
-        ]]]],
+    $content = [
+        ['type' => 'progetti', 'id' => 0, 'values' => []],
+        ['type' => 'progetti', 'id' => 1, 'hidden' => true, 'values' => []],
+        ['type' => 'homepage', 'id' => 0, 'values' => ['posts' => [
+            ['id' => 0, 'values' => []], ['id' => 1, 'hidden' => true, 'values' => []],
+        ]]],
     ];
-    $entries = Seo::sitemapEntries($data, [
-        ['page' => 'progetto', 'key' => 'progetti'],
-        ['page' => 'post', 'key' => 'homepage', 'id' => 0, 'children' => 'posts'],
-    ], ['progetto', 'post']);
+    $entries = Seo::sitemapEntries(['pages' => [
+        'progetto' => ['type' => 'progetti', 'sitemap' => true],
+        'post' => ['type' => 'homepage', 'item' => 0, 'list' => 'posts', 'sitemap' => true],
+    ]], $content);
     assertSame([['progetto', 'progetti', 0, []], ['post', 'homepage', 0, ['posts', '0']]], $entries);
 });
 

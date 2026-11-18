@@ -50,7 +50,7 @@ final class MediaStore
     public static function siteOptions(string $root): array
     {
         try {
-            $settings = \Kris\Store\Stores::site($root)->read('settings')->value;
+            $settings = \Kris\Store\Site::load($root)['settings'];
         } catch (StorageException $e) {
             // Impostazioni illeggibili: si carica con le opzioni predefinite
             return [];

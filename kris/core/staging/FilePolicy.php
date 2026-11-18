@@ -44,7 +44,7 @@ final class FilePolicy
      */
     public static function assertRestorable(string $relative): void
     {
-        $fixed = ['data/k_data.json', 'data/k_model.json', 'data/cms_settings.json', 'config/allowed_pages.json', 'config/seo.json'];
+        $fixed = ['data/schema.json', 'data/content.json', 'data/settings.json', 'data/k_data.json', 'data/k_model.json', 'data/cms_settings.json', 'config/allowed_pages.json', 'config/seo.json'];
         if (in_array($relative, $fixed, true) || preg_match('#^assets/uploads/[A-Za-z0-9][A-Za-z0-9._-]*$#', $relative) === 1
             || preg_match('#^assets/fonts/[a-z0-9][a-z0-9_-]*\.woff2$#', $relative) === 1) {
             return;

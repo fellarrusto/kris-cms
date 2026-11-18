@@ -3,13 +3,12 @@ declare(strict_types=1);
 
 namespace Kris\Staging;
 
-use Kris\Entity\Entity;
-
 /**
- * Operazioni su contenuti, schema e pagine, applicate a uno stato in memoria:
+ * Operazioni su contenuti, schema e pagine, applicate a uno stato in memoria
+ * nel formato 2 (docs/2.0/specifica.md, 2):
  *
- *   ['data' => k_data.json, 'model' => k_model.json,
- *    'pages' => elenco di config/allowed_pages.json, 'seo' => config/seo.json]
+ *   ['schema' => tipi, pagine, elenchi promossi, 'content' => contenuti,
+ *    'settings' => lingue e opzioni]
  *
  * Funzioni pure: nessun accesso al filesystem, cosi la stessa operazione si
  * applica all'anteprima quando viene registrata e ai dati veri del sito
@@ -19,14 +18,18 @@ use Kris\Entity\Entity;
  * ripetizione il sito non e piu cosi (il cliente ha cambiato lo stesso campo
  * dall'editor, o ha tolto l'elemento) e un conflitto.
  *
- * Percorsi: 'key' e 'id' individuano l'entita radice, 'path' alterna nome di
- * un campo array e id del figlio, come il parametro path delle pagine:
+ * Percorsi: 'key' (il tipo) e 'id' individuano il contenuto, 'path' alterna
+ * nome di un elenco e id dell'elemento, come il parametro path delle pagine:
  * ['servizi', 2, 'punti', 0].
+ *
+ * Tipi di campo: text, richtext, media, select, boolean, list, con
+ * "localized" (un valore per lingua) tranne list. I nomi della 1.x restano
+ * validi: plain è un text non localizzato, image un media, array un list.
  */
 final class Operations
 {
-    public const TYPES = ['plain', 'text', 'richtext', 'image', 'array', 'boolean', 'select'];
-
+    public const TYPES = ['text', 'richtext', 'media', 'select', 'boolean', 'list'];
+    private const ALIASES = ['plain' => 'text', 'image' => 'media', 'array' => 'list'];
 
     // Gli stessi nomi che l'editor riserva ai propri controlli, piu quelli esposti dal motore dei template
     private const RESERVED_NAMES = ['id', 'language', 'group', 'path', 'save_entity', 'create_instance',
@@ -41,6 +44,9 @@ final class Operations
         'register_page' => ['op', 'page', 'sitemap'],
         'set_sitemap' => ['op', 'page', 'sitemap'],
     ];
+
+    /** Le sezioni riservate di Kris di cui si scrivono i valori (non lo schema). */
+    private const WRITABLE_RESERVED = ['kris_site', 'kris_legal', 'kris_notfound', 'kris_wip'];
 
     /**
      * Applica un'operazione. Alla prima applicazione (non $replay) completa
@@ -77,6 +83,8 @@ final class Operations
                     . '. Chiavi ammesse: ' . implode(', ', self::KEYS[$type]) . '.');
             }
         }
+        $state += ['schema' => [], 'content' => [], 'settings' => []];
+        $state['schema'] += ['types' => [], 'pages' => []];
         $ctx = ['languages' => array_values($languages), 'uploadExists' => $uploadExists, 'replay' => $replay, 'force' => $force,
             'warnings' => $warnings ?? new \ArrayObject()];
         return self::$method($state, $op, $ctx);
@@ -103,9 +111,9 @@ final class Operations
             'register_page' => "Nuova pagina pubblica «{$op['page']}»" . (!array_key_exists('sitemap', $op) ? '' : ($op['sitemap'] === false || $op['sitemap'] === null ? ', fuori dalla sitemap' : ', aggiunta alla sitemap')),
             'set_sitemap' => ($op['sitemap'] ?? null) === false || ($op['sitemap'] ?? null) === null
                 ? "Toglie la pagina «{$op['page']}» dalla sitemap" : "Mette la pagina «{$op['page']}» nella sitemap",
-            'remove_collection' => "Elimina la raccolta «{$op['name']}», con tutti i suoi contenuti",
+            'remove_collection' => "Elimina la raccolta «{$op['name']}», con tutti i suoi contenuti e le sue pagine",
             'rename_collection' => "Rinomina la raccolta «{$op['from']}» in «{$op['to']}»",
-            'change_type' => "Cambia il tipo del campo «{$op['name']}» in {$op['type']} in " . self::schemaWhere($op),
+            'change_type' => "Cambia il tipo del campo «{$op['name']}» in {$op['type']}" . (isset($op['localized']) ? ($op['localized'] ? ' per lingua' : ' condiviso') : '') . ' in ' . self::schemaWhere($op),
             'move_field' => "Sposta il campo «{$op['name']}» in posizione " . ((int) ($op['to'] ?? 0) + 1) . ' in ' . self::schemaWhere($op),
             'set_posts' => (!empty($op['posts']) ? 'Mostra in Posts' : 'Toglie da Posts') . " l'elenco «{$op['name']}» di «{$op['collection']}»",
             'set_post_collection' => (!empty($op['enabled']) ? 'Mostra in Posts' : 'Toglie da Posts') . " la raccolta «{$op['collection']}»",
@@ -128,25 +136,25 @@ final class Operations
 
     /**
      * I testi richtext che un'operazione scrive (set_field, add_item,
-     * create_entity): sono HTML che il sito emette così com'è, quindi codice
-     * da far approvare come quello dei file. $model è lo schema in cui
+     * create_entity): sono HTML che il sito emette, quindi codice da far
+     * approvare come quello dei file. $schema è lo schema in cui
      * l'operazione si applica.
      *
      * @return list<string>
      */
-    public static function richtextValues(array $model, array $op): array
+    public static function richtextValues(array $schema, array $op): array
     {
         try {
             $key = (string) ($op['key'] ?? '');
             switch ($op['op'] ?? '') {
                 case 'set_field':
-                    $def = self::fieldDef(self::schemaAt($model, $key, self::arrayNames(self::path($op))), (string) ($op['field'] ?? ''));
+                    $def = self::fieldDef(self::schemaAt($schema, $key, self::listNames(self::path($op))), (string) ($op['field'] ?? ''));
                     return $def['type'] === 'richtext' ? self::strings($op['value'] ?? null) : [];
                 case 'add_item':
-                    $names = array_merge(self::arrayNames(self::path($op)), [(string) ($op['array'] ?? '')]);
-                    return self::richtextIn(self::schemaAt($model, $key, $names), (array) ($op['fields'] ?? []));
+                    $names = array_merge(self::listNames(self::path($op)), [(string) ($op['array'] ?? '')]);
+                    return self::richtextIn(self::schemaAt($schema, $key, $names), (array) ($op['fields'] ?? []));
                 case 'create_entity':
-                    return self::richtextIn(self::schemaAt($model, $key, []), (array) ($op['fields'] ?? []));
+                    return self::richtextIn(self::schemaAt($schema, $key, []), (array) ($op['fields'] ?? []));
             }
         } catch (StagingException $e) {
             // Un'operazione che non si applica più non scrive nulla
@@ -154,15 +162,15 @@ final class Operations
         return [];
     }
 
-    private static function richtextIn(array $schema, array $fields): array
+    private static function richtextIn(array $fields, array $values): array
     {
         $found = [];
-        foreach ($schema as $def) {
-            if (!is_array($def) || !array_key_exists($def['name'] ?? '', $fields)) continue;
-            $value = $fields[$def['name']];
+        foreach ($fields as $def) {
+            if (!is_array($def) || !array_key_exists($def['name'] ?? '', $values)) continue;
+            $value = $values[$def['name']];
             if (($def['type'] ?? null) === 'richtext') {
                 array_push($found, ...self::strings($value));
-            } elseif (($def['type'] ?? null) === 'array' && is_array($value)) {
+            } elseif (($def['type'] ?? null) === 'list' && is_array($value)) {
                 foreach ($value as $item) {
                     if (is_array($item)) array_push($found, ...self::richtextIn($def['of'] ?? [], $item));
                 }
@@ -181,7 +189,7 @@ final class Operations
     /**
      * Campi tolti o rinominati: i template che li usano ancora vanno aggiornati.
      *
-     * @return list<array{name: string, context: string}> nome e contesto (raccolta ed elenchi, vedi TemplateUsage)
+     * @return list<array{name: string, context: string}> nome e contesto (tipo ed elenchi, vedi TemplateUsage)
      */
     public static function retiredNames(array $op): array
     {
@@ -194,30 +202,34 @@ final class Operations
         return [['name' => $name, 'context' => TemplateUsage::context((string) ($op['collection'] ?? ''), (array) ($op['path'] ?? []))]];
     }
 
+    /** Vero se il campo ha un solo valore per tutte le lingue (formato 2: non localized). */
+    public static function shared(array $def): bool
+    {
+        return ($def['type'] ?? '') !== 'list' && empty($def['localized']);
+    }
+
     // --- contenuti -----------------------------------------------------------
 
     private static function setField(array $state, array $op, array $ctx): array
     {
         $path = self::path($op);
-        $schema = self::schemaAt($state['model'], (string) ($op['key'] ?? ''), self::arrayNames($path));
-        $def = self::fieldDef($schema, (string) ($op['field'] ?? ''));
-        if ($def['type'] === 'array') {
+        $key = (string) ($op['key'] ?? '');
+        $fields = self::schemaAt($state['schema'], $key, self::listNames($path));
+        $def = self::fieldDef($fields, (string) ($op['field'] ?? ''));
+        if ($def['type'] === 'list') {
             throw new StagingException("«{$def['name']}» è un elenco: usa add_item, remove_item o move_item.");
         }
         $lang = isset($op['lang']) ? (string) $op['lang'] : null;
-        if ($lang !== null && Entity::isShared($def)) {
+        if ($lang !== null && self::shared($def)) {
             throw new StagingException("«{$def['name']}» ha un solo valore per tutte le lingue: togli \"lang\".");
         }
         if ($lang !== null && !in_array($lang, $ctx['languages'], true)) {
             throw new StagingException("La lingua '{$lang}' non è attiva sul sito. Lingue attive: " . implode(', ', $ctx['languages']) . '.');
         }
 
-        // Fra le raccolte di Kris si scrivono i valori di kris_site (favicon), kris_legal (titolare, informative, banner) e kris_notfound (pagina 404); lo schema no
-        $key = (string) $op['key'];
-        $writable = in_array($key, ['kris_site', 'kris_legal', 'kris_notfound', 'kris_wip'], true);
-        $entity = &self::entity($state['data'], $key, (int) ($op['id'] ?? 0), $path, $writable);
-        $index = self::fieldIndex($entity, $def['name']);
-        $current = $index === null ? null : $entity['data'][$index]['value'];
+        // Fra le sezioni di Kris si scrivono i valori di kris_site, kris_legal, kris_notfound e kris_wip; lo schema no
+        $item = &self::item($state['content'], $key, (int) ($op['id'] ?? 0), $path, in_array($key, self::WRITABLE_RESERVED, true));
+        $current = $item['values'][$def['name']] ?? null;
         $before = $lang === null ? $current : (is_array($current) ? ($current[$lang] ?? null) : null);
 
         if ($ctx['replay']) {
@@ -231,33 +243,25 @@ final class Operations
         if ($lang === null) {
             $value = self::value($def, $op['value'] ?? null, $ctx);
         } else {
-            $value = is_array($current) ? $current : array_fill_keys($ctx['languages'], '');
-            $value[$lang] = self::langString($def, $op['value'] ?? null, $ctx);
+            $value = is_array($current) && !array_is_list($current) ? $current : array_fill_keys($ctx['languages'], self::emptyOf($def));
+            $value[$lang] = self::one($def, $op['value'] ?? null, $ctx);
         }
-        if ($index === null) {
-            $entity['data'][] = ['name' => $def['name'], 'type' => $def['type'], 'value' => $value];
-        } else {
-            $entity['data'][$index]['value'] = $value;
-        }
+        if (!isset($item['values']) || !is_array($item['values']) || array_is_list($item['values'])) $item['values'] = [];
+        $item['values'][$def['name']] = $value;
         return [$state, $op];
     }
 
     private static function addItem(array $state, array $op, array $ctx): array
     {
         $path = self::path($op);
-        $arrayName = (string) ($op['array'] ?? '');
-        $parentSchema = self::schemaAt($state['model'], (string) ($op['key'] ?? ''), self::arrayNames($path));
-        $def = self::fieldDef($parentSchema, $arrayName);
-        if ($def['type'] !== 'array') {
-            throw new StagingException("«{$arrayName}» non è un elenco.");
+        $listName = (string) ($op['array'] ?? '');
+        $def = self::fieldDef(self::schemaAt($state['schema'], (string) ($op['key'] ?? ''), self::listNames($path)), $listName);
+        if ($def['type'] !== 'list') {
+            throw new StagingException("«{$listName}» non è un elenco.");
         }
-        $entity = &self::entity($state['data'], (string) $op['key'], (int) ($op['id'] ?? 0), $path);
-        $index = self::fieldIndex($entity, $arrayName);
-        if ($index === null) {
-            $entity['data'][] = ['name' => $arrayName, 'type' => 'array', 'value' => []];
-            $index = array_key_last($entity['data']);
-        }
-        $items = &$entity['data'][$index]['value'];
+        $item = &self::item($state['content'], (string) $op['key'], (int) ($op['id'] ?? 0), $path);
+        if (!is_array($item['values'][$listName] ?? null)) $item['values'][$listName] = [];
+        $items = &$item['values'][$listName];
 
         $newId = $items ? max(array_map(fn($c) => (int) ($c['id'] ?? 0), $items)) + 1 : 0;
         if ($ctx['replay'] && isset($op['assigned_id'])) {
@@ -268,10 +272,10 @@ final class Operations
             }
             $newId = (int) $op['assigned_id'];
         }
-        $item =['id' => $newId, 'data' => self::fill($def['of'] ?? [], (array) ($op['fields'] ?? []), $ctx)];
+        $new = ['id' => $newId, 'values' => self::fill($def['of'] ?? [], (array) ($op['fields'] ?? []), $ctx)];
         $position = $op['position'] ?? 'end';
         $at = $position === 'start' ? 0 : (is_int($position) ? max(0, min($position, count($items))) : count($items));
-        array_splice($items, $at, 0, [$item]);
+        array_splice($items, $at, 0, [$new]);
 
         if (!$ctx['replay']) $op['assigned_id'] = $newId;
         return [$state, $op];
@@ -279,32 +283,31 @@ final class Operations
 
     private static function removeItem(array $state, array $op, array $ctx): array
     {
-        $entity = &self::entity($state['data'], (string) ($op['key'] ?? ''), (int) ($op['id'] ?? 0), self::path($op));
-        $index = self::fieldIndex($entity, (string) ($op['array'] ?? ''));
-        $items = $index === null ? [] : $entity['data'][$index]['value'];
-        $pos = self::itemPosition($items, (int) ($op['item_id'] ?? -1));
+        $item = &self::item($state['content'], (string) ($op['key'] ?? ''), (int) ($op['id'] ?? 0), self::path($op));
+        $list = (string) ($op['array'] ?? '');
+        $pos = self::itemPosition(is_array($item['values'][$list] ?? null) ? $item['values'][$list] : [], (int) ($op['item_id'] ?? -1));
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "l'elemento non esiste più"));
         }
-        array_splice($entity['data'][$index]['value'], $pos, 1);
+        array_splice($item['values'][$list], $pos, 1);
         return [$state, $op];
     }
 
     private static function moveItem(array $state, array $op, array $ctx): array
     {
-        $entity = &self::entity($state['data'], (string) ($op['key'] ?? ''), (int) ($op['id'] ?? 0), self::path($op));
-        $index = self::fieldIndex($entity, (string) ($op['array'] ?? ''));
-        $items = $index === null ? [] : $entity['data'][$index]['value'];
+        $item = &self::item($state['content'], (string) ($op['key'] ?? ''), (int) ($op['id'] ?? 0), self::path($op));
+        $list = (string) ($op['array'] ?? '');
+        $items = is_array($item['values'][$list] ?? null) ? $item['values'][$list] : [];
         $pos = self::itemPosition($items, (int) ($op['item_id'] ?? -1));
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "l'elemento non esiste più"));
         }
-        $item = $items[$pos];
+        $moved = $items[$pos];
         array_splice($items, $pos, 1);
-        array_splice($items, max(0, min((int) ($op['to'] ?? 0), count($items))), 0, [$item]);
-        $entity['data'][$index]['value'] = $items;
+        array_splice($items, max(0, min((int) ($op['to'] ?? 0), count($items))), 0, [$moved]);
+        $item['values'][$list] = $items;
         return [$state, $op];
     }
 
@@ -312,11 +315,9 @@ final class Operations
     {
         $key = (string) ($op['key'] ?? '');
         self::assertUserCollection($key);
-        if (!isset($state['model'][$key])) {
-            throw new StagingException("La raccolta «{$key}» non esiste.");
-        }
-        $ids = array_map(fn($e) => (int) $e['id'], array_filter($state['data'], fn($e) => ($e['name'] ?? null) === $key));
-        if ($ids && !empty($state['settings']['collections'][$key]['single']) && !($ctx['replay'] && $ctx['force'])) {
+        $type = self::type($state, $key);
+        $ids = array_map(fn($e) => (int) $e['id'], array_filter($state['content'], fn($e) => ($e['type'] ?? null) === $key));
+        if ($ids && !empty($type['single']) && !($ctx['replay'] && $ctx['force'])) {
             throw new StagingException("«{$key}» ha un contenuto unico: non ne riceve un secondo.");
         }
         $newId = $ids ? max($ids) + 1 : 0;
@@ -327,7 +328,7 @@ final class Operations
             }
             $newId = (int) $op['assigned_id'];
         }
-        $state['data'][] = ['name' => $key, 'id' => $newId, 'data' => self::fill($state['model'][$key], (array) ($op['fields'] ?? []), $ctx)];
+        $state['content'][] = ['type' => $key, 'id' => $newId, 'values' => self::fill($type['fields'] ?? [], (array) ($op['fields'] ?? []), $ctx)];
         if (!$ctx['replay']) $op['assigned_id'] = $newId;
         return [$state, $op];
     }
@@ -336,53 +337,54 @@ final class Operations
     {
         $key = (string) ($op['key'] ?? '');
         self::assertUserCollection($key);
-        if (!empty($state['settings']['collections'][$key]['single']) && !($ctx['replay'] && $ctx['force'])) {
+        if (!empty($state['schema']['types'][$key]['single']) && !($ctx['replay'] && $ctx['force'])) {
             // Eliminarlo svuoterebbe la pagina
             throw new StagingException("«{$key}» ha un contenuto unico: non si elimina.");
         }
-        $pos = self::rootPosition($state['data'], $key, (int) ($op['id'] ?? -1));
+        $pos = self::rootPosition($state['content'], $key, (int) ($op['id'] ?? -1));
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, 'il contenuto non esiste più'));
         }
-        array_splice($state['data'], $pos, 1);
+        array_splice($state['content'], $pos, 1);
         return [$state, $op];
     }
 
-    /** Sposta un'entita radice fra quelle della sua raccolta; le altre raccolte restano dove sono. */
+    /** Sposta un contenuto fra quelli del suo tipo; gli altri tipi restano dove sono. */
     private static function moveEntity(array $state, array $op, array $ctx): array
     {
         $key = (string) ($op['key'] ?? '');
         self::assertUserCollection($key);
-        $slots = array_keys(array_filter($state['data'], fn($e) => ($e['name'] ?? null) === $key));
-        $entities = array_map(fn($i) => $state['data'][$i], $slots);
-        $pos = self::itemPosition($entities, (int) ($op['id'] ?? -1));
+        $slots = array_keys(array_filter($state['content'], fn($e) => ($e['type'] ?? null) === $key));
+        $items = array_map(fn($i) => $state['content'][$i], $slots);
+        $pos = self::itemPosition($items, (int) ($op['id'] ?? -1));
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, 'il contenuto non esiste più'));
         }
-        $entity = $entities[$pos];
-        array_splice($entities, $pos, 1);
-        array_splice($entities, max(0, min((int) ($op['to'] ?? 0), count($entities))), 0, [$entity]);
-        foreach ($slots as $n => $i) $state['data'][$i] = $entities[$n];
+        $moved = $items[$pos];
+        array_splice($items, $pos, 1);
+        array_splice($items, max(0, min((int) ($op['to'] ?? 0), count($items))), 0, [$moved]);
+        foreach ($slots as $n => $i) $state['content'][$i] = $items[$n];
         return [$state, $op];
     }
 
-    /** Sospende o rende visibile un'entita radice o un elemento di un elenco. */
+    /** Sospende o rende visibile un contenuto o un elemento di un elenco. */
     private static function setHidden(array $state, array $op, array $ctx): array
     {
         try {
-            $entity = &self::entity($state['data'], (string) ($op['key'] ?? ''), (int) ($op['id'] ?? 0), self::path($op));
+            $item = &self::item($state['content'], (string) ($op['key'] ?? ''), (int) ($op['id'] ?? 0), self::path($op));
         } catch (StagingException $e) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "l'elemento non esiste più"));
         }
         if (!empty($op['hidden'])) {
-            $entity['hidden'] = true;
+            // hidden accanto a tipo e id, prima dei valori
+            $item = array_intersect_key($item, ['type' => 1, 'id' => 1]) + ['hidden' => true] + $item;
         } else {
-            unset($entity['hidden']);
+            unset($item['hidden']);
         }
-        unset($entity);
+        unset($item);
         return [$state, $op];
     }
 
@@ -393,20 +395,15 @@ final class Operations
         $collection = (string) ($op['collection'] ?? '');
         $names = array_map('strval', (array) ($op['path'] ?? []));
         $field = self::validDef((array) ($op['field'] ?? []), $collection);
-        $schema = &self::schemaRef($state['model'], $collection, $names);
-        foreach ($schema as $existing) {
-            if (($existing['name'] ?? null) === $field['name']) {
-                if ($ctx['replay'] && $ctx['force']) return [$state, $op];
-                throw new StagingException(self::conflict($op, "il campo «{$field['name']}» esiste già"));
-            }
+        $fields = &self::schemaRef($state['schema'], $collection, $names);
+        if (self::defPosition($fields, $field['name']) !== null) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "il campo «{$field['name']}» esiste già"));
         }
-        $schema[] = $field;
-        // Anche un campo vuoto deve esistere nei contenuti: un k-array su un campo
-        // mancante cercherebbe una raccolta con lo stesso nome
-        self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($field, $ctx): void {
-            if (self::fieldIndex($entity, $field['name']) === null) {
-                $entity['data'][] = self::emptyValue($field, $ctx['languages']);
-            }
+        $fields[] = $field;
+        // Ogni contenuto ha tutti i campi del suo tipo, anche vuoti
+        self::eachItem($state['content'], $collection, $names, function (array &$item) use ($field, $ctx): void {
+            if (!array_key_exists($field['name'], $item['values'] ?? [])) $item['values'][$field['name']] = self::emptyValue($field, $ctx['languages']);
         });
         return [$state, $op];
     }
@@ -417,16 +414,15 @@ final class Operations
         $names = array_map('strval', (array) ($op['path'] ?? []));
         $name = (string) ($op['name'] ?? '');
         self::assertUserCollection($collection);
-        $schema = &self::schemaRef($state['model'], $collection, $names);
-        $pos = self::defPosition($schema, $name);
+        $fields = &self::schemaRef($state['schema'], $collection, $names);
+        $pos = self::defPosition($fields, $name);
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "il campo «{$name}» non esiste"));
         }
-        array_splice($schema, $pos, 1);
-        self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($name): void {
-            $i = self::fieldIndex($entity, $name);
-            if ($i !== null) array_splice($entity['data'], $i, 1);
+        array_splice($fields, $pos, 1);
+        self::eachItem($state['content'], $collection, $names, function (array &$item) use ($name): void {
+            unset($item['values'][$name]);
         });
         return [$state, $op];
     }
@@ -439,16 +435,19 @@ final class Operations
         $to = (string) ($op['to'] ?? '');
         self::assertUserCollection($collection);
         self::assertFieldName($to);
-        $schema = &self::schemaRef($state['model'], $collection, $names);
-        $pos = self::defPosition($schema, $from);
-        if ($pos === null || self::defPosition($schema, $to) !== null) {
+        $fields = &self::schemaRef($state['schema'], $collection, $names);
+        $pos = self::defPosition($fields, $from);
+        if ($pos === null || self::defPosition($fields, $to) !== null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, $pos === null ? "il campo «{$from}» non esiste" : "esiste già un campo «{$to}»"));
         }
-        $schema[$pos]['name'] = $to;
-        self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($from, $to): void {
-            $i = self::fieldIndex($entity, $from);
-            if ($i !== null) $entity['data'][$i]['name'] = $to;
+        $fields[$pos]['name'] = $to;
+        self::eachItem($state['content'], $collection, $names, function (array &$item) use ($from, $to): void {
+            if (!array_key_exists($from, $item['values'] ?? [])) return;
+            // Stessa posizione fra i valori
+            $values = [];
+            foreach ($item['values'] as $name => $value) $values[$name === $from ? $to : $name] = $value;
+            $item['values'] = $values;
         });
         return [$state, $op];
     }
@@ -457,22 +456,22 @@ final class Operations
     {
         $collection = (string) ($op['collection'] ?? '');
         self::assertUserCollection($collection);
-        $schema = &self::schemaRef($state['model'], $collection, array_map('strval', (array) ($op['path'] ?? [])));
-        $pos = self::defPosition($schema, (string) ($op['name'] ?? ''));
+        $fields = &self::schemaRef($state['schema'], $collection, array_map('strval', (array) ($op['path'] ?? [])));
+        $pos = self::defPosition($fields, (string) ($op['name'] ?? ''));
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "il campo «{$op['name']}» non esiste"));
         }
         if (array_key_exists('description', $op)) {
-            $schema[$pos]['description'] = mb_substr((string) $op['description'], 0, 300);
+            $fields[$pos]['description'] = mb_substr((string) $op['description'], 0, 300);
         }
         // La sezione raggruppa i campi nell'editor; vuota la toglie
         if (array_key_exists('section', $op)) {
             $section = self::section($op['section']);
             if ($section === '') {
-                unset($schema[$pos]['section']);
+                unset($fields[$pos]['section']);
             } else {
-                $schema[$pos]['section'] = $section;
+                $fields[$pos]['section'] = $section;
             }
         }
         return [$state, $op];
@@ -483,7 +482,7 @@ final class Operations
         $name = (string) ($op['name'] ?? '');
         self::assertFieldName($name);
         self::assertUserCollection($name);
-        if (isset($state['model'][$name])) {
+        if (isset($state['schema']['types'][$name])) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "la raccolta «{$name}» esiste già"));
         }
@@ -495,33 +494,30 @@ final class Operations
             }
             $fields[] = $def;
         }
-        $state['model'][$name] = $fields;
+        $state['schema']['types'][$name] = ['fields' => $fields];
         return [$state, $op];
     }
 
-    /** Elimina una raccolta: schema, contenuti, posto in Posts e regole della sitemap. */
+    /** Elimina una raccolta: schema, contenuti, pagine che la rendono ed elenchi promossi. */
     private static function removeCollection(array $state, array $op, array $ctx): array
     {
         $name = (string) ($op['name'] ?? '');
         self::assertUserCollection($name);
-        if (!isset($state['model'][$name])) {
+        if (!isset($state['schema']['types'][$name])) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "la raccolta «{$name}» non esiste"));
         }
-        unset($state['model'][$name]);
-        $state['data'] = array_values(array_filter($state['data'], fn($e) => ($e['name'] ?? null) !== $name));
-        $state['settings']['post_collections'] = self::withoutValue($state['settings']['post_collections'] ?? [], $name);
-        unset($state['settings']['collections'][$name]);
-        if (isset($state['settings']['collection_order'])) {
-            $state['settings']['collection_order'] = self::withoutValue($state['settings']['collection_order'], $name);
-        }
-        if (is_array($state['seo']['sitemap'] ?? null)) {
-            $state['seo']['sitemap'] = array_values(array_filter($state['seo']['sitemap'], fn($r) => !is_array($r) || ($r['key'] ?? 'homepage') !== $name));
+        unset($state['schema']['types'][$name]);
+        $state['content'] = array_values(array_filter($state['content'], fn($e) => ($e['type'] ?? null) !== $name));
+        $state['schema']['pages'] = array_filter($state['schema']['pages'], fn($p) => !is_array($p) || ($p['type'] ?? null) !== $name);
+        if (isset($state['schema']['promoted'])) {
+            $state['schema']['promoted'] = array_values(array_filter((array) $state['schema']['promoted'], fn($p) => ($p['from'] ?? null) !== $name && ($p['to'] ?? null) !== $name));
+            if (!$state['schema']['promoted']) unset($state['schema']['promoted']);
         }
         return [$state, $op];
     }
 
-    /** Rinomina una raccolta: schema, contenuti, Posts e sitemap. I template li aggiorna chi la rinomina. */
+    /** Rinomina una raccolta: schema, contenuti, pagine ed elenchi promossi. I template li aggiorna chi la rinomina. */
     private static function renameCollection(array $state, array $op, array $ctx): array
     {
         $from = (string) ($op['from'] ?? '');
@@ -529,60 +525,59 @@ final class Operations
         self::assertUserCollection($from);
         self::assertFieldName($to);
         self::assertUserCollection($to);
-        if (!isset($state['model'][$from]) || isset($state['model'][$to])) {
+        $types = $state['schema']['types'];
+        if (!isset($types[$from]) || isset($types[$to])) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
-            throw new StagingException(self::conflict($op, !isset($state['model'][$from]) ? "la raccolta «{$from}» non esiste" : "esiste già una raccolta «{$to}»"));
+            throw new StagingException(self::conflict($op, !isset($types[$from]) ? "la raccolta «{$from}» non esiste" : "esiste già una raccolta «{$to}»"));
         }
-        $model = [];
-        foreach ($state['model'] as $key => $schema) $model[$key === $from ? $to : $key] = $schema;
-        $state['model'] = $model;
-        foreach ($state['data'] as &$entity) {
-            if (($entity['name'] ?? null) === $from) $entity['name'] = $to;
+        $renamed = [];
+        foreach ($types as $key => $type) $renamed[$key === $from ? $to : $key] = $type;
+        $state['schema']['types'] = $renamed;
+        foreach ($state['content'] as &$item) {
+            if (($item['type'] ?? null) === $from) $item['type'] = $to;
         }
-        unset($entity);
-        $posts = $state['settings']['post_collections'] ?? [];
-        if (is_array($posts) && in_array($from, $posts, true)) {
-            $state['settings']['post_collections'] = array_values(array_map(fn($n) => $n === $from ? $to : $n, $posts));
+        unset($item);
+        foreach ($state['schema']['pages'] as &$page) {
+            if (is_array($page) && ($page['type'] ?? null) === $from) $page['type'] = $to;
         }
-        if (isset($state['settings']['collections'][$from])) {
-            $state['settings']['collections'][$to] = $state['settings']['collections'][$from];
-            unset($state['settings']['collections'][$from]);
-        }
-        if (is_array($state['settings']['collection_order'] ?? null)) {
-            $state['settings']['collection_order'] = array_values(array_map(fn($n) => $n === $from ? $to : $n, $state['settings']['collection_order']));
-        }
-        if (is_array($state['seo']['sitemap'] ?? null)) {
-            foreach ($state['seo']['sitemap'] as &$rule) {
-                if (is_array($rule) && ($rule['key'] ?? null) === $from) $rule['key'] = $to;
+        unset($page);
+        foreach ((array) ($state['schema']['promoted'] ?? []) as $i => $p) {
+            foreach (['from', 'to'] as $k) {
+                if (($p[$k] ?? null) === $from) $state['schema']['promoted'][$i][$k] = $to;
             }
-            unset($rule);
         }
         return [$state, $op];
     }
 
     /**
-     * Cambia il tipo di un campo e converte i valori: plain diventa lo stesso
-     * testo in ogni lingua, un testo per lingua diventa plain con la prima
-     * lingua non vuota, text e richtext si convertono (escape o testo senza
-     * tag). Da o verso array solo se il campo e vuoto in tutti i contenuti.
+     * Cambia il tipo di un campo, o se ha un valore per lingua, e converte i
+     * valori: un valore condiviso diventa lo stesso in ogni lingua, uno per
+     * lingua diventa condiviso con la prima lingua non vuota, text e richtext
+     * si convertono (escape o testo senza tag). Da o verso elenco,
+     * interruttore o scelta solo se il campo è vuoto in tutti i contenuti.
+     *
+     * "type" accetta i nomi della 1.x: plain è text condiviso; text,
+     * richtext e media senza "localized" diventano per lingua.
      */
     private static function changeType(array $state, array $op, array $ctx): array
     {
         $collection = (string) ($op['collection'] ?? '');
         $names = array_map('strval', (array) ($op['path'] ?? []));
         $name = (string) ($op['name'] ?? '');
-        $type = (string) ($op['type'] ?? '');
+        $asked = (string) ($op['type'] ?? '');
+        $type = self::ALIASES[$asked] ?? $asked;
         self::assertUserCollection($collection);
         if (!in_array($type, self::TYPES, true)) {
-            throw new StagingException("Tipo di campo non valido: '{$type}'. Tipi ammessi: " . implode(', ', self::TYPES) . '.');
+            throw new StagingException("Tipo di campo non valido: '{$asked}'. Tipi ammessi: " . implode(', ', self::TYPES) . '.');
         }
-        $schema = &self::schemaRef($state['model'], $collection, $names);
-        $pos = self::defPosition($schema, $name);
+        $fields = &self::schemaRef($state['schema'], $collection, $names);
+        $pos = self::defPosition($fields, $name);
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "il campo «{$name}» non esiste"));
         }
-        $from = (string) $schema[$pos]['type'];
+        $old = $fields[$pos];
+        $from = self::label($old);
         if ($ctx['replay']) {
             if (!$ctx['force'] && ($op['from'] ?? null) !== $from) {
                 throw new StagingException(self::conflict($op, 'il tipo del campo è stato cambiato sul sito nel frattempo'));
@@ -590,54 +585,68 @@ final class Operations
         } else {
             $op['from'] = $from;
         }
-        if ($from === $type) return [$state, $op];
-        $choices = ['array', 'boolean', 'select'];
-        if (in_array($from, $choices, true) || in_array($type, $choices, true)) {
+        $localized = match (true) {
+            $type === 'list' => null,
+            array_key_exists('localized', $op) => (bool) $op['localized'],
+            $asked === 'plain' => false,
+            in_array($type, ['text', 'richtext', 'media'], true) => true,
+            default => !empty($old['localized']),
+        };
+        $new = ['name' => $name, 'type' => $type] + ($type === 'list' ? ['of' => []] : ['localized' => $localized])
+            + array_intersect_key($old, array_flip(['description', 'section']));
+        if (self::label($new) === $from) return [$state, $op];
+        $choices = ['list', 'boolean', 'select'];
+        if ($old['type'] !== $type && (in_array($old['type'], $choices, true) || in_array($type, $choices, true))) {
             if ($type === 'select') {
                 throw new StagingException("Per un campo a scelta servono le opzioni: aggiungilo con add_field invece di convertire «{$name}».");
             }
             $filled = false;
-            self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($name, &$filled): void {
-                $i = self::fieldIndex($entity, $name);
-                if ($i !== null && !self::isEmptyValue($entity['data'][$i]['value'] ?? null)) $filled = true;
+            self::eachItem($state['content'], $collection, $names, function (array &$item) use ($name, &$filled): void {
+                if (!self::isEmptyValue($item['values'][$name] ?? null)) $filled = true;
             });
             if ($filled) {
-                throw new StagingException("«{$name}» contiene valori: un campo si converte da o verso un elenco o un interruttore solo quando è vuoto in tutti i contenuti.");
+                throw new StagingException("«{$name}» contiene valori: un campo si converte da o verso un elenco, un interruttore o una scelta solo quando è vuoto in tutti i contenuti.");
             }
         }
-        $schema[$pos]['type'] = $type;
-        if ($type === 'array') {
-            $schema[$pos]['of'] = [];
-        } else {
-            unset($schema[$pos]['of'], $schema[$pos]['posts'], $schema[$pos]['options'], $schema[$pos]['multiple'], $schema[$pos]['localized']);
-        }
-        unset($schema);
+        if ($old['type'] === $type && $type === 'select') $new += array_intersect_key($old, array_flip(['options', 'multiple']));
+        $fields[$pos] = $new;
+        unset($fields);
         $languages = $ctx['languages'];
-        self::eachEntity($state['data'], $collection, $names, function (array &$entity) use ($name, $from, $type, $languages): void {
-            $i = self::fieldIndex($entity, $name);
-            if ($i === null) return;
-            $entity['data'][$i]['type'] = $type;
-            $entity['data'][$i]['value'] = self::convertValue($entity['data'][$i]['value'] ?? null, $from, $type, $languages);
+        self::eachItem($state['content'], $collection, $names, function (array &$item) use ($name, $old, $new, $languages): void {
+            if (!array_key_exists($name, $item['values'] ?? [])) return;
+            $item['values'][$name] = self::convertValue($item['values'][$name], $old, $new, $languages);
         });
         return [$state, $op];
     }
 
-    private static function convertValue(mixed $value, string $from, string $to, array $languages): mixed
+    /** Tipo leggibile di un campo, per il confronto alla ripetizione: "text", "text per lingua". */
+    private static function label(array $def): string
     {
-        if ($to === 'array') return [];
-        if ($to === 'boolean') return '';
-        if ($from === 'array') return $to === 'plain' ? '' : array_fill_keys($languages, '');
+        return $def['type'] . (!empty($def['localized']) ? ' per lingua' : '');
+    }
+
+    private static function convertValue(mixed $value, array $from, array $to, array $languages): mixed
+    {
+        if ($from['type'] !== $to['type'] && (in_array($to['type'], ['list', 'boolean', 'select'], true) || in_array($from['type'], ['list', 'boolean', 'select'], true))) {
+            return self::emptyValue($to, $languages);
+        }
+        if ($from['type'] === $to['type'] && in_array($to['type'], ['boolean', 'select'], true)) {
+            // Stessa scelta, condivisa o per lingua
+            if (!empty($to['localized']) && empty($from['localized'])) return array_fill_keys($languages, $value);
+            if (empty($to['localized']) && is_array($value) && !array_is_list($value)) return $value[$languages[0]] ?? (array_values($value)[0] ?? self::emptyOf($to));
+            return $value;
+        }
         $convert = function (string $text) use ($from, $to): string {
-            if ($from === 'richtext' && $to !== 'richtext') {
+            if ($from['type'] === 'richtext' && $to['type'] !== 'richtext') {
                 $text = str_ireplace(['<br>', '<br/>', '<br />', '</p>'], "\n", $text);
                 return trim(html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
             }
-            if ($to === 'richtext' && $from !== 'richtext') {
+            if ($to['type'] === 'richtext' && $from['type'] !== 'richtext') {
                 return $text === '' ? '' : nl2br(htmlspecialchars($text, ENT_QUOTES, 'UTF-8'), false);
             }
             return $text;
         };
-        if ($to === 'plain') {
+        if (empty($to['localized'])) {
             if (!is_array($value)) return $convert((string) $value);
             foreach ($languages as $lang) {
                 if (isset($value[$lang]) && $value[$lang] !== '') return $convert((string) $value[$lang]);
@@ -669,7 +678,7 @@ final class Operations
             }
             return true;
         }
-        return $value === null || $value === '';
+        return $value === null || $value === '' || $value === false;
     }
 
     /** Sposta un campo nello schema: cambia solo l'ordine nell'editor. */
@@ -677,126 +686,120 @@ final class Operations
     {
         $collection = (string) ($op['collection'] ?? '');
         self::assertUserCollection($collection);
-        $schema = &self::schemaRef($state['model'], $collection, array_map('strval', (array) ($op['path'] ?? [])));
-        $pos = self::defPosition($schema, (string) ($op['name'] ?? ''));
+        $fields = &self::schemaRef($state['schema'], $collection, array_map('strval', (array) ($op['path'] ?? [])));
+        $pos = self::defPosition($fields, (string) ($op['name'] ?? ''));
         if ($pos === null) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "il campo «{$op['name']}» non esiste"));
         }
-        $list = array_values($schema);
+        $list = array_values($fields);
         $field = $list[$pos];
         array_splice($list, $pos, 1);
         array_splice($list, max(0, min((int) ($op['to'] ?? 0), count($list))), 0, [$field]);
-        $schema = $list;
+        $fields = $list;
         return [$state, $op];
     }
 
-    /** "Mostra in Posts" su un elenco di primo livello. */
+    /** Nel formato 2 un elenco non sta in Posts: gli articoli sono una raccolta. */
     private static function setPosts(array $state, array $op, array $ctx): array
     {
-        $collection = (string) ($op['collection'] ?? '');
-        self::assertUserCollection($collection);
-        $schema = &self::schemaRef($state['model'], $collection, []);
-        $pos = self::defPosition($schema, (string) ($op['name'] ?? ''));
-        if ($pos === null || ($schema[$pos]['type'] ?? null) !== 'array') {
-            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
-            throw new StagingException(self::conflict($op, "«{$op['name']}» non è un elenco di primo livello"));
-        }
-        if (!empty($op['posts'])) {
-            $schema[$pos]['posts'] = true;
-        } else {
-            unset($schema[$pos]['posts']);
-        }
-        return [$state, $op];
+        if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+        throw new StagingException('Un elenco non sta più in Posts: gli articoli sono una raccolta, con set_post_collection (i nuovi in cima).');
     }
 
-    /** Una raccolta intera in Posts (cms_settings.json, post_collections). */
+    /** Una raccolta in Posts: un elenco di articoli, i nuovi in cima (newest_first). */
     private static function setPostCollection(array $state, array $op, array $ctx): array
     {
         $collection = (string) ($op['collection'] ?? '');
         self::assertUserCollection($collection);
-        if (!isset($state['model'][$collection])) {
+        if (!isset($state['schema']['types'][$collection])) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "la raccolta «{$collection}» non esiste"));
         }
-        $names = self::withoutValue($state['settings']['post_collections'] ?? [], $collection);
-        if (!empty($op['enabled'])) $names[] = $collection;
-        $state['settings']['post_collections'] = $names;
+        $type = $state['schema']['types'][$collection];
+        unset($type['newest_first']);
+        $state['schema']['types'][$collection] = self::typeAttrs($type, ['newest_first' => !empty($op['enabled']) ? true : null]);
         return [$state, $op];
     }
 
     /**
-     * Nome visibile, descrizione e contenuto unico di una raccolta
-     * (cms_settings.json, collections). Solo le chiavi indicate; "" toglie
-     * nome o descrizione. Contenuto unico solo con al massimo un contenuto.
+     * Nome visibile, descrizione e contenuto unico di una raccolta. Solo le
+     * chiavi indicate; "" toglie nome o descrizione. Contenuto unico solo con
+     * al massimo un contenuto.
      */
     private static function setCollectionInfo(array $state, array $op, array $ctx): array
     {
         $collection = (string) ($op['collection'] ?? '');
         self::assertUserCollection($collection);
-        if (!isset($state['model'][$collection])) {
+        if (!isset($state['schema']['types'][$collection])) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "la raccolta «{$collection}» non esiste"));
         }
-        $entry = is_array($state['settings']['collections'][$collection] ?? null) ? $state['settings']['collections'][$collection] : [];
+        $type = $state['schema']['types'][$collection];
+        $set = [];
         foreach (['label' => 60, 'description' => 200] as $key => $max) {
             if (!array_key_exists($key, $op)) continue;
             $text = mb_substr(trim((string) $op[$key]), 0, $max);
-            if ($text === '') unset($entry[$key]); else $entry[$key] = $text;
+            unset($type[$key]);
+            $set[$key] = $text === '' ? null : $text;
         }
         if (array_key_exists('single', $op)) {
-            $count = count(array_filter($state['data'], fn($e) => ($e['name'] ?? null) === $collection));
+            $count = count(array_filter($state['content'], fn($e) => ($e['type'] ?? null) === $collection));
             if (!empty($op['single']) && $count > 1) {
                 throw new StagingException("«{$collection}» ha {$count} contenuti: il contenuto unico vale solo con uno.");
             }
-            if (!empty($op['single'])) $entry['single'] = true; else unset($entry['single']);
+            unset($type['single']);
+            $set['single'] = !empty($op['single']) ? true : null;
         }
-        if ($entry) {
-            $state['settings']['collections'][$collection] = $entry;
-        } else {
-            unset($state['settings']['collections'][$collection]);
-        }
+        $state['schema']['types'][$collection] = self::typeAttrs($type, $set);
         return [$state, $op];
     }
 
-    /** Posizione di una raccolta nell'editor (cms_settings.json, collection_order). */
+    /** Gli attributi di un tipo nell'ordine fisso (label, description, single, newest_first, reserved), poi i campi. */
+    private static function typeAttrs(array $type, array $set): array
+    {
+        $out = [];
+        foreach (['label', 'description', 'single', 'newest_first', 'reserved'] as $key) {
+            $value = array_key_exists($key, $set) ? $set[$key] : ($type[$key] ?? null);
+            if ($value !== null) $out[$key] = $value;
+        }
+        return $out + array_diff_key($type, $out) + ['fields' => []];
+    }
+
+    /** Posizione di una raccolta nell'editor: l'ordine dei tipi nello schema. */
     private static function moveCollection(array $state, array $op, array $ctx): array
     {
         $collection = (string) ($op['collection'] ?? '');
         self::assertUserCollection($collection);
-        if (!isset($state['model'][$collection])) {
+        $types = $state['schema']['types'];
+        if (!isset($types[$collection])) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "la raccolta «{$collection}» non esiste"));
         }
-        $current = is_array($state['settings']['collection_order'] ?? null) ? $state['settings']['collection_order'] : [];
-        $names = array_values(array_filter(array_keys($state['model']), fn($n) => !str_starts_with((string) $n, 'kris_')));
-        $order = array_values(array_unique(array_merge(array_values(array_intersect($current, $names)), $names)));
-        $order = self::withoutValue($order, $collection);
+        $order = array_values(array_filter(array_keys($types), fn($n) => !str_starts_with((string) $n, 'kris_') && $n !== $collection));
         array_splice($order, max(0, min((int) ($op['to'] ?? 0), count($order))), 0, [$collection]);
-        $state['settings']['collection_order'] = $order;
+        $sorted = [];
+        foreach ($order as $name) $sorted[$name] = $types[$name];
+        // Le sezioni di Kris restano in fondo, nel loro ordine
+        $state['schema']['types'] = $sorted + $types;
         return [$state, $op];
-    }
-
-    private static function withoutValue(mixed $list, string $value): array
-    {
-        return is_array($list) ? array_values(array_filter($list, fn($v) => $v !== $value)) : [];
     }
 
     // --- pagine --------------------------------------------------------------
 
-    /** Toglie una pagina dalle pagine pubbliche e le sue regole dalla sitemap. Il template resta. */
+    /** Toglie una pagina dalle pagine pubbliche (e dalla sitemap). Il template resta. */
     private static function unregisterPage(array $state, array $op, array $ctx): array
     {
         $page = (string) ($op['page'] ?? '');
         if ($page === 'homepage') {
             throw new StagingException('La homepage è la pagina predefinita del sito: non si può togliere.');
         }
-        if (!in_array($page, $state['pages'], true)) {
+        if (!isset($state['schema']['pages'][$page])) {
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "«{$page}» non è una pagina pubblica"));
         }
-        $state['pages'] = self::withoutValue($state['pages'], $page);
-        return [self::withoutSitemapRules($state, $page), $op];
+        unset($state['schema']['pages'][$page]);
+        return [$state, $op];
     }
 
     private static function registerPage(array $state, array $op, array $ctx): array
@@ -805,86 +808,78 @@ final class Operations
         if (preg_match('/^[a-z0-9][a-z0-9_-]*$/', $page) !== 1) {
             throw new StagingException("Nome di pagina non valido: '{$page}'.");
         }
-        if (!in_array($page, $state['pages'], true)) {
-            $state['pages'][] = $page;
+        $current = $state['schema']['pages'][$page] ?? null;
+        if (!array_key_exists('sitemap', $op)) {
+            $state['schema']['pages'][$page] = is_array($current) ? $current : self::pageEntry($state['schema'], $page, false, null);
+            return [$state, $op];
         }
-        if (!array_key_exists('sitemap', $op)) return [$state, $op];
-        $rule = self::sitemapRule($page, $op['sitemap']);
-        // false: una pagina raggiungibile solo da chi conosce l'indirizzo, senza regole nella sitemap
-        if ($rule === null) return [self::withoutSitemapRules($state, $page), $op];
-        $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : [['page' => 'homepage']];
-        if (!in_array($rule, $sitemap, true)) $sitemap[] = $rule;
-        $state['seo']['sitemap'] = $sitemap;
+        $state['schema']['pages'][$page] = self::pageEntry($state['schema'], $page, $op['sitemap'], is_array($current) ? $current : null);
         return [$state, $op];
     }
 
-    /**
-     * Mette o toglie dalla sitemap una pagina già pubblica: le sue regole
-     * vengono sostituite da quella indicata, o tolte con false.
-     */
+    /** Mette o toglie dalla sitemap una pagina già pubblica; una regola indica anche cosa rende. */
     private static function setSitemap(array $state, array $op, array $ctx): array
     {
         $page = (string) ($op['page'] ?? '');
-        if (!in_array($page, $state['pages'], true)) {
+        if (!isset($state['schema']['pages'][$page])) {
             throw new StagingException(self::conflict($op, "«{$page}» non è una pagina pubblica: registrala con register_page"));
         }
         if (!array_key_exists('sitemap', $op)) {
             throw new StagingException('set_sitemap vuole «sitemap»: false per toglierla, true o una regola ({"key", "id", "children"}) per metterla.');
         }
-        $rule = self::sitemapRule($page, $op['sitemap']);
-        $state = self::withoutSitemapRules($state, $page);
-        if ($rule !== null) {
-            $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : [['page' => 'homepage']];
-            $sitemap[] = $rule;
-            $state['seo']['sitemap'] = $sitemap;
-        }
+        $state['schema']['pages'][$page] = self::pageEntry($state['schema'], $page, $op['sitemap'], $state['schema']['pages'][$page]);
         return [$state, $op];
     }
 
     /**
-     * Regola della sitemap per una pagina: null con false, solo la pagina con
-     * true, altrimenti la pagina con key, id e children dati.
+     * La pagina dello schema: con false fuori dalla sitemap, con true nella
+     * sitemap, con una regola {key, id, children} nella sitemap e con quello
+     * che rende (il tipo, il contenuto fisso, l'elenco). Una pagina nuova
+     * senza regola rende il contenuto 0 del tipo con il suo nome, o della
+     * homepage.
      */
-    private static function sitemapRule(string $page, mixed $value): ?array
+    private static function pageEntry(array $schema, string $page, mixed $sitemap, ?array $current): array
     {
-        if ($value === false || $value === null) return null;
-        if ($value === true) return ['page' => $page];
-        if (!is_array($value)) {
+        $entry = $current ?? ['template' => $page, 'type' => isset($schema['types'][$page]) ? $page : 'homepage', 'item' => 0];
+        if ($sitemap === false || $sitemap === null || $sitemap === true) {
+            $entry['sitemap'] = $sitemap === true;
+            return self::pageOrder($entry);
+        }
+        if (!is_array($sitemap)) {
             throw new StagingException('«sitemap» è false, true o una regola con "key", "id" e "children".');
         }
-        $unknown = array_diff(array_map('strval', array_keys($value)), ['key', 'id', 'children']);
+        $unknown = array_diff(array_map('strval', array_keys($sitemap)), ['key', 'id', 'children']);
         if ($unknown) {
             throw new StagingException('La regola della sitemap non conosce ' . implode(', ', array_map(fn($k) => "«{$k}»", $unknown)) . '. Chiavi ammesse: key, id, children.');
         }
-        $rule = ['page' => $page];
-        foreach (['key', 'children'] as $k) {
-            if (isset($value[$k])) $rule[$k] = (string) $value[$k];
+        $type = isset($sitemap['key']) ? (string) $sitemap['key'] : 'homepage';
+        unset($entry['item'], $entry['list'], $entry['slug']);
+        $entry['type'] = $type;
+        if (isset($sitemap['children']) && (string) $sitemap['children'] !== '') {
+            $entry += ['item' => (int) ($sitemap['id'] ?? 0), 'list' => (string) $sitemap['children']];
+        } elseif (isset($sitemap['id']) || $type === 'homepage') {
+            $entry['item'] = (int) ($sitemap['id'] ?? 0);
         }
-        if (isset($value['id'])) $rule['id'] = (int) $value['id'];
-        return $rule;
+        $entry['sitemap'] = true;
+        return self::pageOrder($entry);
     }
 
-    private static function withoutSitemapRules(array $state, string $page): array
+    private static function pageOrder(array $entry): array
     {
-        if (is_array($state['seo']['sitemap'] ?? null)) {
-            $state['seo']['sitemap'] = array_values(array_filter($state['seo']['sitemap'], fn($r) => !is_array($r) || ($r['page'] ?? null) !== $page));
+        $out = [];
+        foreach (['template', 'type', 'item', 'list', 'sitemap', 'priority', 'slug'] as $key) {
+            if (array_key_exists($key, $entry)) $out[$key] = $entry[$key];
         }
-        return $state;
+        return $out + $entry;
     }
 
     // --- valori --------------------------------------------------------------
 
-    /** Valore completo di un campo non array, controllato rispetto al tipo. */
+    /** Valore completo di un campo non elenco, controllato rispetto al tipo. */
     private static function value(array $def, mixed $value, array $ctx): mixed
     {
-        if (Entity::isShared($def)) {
-            if (in_array($def['type'], ['boolean', 'select'], true)) return self::choice($def, $value);
-            if (!is_scalar($value) && $value !== null) {
-                throw new StagingException("«{$def['name']}» è un campo plain: serve un valore semplice.");
-            }
-            return $value === null ? '' : (is_bool($value) ? ($value ? '1' : '0') : (string) $value);
-        }
-        if (in_array($def['type'], ['boolean', 'select'], true) && !is_array($value)) {
+        if (self::shared($def)) return self::one($def, $value, $ctx, true);
+        if (in_array($def['type'], ['boolean', 'select'], true) && (!is_array($value) || array_is_list($value))) {
             // Interruttore o scelta per lingua: un valore solo vale per tutte le lingue
             $value = array_fill_keys($ctx['languages'], $value);
         }
@@ -895,12 +890,12 @@ final class Operations
         if (!is_array($value)) {
             throw new StagingException("«{$def['name']}» vuole un testo per lingua, per esempio {\"it\": \"…\"}.");
         }
-        $out = array_fill_keys($ctx['languages'], '');
+        $out = array_fill_keys($ctx['languages'], self::emptyOf($def));
         foreach ($value as $lang => $text) {
             if (!in_array($lang, $ctx['languages'], true)) {
                 throw new StagingException("La lingua '{$lang}' non è attiva sul sito.");
             }
-            $out[$lang] = self::langString($def, $text, $ctx);
+            $out[$lang] = self::one($def, $text, $ctx);
         }
         $empty = array_keys(array_filter($out, fn($text) => $text === ''));
         if ($empty && count($empty) < count($out) && !$ctx['replay']) {
@@ -910,112 +905,124 @@ final class Operations
         return $out;
     }
 
-    /** Interruttore ("1" o "") o scelta fra le opzioni dello schema; un'opzione sconosciuta è un errore. */
-    private static function choice(array $def, mixed $value): string
+    /**
+     * Un valore (di una lingua, o condiviso): true/false per un interruttore,
+     * l'opzione o le opzioni per una scelta, un testo per gli altri.
+     */
+    private static function one(array $def, mixed $value, array $ctx, bool $lenient = false): mixed
     {
         if ($def['type'] === 'boolean') {
             if (!in_array($value, [true, false, 1, 0, '1', '0', '', null], true)) {
                 throw new StagingException("«{$def['name']}» è un interruttore: true o false.");
             }
-            return Entity::normalizeChoice($def, $value);
+            return in_array($value, [true, 1, '1'], true);
         }
-        $picked = is_array($value) ? $value : ($value === null || $value === '' ? [] : explode(',', (string) $value));
-        $picked = array_map(fn($v) => trim((string) $v), $picked);
-        $unknown = array_diff($picked, array_map('strval', (array) ($def['options'] ?? [])));
-        if ($unknown) {
-            throw new StagingException("«{$def['name']}» non ha l'opzione «" . implode('», «', $unknown) . '». Opzioni: ' . implode(', ', (array) ($def['options'] ?? [])) . '.');
+        if ($def['type'] === 'select') {
+            $picked = is_array($value) ? $value : ($value === null || $value === '' ? [] : explode(',', (string) $value));
+            $picked = array_values(array_map(fn($v) => trim((string) $v), $picked));
+            $options = array_map('strval', (array) ($def['options'] ?? []));
+            $unknown = array_diff($picked, $options);
+            if ($unknown) {
+                throw new StagingException("«{$def['name']}» non ha l'opzione «" . implode('», «', $unknown) . '». Opzioni: ' . implode(', ', $options) . '.');
+            }
+            if (count($picked) > 1 && empty($def['multiple'])) {
+                throw new StagingException("«{$def['name']}» ammette una sola opzione.");
+            }
+            // Nell'ordine delle opzioni
+            $picked = array_values(array_intersect($options, $picked));
+            return !empty($def['multiple']) ? $picked : ($picked[0] ?? '');
         }
-        if (count($picked) > 1 && empty($def['multiple'])) {
-            throw new StagingException("«{$def['name']}» ammette una sola opzione.");
+        if ($lenient && !is_string($value)) {
+            // Un campo condiviso accetta un numero o un sì/no: diventa testo
+            if (!is_scalar($value) && $value !== null) {
+                throw new StagingException("«{$def['name']}» ha un solo valore per tutte le lingue: serve un valore semplice.");
+            }
+            $value = $value === null ? '' : (is_bool($value) ? ($value ? '1' : '0') : (string) $value);
         }
-        return Entity::normalizeChoice($def, $picked);
-    }
-
-    private static function langString(array $def, mixed $text, array $ctx): string
-    {
-        if (in_array($def['type'], ['boolean', 'select'], true)) return self::choice($def, $text);
-        if (!is_string($text)) {
+        if (!is_string($value)) {
             throw new StagingException("Il valore di «{$def['name']}» deve essere un testo.");
         }
-        if ($def['type'] === 'image' && $text !== '') {
-            if (preg_match('#^assets/uploads/[A-Za-z0-9._-]+$#', $text) !== 1 || !($ctx['uploadExists'])($text)) {
-                throw new StagingException("«{$def['name']}» è un'immagine: usa un file caricato, assets/uploads/<nome>. '{$text}' non esiste.");
+        if ($def['type'] === 'media' && $value !== '') {
+            if (preg_match('#^assets/uploads/[A-Za-z0-9._-]+$#', $value) !== 1 || !($ctx['uploadExists'])($value)) {
+                throw new StagingException("«{$def['name']}» è un file: usa un file caricato, assets/uploads/<nome>. '{$value}' non esiste.");
             }
         }
-        if ($def['type'] === 'text' && $text !== strip_tags($text)) {
+        // Un testo per lingua è testo semplice; uno condiviso (codici, URL, snippet) esce comunque con l'escape
+        if ($def['type'] === 'text' && !empty($def['localized']) && $value !== strip_tags($value)) {
             throw new StagingException("«{$def['name']}» è testo semplice: niente HTML (per l'HTML serve un campo richtext).");
         }
-        return $text;
+        // Il testo formattato si salva già filtrato: solo gli elementi e gli attributi ammessi
+        return $def['type'] === 'richtext' ? \Kris\Template\Richtext::clean($value) : $value;
     }
 
     /**
-     * Campi di un elemento nuovo: tutti quelli dello schema, vuoti se non
+     * Valori di un elemento nuovo: tutti i campi dello schema, vuoti se non
      * indicati. Un elenco annidato si passa come lista di elementi, ognuno con
      * i suoi campi: gli elementi ricevono gli id 0, 1, 2… nell'ordine dato.
      */
-    private static function fill(array $schema, array $fields, array $ctx): array
+    private static function fill(array $fields, array $values, array $ctx): array
     {
         $out = [];
-        foreach ($schema as $def) {
-            if (!array_key_exists($def['name'], $fields)) {
-                $out[] = self::emptyValue($def, $ctx['languages']);
-            } elseif ($def['type'] === 'array') {
-                $items = $fields[$def['name']];
+        foreach ($fields as $def) {
+            if (!array_key_exists($def['name'], $values)) {
+                $out[$def['name']] = self::emptyValue($def, $ctx['languages']);
+            } elseif ($def['type'] === 'list') {
+                $items = $values[$def['name']];
                 if (!is_array($items) || !array_is_list($items)) {
                     throw new StagingException("«{$def['name']}» è un elenco: passa una lista di elementi, per esempio [{\"title\": {…}}, …].");
                 }
-                $value = [];
+                $list = [];
                 foreach ($items as $i => $item) {
                     if (!is_array($item) || ($item && array_is_list($item))) {
                         throw new StagingException("L'elemento {$i} di «{$def['name']}» deve essere un oggetto con i suoi campi.");
                     }
-                    $value[] = ['id' => $i, 'data' => self::fill($def['of'] ?? [], $item, $ctx)];
+                    $list[] = ['id' => $i, 'values' => self::fill($def['of'] ?? [], $item, $ctx)];
                 }
-                $out[] = ['name' => $def['name'], 'type' => 'array', 'value' => $value];
+                $out[$def['name']] = $list;
             } else {
-                $out[] = ['name' => $def['name'], 'type' => $def['type'], 'value' => self::value($def, $fields[$def['name']], $ctx)];
+                $out[$def['name']] = self::value($def, $values[$def['name']], $ctx);
             }
         }
-        foreach (array_keys($fields) as $name) {
-            if (self::defPosition($schema, (string) $name) === null) {
+        foreach (array_keys($values) as $name) {
+            if (self::defPosition($fields, (string) $name) === null) {
                 throw new StagingException("Il campo «{$name}» non esiste nello schema.");
             }
         }
         return $out;
     }
 
-    private static function emptyValue(array $def, array $languages): array
+    /** Il valore vuoto di un campo: per lingua se il campo è localizzato. */
+    public static function emptyValue(array $def, array $languages): mixed
     {
-        $value = $def['type'] === 'array' ? [] : (Entity::isShared($def) ? '' : array_fill_keys($languages, ''));
-        return ['name' => $def['name'], 'type' => $def['type'], 'value' => $value];
+        if (($def['type'] ?? '') === 'list') return [];
+        return self::shared($def) ? self::emptyOf($def) : array_fill_keys($languages, self::emptyOf($def));
+    }
+
+    private static function emptyOf(array $def): mixed
+    {
+        return match ($def['type'] ?? '') {
+            'boolean' => false,
+            'select' => !empty($def['multiple']) ? [] : '',
+            'list' => [],
+            default => '',
+        };
     }
 
     // --- schema: regole ------------------------------------------------------
 
+    /** Una definizione di campo del formato 2, dai nomi del formato 2 o della 1.x. */
     private static function validDef(array $def, string $collection): array
     {
         self::assertUserCollection($collection);
         $name = (string) ($def['name'] ?? '');
-        $type = (string) ($def['type'] ?? '');
+        $asked = (string) ($def['type'] ?? '');
+        $type = self::ALIASES[$asked] ?? $asked;
         self::assertFieldName($name);
         if (!in_array($type, self::TYPES, true)) {
-            throw new StagingException("Tipo di campo non valido: '{$type}'. Tipi ammessi: " . implode(', ', self::TYPES) . '.');
+            throw new StagingException("Tipo di campo non valido: '{$asked}'. Tipi ammessi: " . implode(', ', self::TYPES) . '.');
         }
         $out = ['name' => $name, 'type' => $type];
-        if (isset($def['description'])) $out['description'] = mb_substr((string) $def['description'], 0, 300);
-        $section = self::section($def['section'] ?? null);
-        if ($section !== '') $out['section'] = $section;
-        if (in_array($type, ['boolean', 'select'], true) && !empty($def['localized'])) $out['localized'] = true;
-        if ($type === 'select') {
-            $options = array_values(array_unique(array_filter(array_map(fn($o) => trim((string) $o), (array) ($def['options'] ?? [])), fn($o) => $o !== '')));
-            if (!$options) throw new StagingException("«{$name}» è una scelta: servono le opzioni, per esempio \"options\": [\"web\", \"app\"].");
-            foreach ($options as $option) {
-                if (str_contains($option, ',')) throw new StagingException("L'opzione «{$option}» di «{$name}» non può contenere virgole.");
-            }
-            $out['options'] = $options;
-            if (!empty($def['multiple'])) $out['multiple'] = true;
-        }
-        if ($type === 'array') {
+        if ($type === 'list') {
             $of = [];
             foreach ((array) ($def['of'] ?? []) as $child) {
                 $child = self::validDef((array) $child, $collection);
@@ -1025,6 +1032,22 @@ final class Operations
                 $of[] = $child;
             }
             $out['of'] = $of;
+        } else {
+            $out['localized'] = array_key_exists('localized', $def)
+                ? (bool) $def['localized']
+                : ($asked !== 'plain' && in_array($type, ['text', 'richtext', 'media'], true));
+        }
+        if (isset($def['description'])) $out['description'] = mb_substr((string) $def['description'], 0, 300);
+        $section = self::section($def['section'] ?? null);
+        if ($section !== '') $out['section'] = $section;
+        if ($type === 'select') {
+            $options = array_values(array_unique(array_filter(array_map(fn($o) => trim((string) $o), (array) ($def['options'] ?? [])), fn($o) => $o !== '')));
+            if (!$options) throw new StagingException("«{$name}» è una scelta: servono le opzioni, per esempio \"options\": [\"web\", \"app\"].");
+            foreach ($options as $option) {
+                if (str_contains($option, ',')) throw new StagingException("L'opzione «{$option}» di «{$name}» non può contenere virgole.");
+            }
+            $out['options'] = $options;
+            $out['multiple'] = !empty($def['multiple']);
         }
         return $out;
     }
@@ -1064,120 +1087,122 @@ final class Operations
     }
 
     /** I nomi degli elenchi in un percorso: ['servizi', 2, 'punti', 0] -> ['servizi', 'punti']. */
-    private static function arrayNames(array $path): array
+    private static function listNames(array $path): array
     {
         $names = [];
         for ($i = 0; $i < count($path); $i += 2) $names[] = (string) $path[$i];
         return $names;
     }
 
-    private static function schemaAt(array $model, string $collection, array $arrayNames): array
+    private static function type(array $state, string $key): array
     {
-        if (!isset($model[$collection]) || !is_array($model[$collection])) {
-            throw new StagingException("La raccolta «{$collection}» non esiste.");
-        }
-        $schema = $model[$collection];
-        foreach ($arrayNames as $name) {
-            $def = self::fieldDef($schema, $name);
-            if ($def['type'] !== 'array') throw new StagingException("«{$name}» non è un elenco.");
-            $schema = $def['of'] ?? [];
-        }
-        return $schema;
+        $type = $state['schema']['types'][$key] ?? null;
+        if (!is_array($type)) throw new StagingException("La raccolta «{$key}» non esiste.");
+        return $type;
     }
 
-    private static function &schemaRef(array &$model, string $collection, array $arrayNames): array
+    /** I campi al livello indicato: del tipo, o di un elenco annidato. */
+    private static function schemaAt(array $schema, string $type, array $listNames): array
     {
-        if (!isset($model[$collection]) || !is_array($model[$collection])) {
-            throw new StagingException("La raccolta «{$collection}» non esiste.");
+        $fields = $schema['types'][$type]['fields'] ?? null;
+        if (!isset($schema['types'][$type]) || !is_array($fields)) {
+            throw new StagingException("La raccolta «{$type}» non esiste.");
         }
-        $schema = &$model[$collection];
-        foreach ($arrayNames as $name) {
-            $pos = self::defPosition($schema, $name);
-            if ($pos === null || ($schema[$pos]['type'] ?? null) !== 'array') {
-                throw new StagingException("«{$name}» non è un elenco di «{$collection}».");
+        foreach ($listNames as $name) {
+            $def = self::fieldDef($fields, $name);
+            if ($def['type'] !== 'list') throw new StagingException("«{$name}» non è un elenco.");
+            $fields = $def['of'] ?? [];
+        }
+        return $fields;
+    }
+
+    private static function &schemaRef(array &$schema, string $type, array $listNames): array
+    {
+        if (!isset($schema['types'][$type]) || !is_array($schema['types'][$type])) {
+            throw new StagingException("La raccolta «{$type}» non esiste.");
+        }
+        if (!is_array($schema['types'][$type]['fields'] ?? null)) $schema['types'][$type]['fields'] = [];
+        $fields = &$schema['types'][$type]['fields'];
+        foreach ($listNames as $name) {
+            $pos = self::defPosition($fields, $name);
+            if ($pos === null || ($fields[$pos]['type'] ?? null) !== 'list') {
+                throw new StagingException("«{$name}» non è un elenco di «{$type}».");
             }
-            if (!isset($schema[$pos]['of'])) $schema[$pos]['of'] = [];
-            $schema = &$schema[$pos]['of'];
+            if (!isset($fields[$pos]['of'])) $fields[$pos]['of'] = [];
+            $fields = &$fields[$pos]['of'];
         }
-        return $schema;
+        return $fields;
     }
 
-    private static function fieldDef(array $schema, string $name): array
+    private static function fieldDef(array $fields, string $name): array
     {
-        $pos = self::defPosition($schema, $name);
+        $pos = self::defPosition($fields, $name);
         if ($pos === null) {
             throw new StagingException("Il campo «{$name}» non esiste nello schema.");
         }
-        return $schema[$pos];
+        return array_values($fields)[$pos];
     }
 
-    private static function defPosition(array $schema, string $name): ?int
+    private static function defPosition(array $fields, string $name): ?int
     {
-        foreach (array_values($schema) as $i => $def) {
+        foreach (array_values($fields) as $i => $def) {
             if (($def['name'] ?? null) === $name) return $i;
         }
         return null;
     }
 
-    /** $reservedWritable: un valore di una raccolta kris_ che si puo cambiare (vedi setField); il resto no. */
-    private static function &entity(array &$data, string $key, int $id, array $path, bool $reservedWritable = false): array
+    /** $reservedWritable: un valore di una sezione kris_ che si puo cambiare (vedi setField); il resto no. */
+    private static function &item(array &$content, string $type, int $id, array $path, bool $reservedWritable = false): array
     {
         if (!($reservedWritable && !$path)) {
-            self::assertUserCollection($key);
+            self::assertUserCollection($type);
         }
         $found = null;
-        foreach ($data as $i => $root) {
-            if (($root['name'] ?? null) === $key && (int) ($root['id'] ?? -1) === $id) { $found = $i; break; }
+        foreach ($content as $i => $root) {
+            if (($root['type'] ?? null) === $type && (int) ($root['id'] ?? -1) === $id) { $found = $i; break; }
         }
         if ($found === null) {
-            throw new StagingException("Il contenuto «{$key}» con id {$id} non esiste.");
+            throw new StagingException("Il contenuto «{$type}» con id {$id} non esiste.");
         }
-        $cur = &$data[$found];
+        $cur = &$content[$found];
         for ($i = 0; $i < count($path); $i += 2) {
-            $index = self::fieldIndex($cur, (string) $path[$i]);
-            $items = $index === null ? [] : $cur['data'][$index]['value'];
+            $name = (string) $path[$i];
+            $items = $cur['values'][$name] ?? [];
             $pos = self::itemPosition(is_array($items) ? $items : [], (int) $path[$i + 1]);
             if ($pos === null) {
                 throw new StagingException("L'elemento {$path[$i]}/{$path[$i + 1]} non esiste.");
             }
-            $cur = &$cur['data'][$index]['value'][$pos];
+            $cur = &$cur['values'][$name][$pos];
         }
         return $cur;
     }
 
-    /** Chiama $fn su ogni entita al livello indicato: radici della raccolta, o figli dentro gli elenchi. */
-    private static function eachEntity(array &$data, string $collection, array $arrayNames, callable $fn): void
+    /** Chiama $fn su ogni contenuto al livello indicato: del tipo, o elementi dentro gli elenchi. */
+    private static function eachItem(array &$content, string $type, array $listNames, callable $fn): void
     {
-        foreach ($data as &$root) {
-            if (($root['name'] ?? null) === $collection) self::eachIn($root, $arrayNames, $fn);
+        foreach ($content as &$root) {
+            if (($root['type'] ?? null) === $type) self::eachIn($root, $listNames, $fn);
         }
     }
 
-    private static function eachIn(array &$entity, array $arrayNames, callable $fn): void
+    private static function eachIn(array &$item, array $listNames, callable $fn): void
     {
-        if (!$arrayNames) {
-            $fn($entity);
+        if (!isset($item['values']) || !is_array($item['values'])) $item['values'] = [];
+        if (!$listNames) {
+            $fn($item);
             return;
         }
-        $index = self::fieldIndex($entity, (string) $arrayNames[0]);
-        if ($index === null || !is_array($entity['data'][$index]['value'])) return;
-        foreach ($entity['data'][$index]['value'] as &$child) {
-            self::eachIn($child, array_slice($arrayNames, 1), $fn);
+        $name = (string) $listNames[0];
+        if (!is_array($item['values'][$name] ?? null)) return;
+        foreach ($item['values'][$name] as &$child) {
+            self::eachIn($child, array_slice($listNames, 1), $fn);
         }
     }
 
-    private static function fieldIndex(array $entity, string $name): ?int
+    private static function rootPosition(array $content, string $type, int $id): ?int
     {
-        foreach ($entity['data'] ?? [] as $i => $field) {
-            if (($field['name'] ?? null) === $name) return $i;
-        }
-        return null;
-    }
-
-    private static function rootPosition(array $data, string $key, int $id): ?int
-    {
-        foreach (array_values($data) as $i => $root) {
-            if (($root['name'] ?? null) === $key && (int) ($root['id'] ?? -1) === $id) return $i;
+        foreach (array_values($content) as $i => $root) {
+            if (($root['type'] ?? null) === $type && (int) ($root['id'] ?? -1) === $id) return $i;
         }
         return null;
     }

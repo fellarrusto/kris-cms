@@ -417,39 +417,32 @@ namespace Kris\Install {
      */
     function smoke_test(string $root): ?string
     {
-        $data = read_json($root . '/data/k_data.json');
-        $model = read_json($root . '/data/k_model.json');
-        if ($data === null || $model === null) {
+        try {
+            \Kris\Store\Site::forget();
+            $site = \Kris\Store\Site::load($root);
+            $lang = \Kris\Store\Site::languages($root)[0];
+        } catch (\Throwable $e) {
             return 'i contenuti non sono leggibili dopo l\'aggiornamento';
         }
-        $pages = read_json($root . '/config/allowed_pages.json')['allowed_pages'] ?? ['homepage'];
-        $settings = read_json($root . '/data/cms_settings.json');
-        $lang = (string) ($settings['languages'][0] ?? 'it');
 
-        $rootEntities = [];
-        foreach ($data as $entity) {
-            if (is_array($entity) && isset($entity['name']) && !isset($rootEntities[$entity['name']])) {
-                $rootEntities[$entity['name']] = (int) ($entity['id'] ?? 0);
-            }
-        }
-
-        foreach ((array) $pages as $page) {
-            if (!is_string($page) || !preg_match('/^[a-zA-Z0-9_-]+$/', $page)) {
+        foreach (is_array($site['schema']['pages'] ?? null) ? $site['schema']['pages'] : [] as $page => $p) {
+            $name = is_array($p) && is_string($p['template'] ?? null) ? $p['template'] : (string) $page;
+            if (!preg_match('/^[a-zA-Z0-9_-]+$/', $name)) {
                 continue;
             }
-            $template = $root . '/template/' . $page . '.html';
+            $template = $root . '/template/' . $name . '.html';
             if (!is_file($template)) {
                 return "manca il template della pagina {$page}";
             }
-            // Si renderizzano le pagine che hanno un'entita omonima: le altre
-            // (per esempio i dettagli) dipendono da parametri dell'URL.
-            if (!isset($rootEntities[$page])) {
+            // Si renderizzano le pagine di un contenuto fisso: le altre (per
+            // esempio i dettagli) dipendono dall'indirizzo.
+            if (!is_array($p) || !array_key_exists('item', $p) || isset($p['list']) || !is_string($p['type'] ?? null)) {
                 continue;
             }
             $level = ob_get_level();
             ob_start();
             try {
-                $entity = \Kris\Entity\Entity::fromPath('k_data', $page, $rootEntities[$page], []);
+                $entity = \Kris\Entity\Entity::load($p['type'], (int) $p['item']);
                 $html = (new \Kris\Template\TemplateEngine($lang))->render((string) file_get_contents($template), $entity);
             } catch (\Throwable $e) {
                 return "la pagina {$page} non si genera più ({$e->getMessage()})";

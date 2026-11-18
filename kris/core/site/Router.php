@@ -6,11 +6,9 @@ namespace Kris\Site;
 /**
  * Indirizzi leggibili: /menu, /progetto/3, /en/menu.
  *
- * Le rotte si ricavano dalle regole della sitemap (config/seo.json), che i
- * siti hanno già: una regola con "id" è una pagina fissa, senza "id" una
- * pagina per ogni contenuto della raccolta, con "children" una pagina per
- * ogni elemento dell'elenco. Una pagina senza regola rende il contenuto 0
- * della raccolta con il suo nome, o della homepage.
+ * Le rotte si ricavano dalle pagine dello schema (formato 2): una pagina con
+ * "item" rende sempre quel contenuto, senza "item" un contenuto del tipo per
+ * id (o per slug), con "list" un elemento dell'elenco di quel contenuto.
  *
  * Quello che una rotta non sa esprimere resta un indirizzo index.php?…, che
  * continua a funzionare.
@@ -18,32 +16,35 @@ namespace Kris\Site;
 final class Router
 {
     /** @return array<string, array{key: string, kind: string, id: int, children: string}> */
-    public static function routes(array $pages, array $sitemap, array $model): array
+    public static function routes(array $schema): array
     {
         $routes = [];
-        foreach ($sitemap as $rule) {
-            if (!is_array($rule) || !is_string($rule['page'] ?? null) || isset($routes[$rule['page']])) continue;
-            $key = is_string($rule['key'] ?? null) ? $rule['key'] : 'homepage';
-            $kind = is_string($rule['children'] ?? null) && $rule['children'] !== '' ? 'children' : (array_key_exists('id', $rule) || $key === 'homepage' ? 'single' : 'collection');
-            $routes[$rule['page']] = ['key' => $key, 'kind' => $kind, 'id' => (int) ($rule['id'] ?? 0), 'children' => (string) ($rule['children'] ?? '')]
+        foreach (is_array($schema['pages'] ?? null) ? $schema['pages'] : [] as $page => $p) {
+            if (!is_string($page) || !is_array($p)) continue;
+            $key = is_string($p['type'] ?? null) ? $p['type'] : 'homepage';
+            $kind = is_string($p['list'] ?? null) && $p['list'] !== '' ? 'children' : (array_key_exists('item', $p) ? 'single' : 'collection');
+            $routes[$page] = ['key' => $key, 'kind' => $kind, 'id' => (int) ($p['item'] ?? 0), 'children' => (string) ($p['list'] ?? '')]
                 // "slug": il campo dei contenuti che dà l'indirizzo (/progetto/casa-rossi); vuoto = l'id
-                + ($kind === 'collection' && is_string($rule['slug'] ?? null) ? ['slug' => $rule['slug']] : []);
+                + ($kind === 'collection' && is_string($p['slug'] ?? null) ? ['slug' => $p['slug']] : []);
+            // Un elenco promosso a tipo: i vecchi link (key=homepage&id=0&path=posts/3) portano qui
+            foreach (is_array($schema['promoted'] ?? null) ? $schema['promoted'] : [] as $from) {
+                if ($kind === 'collection' && ($from['to'] ?? null) === $key) $routes[$page]['from'] = [(string) $from['from'], (int) $from['id'], (string) $from['list']];
+            }
         }
-        foreach ($pages as $page) {
-            if (!is_string($page) || isset($routes[$page])) continue;
-            $routes[$page] = ['key' => isset($model[$page]) ? $page : 'homepage', 'kind' => 'single', 'id' => 0, 'children' => ''];
-        }
-        return array_intersect_key($routes, array_flip(array_filter($pages, 'is_string')));
+        return $routes;
     }
 
     /** Il percorso leggibile di una pagina ("/", "/en/progetto/3"), o null se la rotta non lo sa esprimere. */
     public static function path(array $routes, string $page, string $key, int $id, array $path, string $lang, string $defaultLang): ?string
     {
         $route = $routes[$page] ?? null;
+        $path = array_values(array_map('strval', $path));
+        if ($route !== null && isset($route['from']) && count($path) === 2 && [$key, $id, $path[0]] === $route['from'] && ctype_digit($path[1])) {
+            [$key, $id, $path] = [$route['key'], (int) $path[1], []];
+        }
         if ($route === null || $route['key'] !== $key) return null;
         $prefix = $lang === $defaultLang ? '' : '/' . rawurlencode($lang);
         $base = $page === 'homepage' ? '' : '/' . rawurlencode($page);
-        $path = array_values(array_map('strval', $path));
         $out = match ($route['kind']) {
             'single' => $id === $route['id'] && !$path ? $base : null,
             'collection' => !$path ? "{$base}/" . (self::slugOf($route, $id, $lang) ?? $id) : null,

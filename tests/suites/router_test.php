@@ -8,23 +8,31 @@ declare(strict_types=1);
 
 use Kris\Site\Router;
 
-$demoRoutes = fn(): array => Router::routes(
-    ['homepage', 'detail', 'post', 'privacy', 'progetto'],
-    [
-        ['page' => 'homepage'],
-        ['page' => 'detail', 'key' => 'homepage', 'id' => 0, 'children' => 'features'],
-        ['page' => 'privacy', 'key' => 'kris_legal', 'id' => 0],
-        ['page' => 'progetto', 'key' => 'progetti'],
-    ],
-    ['homepage' => [], 'post' => []]
-);
+$demoRoutes = fn(): array => Router::routes(['pages' => [
+    'homepage' => ['template' => 'homepage', 'type' => 'homepage', 'item' => 0],
+    'detail' => ['template' => 'detail', 'type' => 'homepage', 'item' => 0, 'list' => 'features'],
+    'post' => ['template' => 'post', 'type' => 'post', 'item' => 0],
+    'privacy' => ['template' => 'privacy', 'type' => 'kris_legal', 'item' => 0],
+    'progetto' => ['template' => 'progetto', 'type' => 'progetti'],
+]]);
 
-test('le rotte vengono dalle regole della sitemap, o dal nome della pagina', function () use ($demoRoutes) {
+test('le rotte vengono dalle pagine dello schema: contenuto fisso, tipo, elenco', function () use ($demoRoutes) {
     $r = $demoRoutes();
     assertSame('single', $r['homepage']['kind']);
     assertSame(['key' => 'homepage', 'kind' => 'children', 'id' => 0, 'children' => 'features'], $r['detail']);
     assertSame('collection', $r['progetto']['kind']);
-    assertSame(['key' => 'post', 'kind' => 'single', 'id' => 0, 'children' => ''], $r['post'], 'senza regola: la raccolta omonima');
+    assertSame(['key' => 'post', 'kind' => 'single', 'id' => 0, 'children' => ''], $r['post']);
+});
+
+test('un elenco promosso a tipo: i vecchi link portano al contenuto del tipo', function () {
+    $r = Router::routes([
+        'pages' => ['post' => ['template' => 'post', 'type' => 'posts', 'sitemap' => true]],
+        'promoted' => [['from' => 'homepage', 'id' => 0, 'list' => 'posts', 'to' => 'posts']],
+    ]);
+    assertSame('/post/2', Router::path($r, 'post', 'posts', 2, [], 'it', 'it'));
+    assertSame('/post/2', Router::path($r, 'post', 'homepage', 0, ['posts', '2'], 'it', 'it'));
+    assertSame(null, Router::path($r, 'post', 'homepage', 0, ['steps', '2'], 'it', 'it'));
+    assertSame(['page' => 'post', 'key' => 'posts', 'id' => '2'], Router::resolve($r, '/post/2', ['it'], 'it'));
 });
 
 test('ogni rotta ha il suo percorso, nella lingua principale senza prefisso', function () use ($demoRoutes) {
@@ -114,7 +122,7 @@ test('il cambio lingua su un percorso leggibile porta alla stessa pagina nell al
 });
 
 test('gli slug vengono dal campo della regola; vuoto vale l id, un doppione riceve -id', function () {
-    $routes = Router::routes(['progetto'], [['page' => 'progetto', 'key' => 'progetti', 'slug' => 'url']], []);
+    $routes = Router::routes(['pages' => ['progetto' => ['template' => 'progetto', 'type' => 'progetti', 'slug' => 'url']]]);
     $routes['progetto']['slugs'] = [
         3 => ['it' => Router::slug('Casa Rossi, è qui'), 'en' => 'rossi-house'],
         5 => ['it' => '', 'en' => ''],

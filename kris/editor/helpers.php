@@ -21,6 +21,10 @@ function getJson(string $path, array $def = []): array
 {
     $doc = editorStoreDocument($path);
     if ($doc === null) return (new JsonStore($path))->read($def);
+    // Contenuti, schema e impostazioni: il formato 2 nella forma che l'editor conosce (format1.php)
+    if (in_array($doc, ['data', 'model', 'cms_settings'], true)) {
+        return editorFormat1(\Kris\Store\Site::current(KRIS_ROOT))[$doc];
+    }
     $snapshot = \Kris\Store\Stores::site()->read($doc);
     return $snapshot->rev === '' ? $def : $snapshot->value;
 }
@@ -29,6 +33,10 @@ function saveJson(string $path, array $data): void
     $doc = editorStoreDocument($path);
     if ($doc === null) {
         (new JsonStore($path))->write($data);
+        return;
+    }
+    if (in_array($doc, ['data', 'model', 'cms_settings'], true)) {
+        editorSaveFormat1($doc, $data);
         return;
     }
     \Kris\Store\Stores::site()->write($doc, $data);

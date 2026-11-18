@@ -4,18 +4,15 @@ declare(strict_types=1);
 namespace Kris\Template;
 
 use Kris\Entity\Entity;
-use Kris\Entity\JsonRepository;
 use Kris\Site\Paths;
 use DOMXPath;
 use DOMDocument;
 
 class ArrayProcessor {
     private string $lang;
-    private JsonRepository $repo;
 
     public function __construct(string $lang) {
         $this->lang = $lang;
-        $this->repo = new JsonRepository();
     }
 
     public function process(DOMDocument $dom, ?Entity $parent = null): void {
@@ -29,8 +26,7 @@ class ArrayProcessor {
 
             $entities = $this->resolveEntities($entityName, $parent);
 
-            foreach ($entities as $entityData) {
-                $entity = Entity::fromArray($entityData, $entityName);
+            foreach ($entities as $entity) {
                 $engine = new TemplateEngine($this->lang);
                 $rendered = $engine->render($template, $entity);
 
@@ -43,13 +39,13 @@ class ArrayProcessor {
         }
     }
 
-    /** Elementi da mostrare: quelli sospesi dall'editor restano fuori. */
+    /**
+     * Elementi da mostrare: un elenco del contenuto corrente, altrimenti i
+     * contenuti del tipo omonimo. Quelli sospesi dall'editor restano fuori.
+     *
+     * @return list<Entity>
+     */
     private function resolveEntities(string $name, ?Entity $parent): array {
-        $items = null;
-        if ($parent !== null) {
-            $items = $parent->getArray($name);
-        }
-        $items ??= $this->repo->findAll('k_data', $name);
-        return array_values(array_filter($items, fn($item) => is_array($item) && !Entity::isHidden($item)));
+        return $parent?->children($name) ?? Entity::all($name);
     }
 }

@@ -36,6 +36,7 @@ function updateSite(): string
     @unlink($dir . '/config/auth.php');
     @unlink($dir . '/config/update.php');
     rcopy(KRIS_TESTS . '/fixtures', $dir . '/data');
+    foreach (['allowed_pages', 'seo'] as $name) rename("{$dir}/data/{$name}.json", "{$dir}/config/{$name}.json");
     foreach (['RELEASE.json', 'MANIFEST.json', 'MANIFEST.sig'] as $f) {
         @unlink($dir . '/kris/' . $f);
     }
@@ -153,13 +154,16 @@ test('torna alla versione precedente con contenuti e framework di allora', funct
     $dataBeforeUpdate = file_get_contents($site . '/data/k_data.json');
     runUpdate($site, 'install', updatePackage($site, '1.0.1'));
     assertSame('1.0.1', siteVersion($site));
-    $dataAfterUpdate = file_get_contents($site . '/data/k_data.json');
-    file_put_contents($site . '/data/k_data.json', str_replace('"id"', '"id" ', $dataAfterUpdate)); // modifica dopo l'update
+    // Dopo l'aggiornamento i contenuti sono nel formato 2; il formato 1 resta in data/format1/
+    assertTrue(!is_file($site . '/data/k_data.json') && is_file($site . '/data/content.json') && is_file($site . '/data/format1/k_data.json'));
+    $dataAfterUpdate = file_get_contents($site . '/data/content.json');
+    file_put_contents($site . '/data/content.json', str_replace('"id"', '"id" ', $dataAfterUpdate)); // modifica dopo l'update
 
     $r = runUpdate($site, 'rollback');
     assertSame(true, $r['ok'] ?? null, 'esito: ' . json_encode($r));
     assertSame('1.0.0', siteVersion($site));
     assertSame($dataBeforeUpdate, file_get_contents($site . '/data/k_data.json'), 'i contenuti tornano a quelli di prima dell\'aggiornamento');
+    assertTrue(!is_file($site . '/data/content.json'), 'i documenti del formato 2 creati dall aggiornamento se ne vanno');
     assertSame('manual_rollback', lastOutcome($site));
     assertSame(['ok', 'manual_rollback'], array_column(siteState($site)['history'], 'outcome'), 'il registro non perde l\'aggiornamento annullato');
     $history = siteState($site)['history'];
@@ -172,12 +176,12 @@ test('torna alla versione precedente con contenuti e framework di allora', funct
 test('una migrazione con modifiche ai dati viene applicata e registrata', function () {
     $site = updateSite();
     $zip = updatePackage($site, '1.1.0', function (string $kris) {
-        testMigration($kris, 'aggiunge_campo', "\$f['k_model']['homepage'][] = ['name' => 'campo_nuovo', 'type' => 'plain']; return \$f;");
+        testMigration($kris, 'aggiunge_campo', "\$f['schema']['types']['homepage']['fields'][] = ['name' => 'campo_nuovo', 'type' => 'text', 'localized' => false]; return \$f;");
     });
     $r = runUpdate($site, 'install', $zip);
     assertSame(true, $r['ok'] ?? null, 'esito: ' . json_encode($r));
     assertSame(nextMigration()[1], siteState($site)['data_version']);
-    assertContains('campo_nuovo', file_get_contents($site . '/data/k_model.json'));
+    assertContains('campo_nuovo', file_get_contents($site . '/data/schema.json'));
 });
 
 // --- guasti: il sito deve tornare com'era -----------------------------------
