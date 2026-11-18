@@ -57,6 +57,11 @@ if ($previewAdmin) {
 // Indirizzi leggibili: il percorso (/en/progetto/3) diventa i parametri della pagina;
 // i vecchi indirizzi index.php?page=… rispondono con un 301 al percorso nuovo.
 $query = $_GET;
+// Lingua scelta dal visitatore (?ln=): la ricorda la lingua automatica, prima di qualunque redirect
+if (\Kris\Template\Seo::config(KRIS_ROOT)['auto_language'] && is_string($_GET['ln'] ?? null) && in_array($_GET['ln'], PageRenderer::language([])[1], true) && !headers_sent()) {
+    setcookie('kris_lang', $_GET['ln'], ['expires' => time() + 180 * 86400, 'path' => '/', 'samesite' => 'Lax']);
+    $_COOKIE['kris_lang'] = $_GET['ln'];
+}
 $routes = PageRenderer::routes();
 $basePath = Router::basePath($_SERVER);
 
@@ -97,6 +102,31 @@ if ($routes !== null) {
         if ($pretty !== null) {
             $rest = array_diff_key($query, array_flip($pageParams));
             header('Location: ' . $basePath . $pretty . ($rest ? '?' . http_build_query($rest) : ''), true, 301);
+            exit;
+        }
+    }
+}
+
+// Lingua automatica (seo.json, auto_language): la homepage senza lingua segue la scelta già fatta
+// dal visitatore (cookie) o la lingua del browser; i motori di ricerca vedono sempre la principale.
+if (\Kris\Template\Seo::config(KRIS_ROOT)['auto_language'] && $preview === null) {
+    [$current, $langs] = PageRenderer::language($query);
+    $explicit = isset($query['ln']) || ($routes !== null && isset($resolved['ln']));
+    if ($explicit) {
+        if (!headers_sent()) setcookie('kris_lang', $current, ['expires' => time() + 180 * 86400, 'path' => '/', 'samesite' => 'Lax']);
+    } elseif (($query['page'] ?? 'homepage') === 'homepage' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+        && !preg_match('/bot|crawl|spider|slurp|facebookexternalhit|preview/i', (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''))) {
+        $wanted = is_string($_COOKIE['kris_lang'] ?? null) && in_array($_COOKIE['kris_lang'], $langs, true) ? $_COOKIE['kris_lang'] : null;
+        if ($wanted === null) {
+            foreach (explode(',', (string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '')) as $part) {
+                $code = strtolower(substr(trim(explode(';', $part)[0]), 0, 2));
+                if (in_array($code, $langs, true)) { $wanted = $code; break; }
+            }
+        }
+        if ($wanted !== null && $wanted !== $langs[0]) {
+            $target = $routes !== null ? $basePath . Router::path($routes, 'homepage', 'homepage', 0, [], $wanted, $langs[0]) : $basePath . '/?ln=' . rawurlencode($wanted);
+            header('Vary: Accept-Language, Cookie');
+            header('Location: ' . $target, true, 302);
             exit;
         }
     }

@@ -43,4 +43,6 @@ $_SERVER['SCRIPT_NAME'] = '/' . $script;
 // Il percorso richiesto, per gli indirizzi leggibili: senza, la richiesta va a index.php con la query
 $_SERVER['REQUEST_URI'] = getenv('KRIS_REQUEST_URI') ?: '/' . $script . ($query ? '?' . http_build_query($query) : '');
 $_SERVER['HTTP_HOST'] = 'localhost';
+$_SERVER['HTTP_ACCEPT_LANGUAGE'] = getenv('KRIS_ACCEPT_LANGUAGE') ?: '';
+$_SERVER['HTTP_USER_AGENT'] = getenv('KRIS_USER_AGENT') ?: 'Mozilla/5.0';
 include $script;
