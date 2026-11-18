@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.10.0",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Prepara il passaggio a Kris 2.0 direttamente dall'editor: quando sarà disponibile, Impostazioni › Versione di Kris spiegherà cosa cambia e segnalerà eventuali controlli da fare prima.",
+            "date": "2026-11-18",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.10.0/kris-1.10.0.zip",
+            "sha256": "2a256e39805507ad158b54fd8733737ffb0c5f0750fb7fd04df11138276fc209",
+            "size": 215281
+        },
+        {
             "version": "1.9.1",
             "min_from": "1.0.0",
             "breaking": false,

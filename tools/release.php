@@ -7,7 +7,10 @@ declare(strict_types=1);
  * Solo pacchetto e canale in locale:
  *   php -d extension=sodium -d extension=zip tools/release.php \
  *       --key <percorso/principale.key> --changelog "Testo per i clienti" \
- *       [--min-from 1.0.0] [--breaking]
+ *       [--min-from 1.0.0] [--breaking] [--editor-upgrade] [--requires-php 8.3]
+ *
+ * --editor-upgrade: una versione principale nuova installabile dall'editor
+ * (dalla 1.10), di solito con --min-from sull'ultima della major precedente.
  *
  * Tutto il giro, dal PC dello sviluppatore:
  *   ... tools/release.php --key … --changelog "…" --publish [--dry-run]
@@ -36,7 +39,7 @@ require __DIR__ . '/lib/release.php';
 use Kris\Update\Package;
 use Kris\Update\Signature;
 
-$opts = getopt('', ['key:', 'changelog:', 'min-from::', 'breaking', 'publish', 'dry-run']);
+$opts = getopt('', ['key:', 'changelog:', 'min-from::', 'breaking', 'editor-upgrade', 'requires-php::', 'publish', 'dry-run']);
 $keyFile = $opts['key'] ?? null;
 $changelog = trim((string) ($opts['changelog'] ?? ''));
 $publish = isset($opts['publish']);
@@ -131,10 +134,10 @@ $release = [
     'version' => $version,
     'min_from' => (string) ($opts['min-from'] ?? '1.0.0'),
     'breaking' => isset($opts['breaking']),
-    'requires' => ['php' => '8.0', 'ext' => KRIS_RELEASE_EXTENSIONS],
+    'requires' => ['php' => (string) ($opts['requires-php'] ?? '8.0'), 'ext' => KRIS_RELEASE_EXTENSIONS],
     'changelog_it' => $changelog,
     'date' => date('Y-m-d'),
-];
+] + (isset($opts['editor-upgrade']) ? ['editor_upgrade' => true] : []);
 @mkdir($repo . '/dist', 0775, true);
 
 // Ripresa: se la release ha gia lo zip, il canale deve puntare a quello,
