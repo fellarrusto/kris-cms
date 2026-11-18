@@ -186,3 +186,19 @@ test('l aggiornamento porta la regola 404 della 1.x agli indirizzi leggibili, il
     \Kris\Update\Stubs::ensure($root);
     assertSame("# del cliente\nRewriteRule !\.(?:css)$ index.php [L,QSA]\n", file_get_contents("{$root}/.htaccess"));
 });
+
+test('l aggiornamento crea kris-admin/ e trasforma gli stub di editor/ della 1.x in un rimando', function () {
+    $root = sys_get_temp_dir() . '/kris-admin-' . bin2hex(random_bytes(3));
+    mkdir("{$root}/editor", 0777, true);
+    register_shutdown_function(fn() => rrmdir($root));
+    file_put_contents("{$root}/editor/index.php", "<?php\nrequire __DIR__ . '/../kris/editor/index.php';\n");
+    file_put_contents("{$root}/editor/note.txt", 'del cliente');
+    $created = \Kris\Update\Stubs::ensure($root);
+    foreach (['kris-admin/index.php', 'kris-admin/upload.php', 'kris-admin/update.php', 'editor/index.php'] as $file) {
+        assertTrue(in_array($file, $created, true), $file);
+    }
+    assertContains("require __DIR__ . '/../kris/editor/index.php'", (string) file_get_contents("{$root}/kris-admin/index.php"));
+    assertContains("Location: ../kris-admin/", (string) file_get_contents("{$root}/editor/index.php"));
+    assertSame('del cliente', file_get_contents("{$root}/editor/note.txt"), 'gli altri file restano');
+    assertTrue(!in_array('editor/index.php', \Kris\Update\Stubs::ensure($root), true), 'una volta sola');
+});

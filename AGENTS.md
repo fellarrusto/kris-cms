@@ -18,7 +18,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 
 | Percorso | Responsabilità |
 | --- | --- |
-| `index.php`, `sitemap.php`, `kris-agent.php`, `editor/index.php`, `editor/upload.php`, `editor/update.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. Gli stub aggiunti da una versione nuova li crea l'aggiornamento (`kris/update/Stubs.php`). |
+| `index.php`, `sitemap.php`, `kris-agent.php`, `kris-admin/index.php`, `kris-admin/upload.php`, `kris-admin/update.php` | Stub fissi di una riga che includono il framework. Non vanno modificati. Gli stub aggiunti da una versione nuova li crea l'aggiornamento (`kris/update/Stubs.php`). |
 | `kris/` | Framework ed editor. Viene sostituito in blocco dagli aggiornamenti: niente personalizzazioni del sito qui dentro. |
 | `kris/bootstrap.php` | Definisce `KRIS_ROOT` (root del sito) e `KRIS_DIR` (cartella del framework) e registra l'autoload. Il framework accede ai file del sito solo tramite `KRIS_ROOT`, mai con percorsi relativi. |
 | `kris/VERSION` | Versione del framework (semver), mostrata nell'editor. Cambia solo con una release. |
@@ -55,7 +55,7 @@ Kris è un CMS PHP basato su file JSON, senza database. Il sito pubblico è rend
 | `kris/core/scripts/script.js` | Utility esistenti per cambio lingua e filtro degli elementi. I template la includono con `kris/core/scripts/script.js`. |
 | `kris/core/scripts/consent.js` | Consenso ai cookie, opzionale. Vedi "Privacy e cookie". |
 | `kris/core/template/Seo.php`, `kris/sitemap.php` | Canonical, hreflang e sitemap generata dai contenuti a ogni richiesta. |
-| `kris/editor/` | Autenticazione, azioni, viste, partial, CSS e JS del pannello. È servito all'indirizzo `/editor/` tramite lo stub. |
+| `kris/editor/` | Autenticazione, azioni, viste, partial, CSS e JS del pannello. È servito all'indirizzo `/kris-admin/` tramite lo stub (fino alla 1.x `/editor/`: l'aggiornamento alla 2.0 crea `kris-admin/` e trasforma gli stub di `editor/` in un rimando; i link di reset salvati con il vecchio indirizzo si correggono da soli). |
 | `tests/` | Test PHP e snapshot pubblici con dati isolati in fixture. |
 
 `Entity` legge i valori e risolve le traduzioni. `JsonRepository` recupera le entità per nome e ID. `JsonStore` verifica il JSON, scrive tramite file temporaneo e conserva copie precedenti; non garantisce il rilevamento di conflitti tra editor concorrenti. Per letture e scritture dei dati del sito usa l'archivio (`Kris\Store\Stores::site()`), mai i file di `data/` direttamente: dalla 2.0 dietro può esserci un database. Fanno eccezione, per contratto con le versioni installate, installer e migrazioni.
@@ -292,11 +292,11 @@ Le pagine sono HTML completo generato sul server: i motori di ricerca le leggono
 - **Regola:** quando aggiungi una pagina navigabile o un tipo di pagina, aggiungila a `config/seo.json` e verifica che compaia in `sitemap.php`. Senza file, la sitemap contiene la sola homepage.
 - `base_url` va impostato in produzione: senza, l'indirizzo si ricava dalla richiesta. `"head": false` disattiva canonical e hreflang automatici.
 - Una regola può avere `"priority"` (0–1), che va nella sitemap.
-- `robots.txt` lo genera Kris (regola del `.htaccess` verso `sitemap.php?robots=1`): esclude `/editor/` e `/kris-admin/`, aggiunge le righe di `"robots"` in `seo.json` (testo, una regola per riga) e la sitemap assoluta. Un `robots.txt` fisico nella root vince. Se lo scrivi a mano, al deploy, usa l'URL assoluto della sitemap:
+- `robots.txt` lo genera Kris (regola del `.htaccess` verso `sitemap.php?robots=1`): esclude `/kris-admin/` (e il vecchio `/editor/`), aggiunge le righe di `"robots"` in `seo.json` (testo, una regola per riga) e la sitemap assoluta. Un `robots.txt` fisico nella root vince. Se lo scrivi a mano, al deploy, usa l'URL assoluto della sitemap:
 
 ```text
 User-agent: *
-Disallow: /editor/
+Disallow: /kris-admin/
 Sitemap: https://www.esempio.it/sitemap.php
 ```
 
@@ -326,7 +326,7 @@ Le modifiche preparate senza pubblicarle subito (dall'agente di Kris Agent, dall
 - **Immagini:** `Staging::upload()` usa `MediaStore::storeLocal()`, con gli stessi controlli dell'upload dell'editor, e salva in `data/staging/uploads/`. La pubblicazione le copia in `assets/uploads/`. `Staging::deleteUpload()` toglie dallo staging un file caricato e non ancora pubblicato (anche un font), senza buttare via il resto; non se è ancora il valore di un campo in attesa. I file già sul sito si tolgono dall'editor.
 - Ogni scrittura porta l'impronta (sha256) della versione letta: se il file è cambiato nel frattempo, la scrittura viene rifiutata, con l'impronta attuale nei dettagli (`current_hash`). `edit` sostituisce un testo che deve comparire una sola volta.
 - **Avvisi:** `Staging::warnings()` segnala, senza bloccare la pubblicazione, i campi senza sezione accanto a campi che ce l'hanno, i campi che nessun template usa e i font citati dal CSS che non ci sono in `assets/fonts/`.
-- **Anteprima:** `index.php?kris_preview=1`, solo con la sessione dell'editor. Aperta una volta, resta attiva in quel browser (cookie `kris_preview_mode`, `Preview::MODE_COOKIE`) anche per gli indirizzi scritti a mano, così si vedono le pagine che nessun link raggiunge; «Esci» porta a `?kris_preview=0`, che la chiude. Senza sessione il cookie da solo non apre nulla. `Staging::previewPages()` elenca le pagine toccate dalle modifiche in attesa, ognuna con il suo indirizzo di anteprima: le mostra «Da pubblicare» e le restituisce lo `status` dell'agente (`preview_pages`). I file in attesa si servono da `index.php?kris_preview_asset=…&kris_preview=1` (`Preview::assetUrl`: l'indirizzo non finisce con l'estensione, così i proxy degli hosting non lo trattano come file statico); nel CSS in attesa gli `url()` e gli `@import` relativi vengono riscritti dalla root del sito. Senza sessione la pagina risponde 404. La pagina ha `noindex`, `no-store` e una barra sottile fissa in cima che dice che è un'anteprima (anche senza modifiche in attesa).
+- **Anteprima:** `/kris-admin/preview/` seguito dall'indirizzo della pagina (`/kris-admin/preview/en/menu` con gli indirizzi leggibili, `/kris-admin/preview/?page=menu` senza), oppure `index.php?kris_preview=1`, solo con la sessione dell'editor. Aperta una volta, resta attiva in quel browser (cookie `kris_preview_mode`, `Preview::MODE_COOKIE`) anche per gli indirizzi scritti a mano, così si vedono le pagine che nessun link raggiunge; «Esci» porta a `?kris_preview=0`, che la chiude. Senza sessione il cookie da solo non apre nulla. `Staging::previewPages()` elenca le pagine toccate dalle modifiche in attesa, ognuna con il suo indirizzo di anteprima: le mostra «Da pubblicare» e le restituisce lo `status` dell'agente (`preview_pages`). I file in attesa si servono da `index.php?kris_preview_asset=…&kris_preview=1` (`Preview::assetUrl`: l'indirizzo non finisce con l'estensione, così i proxy degli hosting non lo trattano come file statico); nel CSS in attesa gli `url()` e gli `@import` relativi vengono riscritti dalla root del sito. Senza sessione la pagina risponde 404. La pagina ha `noindex`, `no-store` e una barra sottile fissa in cima che dice che è un'anteprima (anche senza modifiche in attesa).
 - **Pubblicazione:** da Editor › Da pubblicare. Riepilogo con diff, segnalazione di script, gestori di eventi, URL `javascript:` e domini esterni aggiunti. Se un file è cambiato sul sito dopo la preparazione, serve una conferma esplicita. Prima di scrivere si salvano le versioni attuali: l'ultima pubblicazione si annulla per 14 giorni.
 - Con modifiche in attesa l'aggiornamento di Kris è bloccato: prima si pubblica o si scarta.
 
@@ -375,7 +375,7 @@ php tests/run.php
 
 Le suite dei pacchetti e dell'installazione richiedono le estensioni `sodium` e `zip`: se mancano vengono saltate e il riepilogo lo dice (`SALTATA`). Con un PHP che non le carica dal php.ini: `php -d extension=sodium -d extension=zip tests/run.php`. Una suite saltata non è una suite passata.
 
-Apri `http://127.0.0.1:8000/` e `/editor/`. Il setup crea l'account se manca `config/auth.php`. Il server PHP integrato serve solo allo sviluppo locale.
+Apri `http://127.0.0.1:8000/` e `/kris-admin/`. Il setup crea l'account se manca `config/auth.php`. Il server PHP integrato serve solo allo sviluppo locale.
 
 Sulla linea 2.0 serve almeno PHP 8.3 (la 1.x resta su 8.0): `readonly`, `enum` e il resto di 8.3 sono ammessi, niente di 8.4. La CI verifica 8.3 e 8.4. Servono DOM/libxml, mbstring e le funzionalità standard JSON e sessioni; verifica inoltre la disponibilità delle funzioni di controllo immagini usate da `MediaStore`. Per aggiornare dall'editor servono anche `sodium` e `zip`, e cURL (o `allow_url_fopen`) con i certificati configurati: senza, resta il caricamento manuale del pacchetto oppure l'aggiornamento via FTP.
 

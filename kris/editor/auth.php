@@ -112,7 +112,7 @@ function kris_current_editor_url(): string
     $https = kris_is_https();
     $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
     if (!preg_match('/^[a-z0-9.-]+(:\d+)?$/', $host)) $host = 'localhost';
-    return ($https ? 'https' : 'http') . '://' . $host . (string) ($_SERVER['SCRIPT_NAME'] ?? '/editor/index.php');
+    return ($https ? 'https' : 'http') . '://' . $host . (string) ($_SERVER['SCRIPT_NAME'] ?? '/kris-admin/index.php');
 }
 
 /**
@@ -141,7 +141,8 @@ function kris_send_reset_link(): bool
     $config = kris_auth_config();
     if ($config === null || !Credentials::validEmail((string) $config['email']) || $config['editor_url'] === '') return false;
     $token = kris_password_reset()->create();
-    $link = $config['editor_url'] . '?reset=' . $token;
+    // Indirizzo salvato prima della 2.0: l'editor ora è in /kris-admin/
+    $link = preg_replace('#/editor/index\.php$#', '/kris-admin/index.php', (string) $config['editor_url']) . '?reset=' . $token;
     $body = "Ciao,\n\nqualcuno ha chiesto di reimpostare la password dell'editor del sito.\n"
         . "Per sceglierne una nuova apri questo link entro 30 minuti:\n\n{$link}\n\n"
         . "Se non sei stato tu, ignora questa email: la password attuale resta valida.\n\n"

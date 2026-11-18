@@ -10,7 +10,7 @@
 
 1. Clone the repository.
 2. Configure your web server to point to the project root. No build step and no Composer: upload the files via FTP and you are done.
-3. Visit `/editor/` to manage content.
+3. Visit `/kris-admin/` to manage content.
 
 **Requirements:**
 
@@ -205,7 +205,7 @@ Kris 2 includes a native JS utility to filter items instantly without reloading 
 
 You don't need to touch code to change text.
 
-1. Go to `/editor/` in your browser.
+1. Go to `/kris-admin/` in your browser.
 2. **Edit:** Click a group to see all items. Change text for both languages (IT/EN).
 3. **Add New:** Click "Add New" to create a new blog post or feature. The system handles the ID automatically.
 4. **Save:** Updates are instant.
@@ -217,7 +217,7 @@ You don't need to touch code to change text.
 ```
 kris2/
 ├── index.php            # One-line stub, loads kris/public.php
-├── editor/              # One-line stubs, the admin panel lives in kris/editor/
+├── kris-admin/          # One-line stubs, the admin panel lives in kris/editor/
 ├── kris/                # The framework: replaced as a whole on update
 │   ├── bootstrap.php    # Paths (KRIS_ROOT, KRIS_DIR) and autoload
 │   ├── public.php       # Public entry point
