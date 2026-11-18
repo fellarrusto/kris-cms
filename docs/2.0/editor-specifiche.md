@@ -152,6 +152,7 @@ Compaiono in ogni schermata, sopra il contenuto.
 | Lavori in corso attivi | L'interruttore è acceso | Promemoria: i visitatori vedono la pagina di lavorazione |
 | Manca l'email di recupero | Account senza email | Campo email nell'avviso, «Salva email», «Più tardi» |
 | Plugin disattivato | Un plugin è stato spento dopo un errore | Nome del plugin, rimando alla sua scheda |
+| Aggiornamento disponibile | All'apertura dell'editor Kris trova una versione nuova (controllo al massimo una volta al giorno, dopo il caricamento della pagina) | Versione e novità in breve; «Aggiorna ora» porta a Versione di Kris; «Più tardi» lo nasconde fino alla versione successiva. Con modifiche in attesa dice di pubblicarle o scartarle prima. Lo stesso per i plugin con una versione nuova |
 
 In sola lettura i contenuti si consultano ma ogni controllo di modifica è disabilitato.
 

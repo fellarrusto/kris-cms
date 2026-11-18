@@ -259,6 +259,17 @@ Rifacimento dell'interfaccia su un design system, mantenendo PHP renderizzato su
 
 Ordine: token e componenti, poi le viste, poi gli slot per i plugin.
 
+### Aggiornamenti suggeriti all'apertura
+
+Aprendo l'editor Kris controlla se c'è una versione nuova e la propone, senza installarla da sola.
+
+- Il controllo legge il canale firmato (`releases.json`) come «Verifica aggiornamenti»; il risultato resta in `data/kris_state.json` (`last_check`) e si ripete al massimo una volta al giorno.
+- Non rallenta l'apertura: parte dal browser dopo il caricamento della pagina, con una richiesta all'editor; se il canale non risponde non compare niente.
+- Se c'è una versione installabile dall'editor (stessa major, non `breaking`) compare un avviso con la versione, le novità per i clienti e «Aggiorna ora» (porta a Impostazioni › Versione di Kris). «Più tardi» lo nasconde fino alla versione successiva.
+- Una versione riservata allo sviluppatore (major nuova) compare solo come informazione.
+- Niente avviso se gli aggiornamenti dall'editor sono disattivati (`config/update.php`), durante un aggiornamento o con modifiche in attesa, che bloccano comunque l'installazione: in quel caso l'avviso dice di pubblicarle o scartarle prima.
+- Plugin: lo stesso controllo vale per i plugin installati, sull'indice firmato della loro repository.
+
 ## 8. Sicurezza
 
 Prima analisi sulla 1.9, con correzioni rilasciate come 1.9.x. Punti già individuati leggendo il codice:
