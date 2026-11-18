@@ -160,6 +160,46 @@ test('raccolta nuova, contenuto nuovo e pagina nuova', function () {
     assertTrue(in_array(['page' => 'progetto', 'key' => 'progetti'], $seo['sitemap'], true));
 });
 
+test('una pagina registrata con sitemap false resta fuori dalla sitemap', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->write('template/lavagna.html', '<!doctype html><html><body>{{page_title}}</body></html>', null, 'a');
+    $s->operate(['op' => 'register_page', 'page' => 'lavagna', 'sitemap' => false], 'a');
+
+    $pages = json_decode((string) file_get_contents("{$root}/data/staging/config/allowed_pages.json"), true)['allowed_pages'];
+    assertTrue(in_array('lavagna', $pages, true), 'la pagina e pubblica');
+    $seo = json_decode((string) file_get_contents("{$root}/data/staging/config/seo.json"), true);
+    assertTrue(!array_filter($seo['sitemap'] ?? [], fn($r) => ($r['page'] ?? null) === 'lavagna'), 'nessuna regola nella sitemap');
+    assertContains('fuori dalla sitemap', $s->rebuild()[0]['description']);
+});
+
+test('set_sitemap mette e toglie dalla sitemap una pagina gia pubblica', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->write('template/progetto.html', '<!doctype html><html><body>{{page_title}}</body></html>', null, 'a');
+    $s->operate(['op' => 'register_page', 'page' => 'progetto', 'sitemap' => ['key' => 'homepage']], 'a');
+    $rules = fn() => array_values(array_filter(
+        json_decode((string) file_get_contents("{$root}/data/staging/config/seo.json"), true)['sitemap'] ?? [],
+        fn($r) => ($r['page'] ?? null) === 'progetto'
+    ));
+    assertSame([['page' => 'progetto', 'key' => 'homepage']], $rules());
+
+    $s->operate(['op' => 'set_sitemap', 'page' => 'progetto', 'sitemap' => false], 'a');
+    assertSame([], $rules());
+    $s->operate(['op' => 'set_sitemap', 'page' => 'progetto', 'sitemap' => ['key' => 'homepage', 'id' => 0]], 'a');
+    assertSame([['page' => 'progetto', 'key' => 'homepage', 'id' => 0]], $rules());
+
+    expectStaging(fn() => $s->operate(['op' => 'set_sitemap', 'page' => 'inesistente', 'sitemap' => false], 'a'), 'non è una pagina pubblica');
+    expectStaging(fn() => $s->operate(['op' => 'set_sitemap', 'page' => 'progetto'], 'a'), 'vuole «sitemap»');
+    expectStaging(fn() => $s->operate(['op' => 'set_sitemap', 'page' => 'progetto', 'sitemap' => ['chiave' => 'x']], 'a'), 'non conosce');
+    expectStaging(fn() => $s->operate(['op' => 'register_page', 'page' => 'progetto', 'mappa' => false], 'a'), 'non conosce');
+
+    // Alla pubblicazione la regola arriva al sito
+    $s->promote('admin');
+    $site = json_decode((string) file_get_contents("{$root}/config/seo.json"), true)['sitemap'];
+    assertTrue(in_array(['page' => 'progetto', 'key' => 'homepage', 'id' => 0], $site, true));
+});
+
 test('un immagine caricata si usa nei campi image e passa gli stessi controlli dell editor', function () {
     $root = contentSite();
     $s = new Staging($root);
@@ -237,6 +277,52 @@ test('un campo tolto ma ancora usato da un template blocca la pubblicazione', fu
     $read = $s->read('template/homepage.html');
     $s->write('template/homepage.html', str_replace('{{page_title}}', 'Kris', (string) $read['content']), $read['hash'], 'agente');
     assertTrue(!array_filter($s->templateProblems(), fn($p) => str_contains($p, 'template/homepage.html')));
+});
+
+test('un campo omonimo di un altra raccolta non blocca la pubblicazione', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    // homepage e navbar hanno entrambe page_title: si toglie solo quello della navbar
+    $s->operate(['op' => 'remove_field', 'collection' => 'navbar', 'name' => 'page_title'], 'agente');
+    $problems = $s->templateProblems();
+    assertTrue((bool) array_filter($problems, fn($p) => str_contains($p, 'template/navbar.html usa ancora «page_title»')), implode('; ', $problems));
+    assertTrue(!array_filter($problems, fn($p) => str_contains($p, 'template/homepage.html')), 'la homepage legge il suo page_title');
+
+    // Un template senza nessun riferimento puo rendere qualunque raccolta: resta segnalato
+    $s->write('template/orfano.html', '<p>{{page_title}}</p>', null, 'agente');
+    assertTrue((bool) array_filter($s->templateProblems(), fn($p) => str_contains($p, 'template/orfano.html usa ancora «page_title»')));
+});
+
+test('il contesto dei template si ricava da sitemap, link, componenti ed elenchi', function () {
+    $model = [
+        'homepage' => [['name' => 'features', 'type' => 'array', 'of' => [
+            ['name' => 'title', 'type' => 'text'],
+            ['name' => 'highlights', 'type' => 'array', 'of' => [['name' => 'title', 'type' => 'text']]],
+        ]]],
+        'torte' => [['name' => 'message', 'type' => 'text']],
+        'navbar' => [['name' => 'logo', 'type' => 'image']],
+        'progetti' => [['name' => 'title', 'type' => 'text']],
+    ];
+    $templates = [
+        'homepage' => '<header k-component="navbar" k-template="navbar" k-index="0"></header><div k-array="features" k-template="card"></div><div k-array="progetti" k-template="progetto-card"></div>',
+        'card' => '<a href="?page=detail&amp;key=homepage&amp;id=0&amp;path=features/{{id}}">{{title}}</a>',
+        'detail' => '<ul k-array="highlights" k-template="highlight"></ul>',
+        'highlight' => '<li>{{title}}</li>',
+        'navbar' => '<a href="index.php?page=torte&amp;key=torte&amp;ln={{language}}">{{logo}}</a>',
+        'torte' => '<p>{{message}}</p>',
+        'progetto-card' => '<h3>{{title}}</h3>',
+        'lavagna' => '<p>{{message}}</p>',
+    ];
+    $ctx = \Kris\Staging\TemplateUsage::contexts($templates, [$model], [['page' => 'lavagna', 'key' => 'lavagna']]);
+    assertSame(['homepage'], $ctx['homepage']);
+    assertSame(['navbar'], $ctx['navbar']);
+    assertSame(['homepage/features'], $ctx['card']);
+    assertSame(['homepage/features'], $ctx['detail']);
+    assertSame(['homepage/features/highlights'], $ctx['highlight']);
+    assertSame(['torte'], $ctx['torte']);
+    assertSame(['progetti'], $ctx['progetto-card'], 'k-array senza elenco omonimo: la raccolta');
+    assertSame(['lavagna'], $ctx['lavagna']);
+    assertSame(null, \Kris\Staging\TemplateUsage::contexts(['solo' => '<p>{{x}}</p>'], [$model], [])['solo']);
 });
 
 test('l anteprima mostra i contenuti dello staging a un admin', function () {

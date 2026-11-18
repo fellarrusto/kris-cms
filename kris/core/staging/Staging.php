@@ -44,7 +44,7 @@ final class Staging
     ];
 
     /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
-    private const PAGE_OPS = ['register_page', 'unregister_page', 'remove_collection', 'rename_collection'];
+    private const PAGE_OPS = ['register_page', 'unregister_page', 'set_sitemap', 'remove_collection', 'rename_collection'];
     private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection', 'set_collection_info', 'move_collection'];
 
     private string $root;
@@ -430,7 +430,7 @@ final class Staging
         $retired = [];
         $collections = [];
         foreach ($this->operations() as $op) {
-            foreach (Operations::retiredNames($op) as $name) $retired[$name] = true;
+            foreach (Operations::retiredNames($op) as $field) $retired[$field['name']][$field['context']] = true;
             foreach (Operations::retiredCollections($op) as $name) $collections[$name] = true;
         }
         $deleted = [];
@@ -446,9 +446,25 @@ final class Staging
             }
         }
         foreach (array_keys($deleted) as $name) unset($templates["template/{$name}.html"]);
+        // Quale raccolta rende ogni template: un campo omonimo di un'altra raccolta non e un problema
+        $usage = [];
+        if ($retired) {
+            $site = $this->siteState();
+            $preview = $this->state();
+            $byName = [];
+            foreach ($templates as $relative => $html) $byName[substr(basename($relative), 0, -5)] = $html;
+            $usage = TemplateUsage::contexts(
+                $byName,
+                [$site['model'], $preview['model']],
+                array_merge((array) ($site['seo']['sitemap'] ?? []), (array) ($preview['seo']['sitemap'] ?? []))
+            );
+        }
         $problems = [];
         foreach ($templates as $relative => $html) {
-            foreach (array_keys($retired) as $name) {
+            $contexts = $usage[substr(basename($relative), 0, -5)] ?? null;
+            foreach ($retired as $name => $where) {
+                // Contesto sconosciuto: il template potrebbe rendere qualunque raccolta
+                if ($contexts !== null && !array_intersect($contexts, array_keys($where))) continue;
                 $q = preg_quote((string) $name, '/');
                 if (preg_match('/\{\{\s*' . $q . '\s*\}\}|\{\{#(?:if|elif)\s+' . $q . '\b|k-array=["\']' . $q . '["\']/', $html) === 1) {
                     $problems[] = "{$relative} usa ancora «{$name}»";
