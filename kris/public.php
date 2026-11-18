@@ -17,6 +17,16 @@ if ($maintenance !== null && !$maintenance['stale']) {
     exit;
 }
 
+// Anteprima a indirizzo proprio: /kris-admin/preview/<indirizzo della pagina> è quella pagina
+// in anteprima, anche se nessun link la raggiunge. Vale come ?kris_preview=1 (serve l'editor aperto).
+$previewPrefix = \Kris\Site\Router::basePath($_SERVER) . '/kris-admin/preview';
+$requestPath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH);
+if ($requestPath === $previewPrefix || str_starts_with($requestPath, $previewPrefix . '/')) {
+    $_GET['kris_preview'] = '1';
+    $tail = substr($requestPath, strlen($previewPrefix)) ?: '/';
+    $queryString = (string) parse_url((string) $_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+    $_SERVER['REQUEST_URI'] = \Kris\Site\Router::basePath($_SERVER) . $tail . ($queryString !== '' ? '?' . $queryString : '');
+}
 // La lingua arriva dall'URL: va confrontata con quelle configurate, non
 // usata cosi com'e (finisce nei contenuti e negli attributi delle pagine).
 [$lang] = PageRenderer::language($_GET);
@@ -144,6 +154,6 @@ if (\Kris\Template\Seo::config(KRIS_ROOT)['auto_language'] && $preview === null)
 $page = PageRenderer::render($query, $_SERVER);
 http_response_code($page['status']);
 $html = $preview !== null
-    ? Preview::decorate($page['html'], $preview, 'editor/index.php?action=staging', Preview::exitUrl($_GET))
+    ? Preview::decorate($page['html'], $preview, 'kris-admin/index.php?action=staging', Preview::exitUrl($_GET))
     : $page['html'];
 echo $routes !== null ? Router::rewriteLinks($html, $routes, $basePath, PageRenderer::language([])[1][0]) : $html;

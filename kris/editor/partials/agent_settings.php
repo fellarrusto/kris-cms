@@ -1,7 +1,7 @@
 <?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } ?>
 <?php
 $agent = (new \Kris\Agent\AgentConfig())->load();
-$agentSiteUrl = preg_replace('#/editor(/index\.php)?$#', '', kris_current_editor_url());
+$agentSiteUrl = preg_replace('#/(?:kris-admin|editor)(/index\.php)?$#', '', kris_current_editor_url());
 ?>
 <section class="card" id="kris-agent"><header class="card-header"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><h2>Kris Agent</h2><p>Permette a un assistente AI di preparare modifiche al sito. Le modifiche restano in attesa finché non le pubblichi tu da «Da pubblicare».</p></div></header><div class="card-body">
 <?php if ($agent === null): ?>

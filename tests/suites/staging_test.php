@@ -438,3 +438,23 @@ test('un font WOFF2 si carica nello staging, si vede in anteprima e va in assets
     $s->undoLastPromotion();
     assertTrue(!is_file("{$root}/assets/fonts/inter-regular.woff2"), 'l annullamento toglie il font nuovo');
 });
+
+test('/kris-admin/preview/ apre la pagina in anteprima, solo con l editor aperto', function () {
+    $sandbox = projectSandbox();
+    $s = new Staging($sandbox);
+    $file = 'template/homepage.html';
+    $original = (string) file_get_contents("{$sandbox}/{$file}");
+    $s->write($file, str_replace('</body>', '<p>SOLO-IN-STAGING</p></body>', $original), Staging::hash($original), 'test');
+    try {
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/kris-admin/preview/?page=homepage';
+        $admin = renderPage([], null, 'index.php', true);
+        assertSame(200, $admin['status']);
+        assertContains('SOLO-IN-STAGING', $admin['output']);
+        assertContains('id="kris-preview-bar"', $admin['output']);
+        assertContains('kris-admin/index.php?action=staging', $admin['output'], 'la barra porta al nuovo editor');
+        assertSame(404, renderPage([], null, 'index.php', false)['status'], 'senza sessione non esiste');
+    } finally {
+        unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
+        $s->discard();
+    }
+});
