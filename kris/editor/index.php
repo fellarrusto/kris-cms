@@ -64,12 +64,22 @@ $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
 
 // Primo avvio: nessuna credenziale configurata, la si crea adesso.
 if (kris_auth_config() === null) {
+    // Chi crea l'accesso deve dimostrare di avere i file del sito: il codice sta in config/setup_code.php
+    if (kris_setup_code()->ensure() === null) {
+        kris_render_setup('Non riesco a scrivere config/setup_code.php: controlla i permessi della cartella config/.');
+    }
     if ($isPost && isset($_POST['do_setup'])) {
         $user = trim((string) ($_POST['user'] ?? ''));
         $pass = (string) ($_POST['pass'] ?? '');
         $email = trim((string) ($_POST['email'] ?? ''));
+        $wait = kris_login_wait();
         if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
             kris_render_setup('Sessione scaduta: riprova.');
+        } elseif ($wait > 0) {
+            kris_render_setup('Troppi tentativi sbagliati. Riprova tra ' . max(1, (int) ceil($wait / 60)) . ' minuti.');
+        } elseif (!kris_setup_code()->verify((string) ($_POST['setup_code'] ?? ''))) {
+            kris_login_throttle()->fail((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+            kris_render_setup('Il codice non corrisponde a quello in config/setup_code.php.');
         } elseif ($user === '' || strlen($pass) < Kris\Auth\Credentials::MIN_PASSWORD) {
             kris_render_setup('Serve uno username e una password di almeno 10 caratteri.');
         } elseif (!Kris\Auth\Credentials::validEmail($email)) {
@@ -79,6 +89,7 @@ if (kris_auth_config() === null) {
         } elseif (!kris_save_credentials($user, $pass, $email)) {
             kris_render_setup('Non riesco a scrivere config/auth.php: controlla i permessi della cartella.');
         } else {
+            kris_setup_code()->remove();
             header("Location: $BASE");
             exit;
         }
