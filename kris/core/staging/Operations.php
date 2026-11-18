@@ -119,6 +119,58 @@ final class Operations
         };
     }
 
+    /**
+     * I testi richtext che un'operazione scrive (set_field, add_item,
+     * create_entity): sono HTML che il sito emette così com'è, quindi codice
+     * da far approvare come quello dei file. $model è lo schema in cui
+     * l'operazione si applica.
+     *
+     * @return list<string>
+     */
+    public static function richtextValues(array $model, array $op): array
+    {
+        try {
+            $key = (string) ($op['key'] ?? '');
+            switch ($op['op'] ?? '') {
+                case 'set_field':
+                    $def = self::fieldDef(self::schemaAt($model, $key, self::arrayNames(self::path($op))), (string) ($op['field'] ?? ''));
+                    return $def['type'] === 'richtext' ? self::strings($op['value'] ?? null) : [];
+                case 'add_item':
+                    $names = array_merge(self::arrayNames(self::path($op)), [(string) ($op['array'] ?? '')]);
+                    return self::richtextIn(self::schemaAt($model, $key, $names), (array) ($op['fields'] ?? []));
+                case 'create_entity':
+                    return self::richtextIn(self::schemaAt($model, $key, []), (array) ($op['fields'] ?? []));
+            }
+        } catch (StagingException $e) {
+            // Un'operazione che non si applica più non scrive nulla
+        }
+        return [];
+    }
+
+    private static function richtextIn(array $schema, array $fields): array
+    {
+        $found = [];
+        foreach ($schema as $def) {
+            if (!is_array($def) || !array_key_exists($def['name'] ?? '', $fields)) continue;
+            $value = $fields[$def['name']];
+            if (($def['type'] ?? null) === 'richtext') {
+                array_push($found, ...self::strings($value));
+            } elseif (($def['type'] ?? null) === 'array' && is_array($value)) {
+                foreach ($value as $item) {
+                    if (is_array($item)) array_push($found, ...self::richtextIn($def['of'] ?? [], $item));
+                }
+            }
+        }
+        return $found;
+    }
+
+    /** @return list<string> */
+    private static function strings(mixed $value): array
+    {
+        if (is_string($value)) return [$value];
+        return is_array($value) ? array_values(array_filter($value, 'is_string')) : [];
+    }
+
     /** Nomi di campi tolti o rinominati: i template che li usano ancora vanno aggiornati. */
     public static function retiredNames(array $op): array
     {

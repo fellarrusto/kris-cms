@@ -160,6 +160,37 @@ test('raccolta nuova, contenuto nuovo e pagina nuova', function () {
     assertTrue(in_array(['page' => 'progetto', 'key' => 'progetti'], $seo['sitemap'], true));
 });
 
+test('un richtext con script dell agente aspetta l approvazione come un file', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    // Testo formattato normale: nessuna approvazione
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'hero_description', 'lang' => 'it', 'value' => '<p>Ciao <a href="https://esempio.it">qui</a></p>'], 'agente');
+    assertSame([], $s->codeFiles());
+    assertTrue($s->codeApproved());
+
+    // Un gestore di eventi in un richtext gira nell'anteprima con la sessione dell'editor
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'hero_description', 'lang' => 'en', 'value' => '<img src="x" onerror="fetch(\'/editor/\')">'], 'agente');
+    $files = $s->codeFiles();
+    assertSame(1, count($files), implode(', ', $files));
+    assertContains('contenuto:', $files[0]);
+    assertSame(false, $s->codeApproved());
+    $s->approveCode((string) $s->codeFingerprint(), 'admin');
+    assertTrue($s->codeApproved());
+
+    // Cambia il testo: l'approvazione non vale più
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'hero_description', 'lang' => 'en', 'value' => '<script>alert(1)</script>'], 'agente');
+    assertSame(false, $s->codeApproved());
+
+    // Anche dentro un elemento nuovo di un elenco, in un campo richtext
+    $s->discard();
+    $s->operate(['op' => 'add_item', 'key' => 'homepage', 'id' => 0, 'array' => 'posts', 'fields' => ['body' => ['it' => '<a href="javascript:alert(1)">x</a>']]], 'agente');
+    assertSame(false, $s->codeApproved());
+    // Un campo plain con lo stesso testo esce con l'escape: non è codice
+    $s->discard();
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'code_example', 'value' => '<script>x</script>'], 'agente');
+    assertTrue($s->codeApproved());
+});
+
 test('un immagine caricata si usa nei campi image e passa gli stessi controlli dell editor', function () {
     $root = contentSite();
     $s = new Staging($root);

@@ -551,22 +551,54 @@ final class Staging
      */
     public function codeFiles(): array
     {
-        $files = [];
+        return array_keys($this->codeItems());
+    }
+
+    /**
+     * File e contenuti in attesa con codice eseguibile nel browser, con
+     * l'impronta della loro versione attuale. Oltre ai file del tema contano
+     * i testi richtext scritti dalle operazioni: escono come HTML, quindi uno
+     * script o un gestore di eventi lì gira nell'anteprima con la sessione
+     * dell'editor aperta, come quello di un file.
+     *
+     * @return array<string, string> nome mostrato all'admin => impronta
+     */
+    private function codeItems(): array
+    {
+        $items = [];
         foreach ($this->changes() as $change) {
             if ($change['kind'] === 'deleted') continue;
             if (FilePolicy::isCode($change['file']) || FilePolicy::hasCodeSignal($change['sensitive'])) {
-                $files[] = $change['file'];
+                $items[$change['file']] = self::hashOf("{$this->dir}/{$change['file']}");
             }
         }
-        return $files;
+        $ops = $this->operations();
+        if (!$ops) return $items;
+        // Lo schema cresce con le operazioni (raccolte e campi nuovi): si segue l'anteprima passo per passo
+        $state = $this->siteState();
+        $languages = $this->languages();
+        foreach ($ops as $op) {
+            foreach (Operations::richtextValues($state['model'], $op) as $html) {
+                if (FilePolicy::hasCodeSignal(FilePolicy::sensitive($html))) {
+                    $label = 'contenuto: ' . Operations::describe($op);
+                    $items[$label] = self::hash(($items[$label] ?? '') . "\n" . $html);
+                }
+            }
+            try {
+                [$state] = Operations::apply($state, $op, $languages, [$this, 'uploadExists'], true, true);
+            } catch (StagingException $e) {
+                // Non applicabile: lo schema resta quello di prima
+            }
+        }
+        return $items;
     }
 
-    /** Impronta dei file con codice cosi come sono ora, o null se non ce ne sono. */
+    /** Impronta dei file e dei contenuti con codice così come sono ora, o null se non ce ne sono. */
     public function codeFingerprint(): ?string
     {
         $parts = [];
-        foreach ($this->codeFiles() as $relative) {
-            $parts[] = $relative . ':' . self::hashOf("{$this->dir}/{$relative}");
+        foreach ($this->codeItems() as $label => $hash) {
+            $parts[] = $label . ':' . $hash;
         }
         return $parts ? self::hash(implode("\n", $parts)) : null;
     }

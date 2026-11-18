@@ -371,6 +371,7 @@ document.addEventListener('submit', async event => {
         if (!response.ok || !result.ok) throw new Error(result.message || 'Non è stato possibile salvare: ricarica la pagina e riprova.');
         status.textContent = result.message;
         if (form.querySelector('[name=change_password]')) form.reset();
+        form.querySelectorAll('input[type=password]').forEach(input => { input.value = ''; });
         // L'avviso in testa all'editor sparisce una volta salvata l'email.
         if (form.closest('.account-alert')) { toast(result.message); form.closest('.account-alert').remove(); }
     } catch (error) {

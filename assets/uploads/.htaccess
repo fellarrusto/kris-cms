@@ -13,3 +13,7 @@ php_flag engine off
     </IfModule>
 </FilesMatch>
 AddType text/plain .php .phtml .phar
+# Il browser usa il tipo dichiarato dal server, senza indovinarlo dal contenuto
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
