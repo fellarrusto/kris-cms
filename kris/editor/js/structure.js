@@ -1,6 +1,7 @@
 // Schema changes remain a normal POST: destructive changes go through the server impact view.
 'use strict';
-const SF_TYPES = [['text','Testo multilingua'],['richtext','Testo formattato'],['image','Media / file'],['plain','Testo condiviso'],['array','Elenco annidato']];
+const SF_TYPES = [['text','Testo multilingua'],['richtext','Testo formattato'],['image','Media / file'],['plain','Testo condiviso'],['array','Elenco annidato'],['boolean','Interruttore'],['select','Scelta fra opzioni']];
+const SF_CHOICE='<div class="sf-choice" hidden><label class="setting-row"><input type="checkbox" class="sf-localized"><span><strong>Diverso per lingua</strong><small>Spento: un solo valore per tutte le lingue.</small></span></label><div class="sf-options" hidden><label>Opzioni, una per riga<textarea class="sf-options-list" rows="4"></textarea></label><label class="setting-row"><input type="checkbox" class="sf-multiple"><span><strong>Più opzioni insieme</strong><small>Per tag e categorie: nei template si controllano con «has».</small></span></label></div></div>';
 // Il flag posts esiste solo sugli elenchi di primo livello.
 const SF_POSTS='<label class="sf-posts-label" hidden><input type="checkbox" class="sf-posts"><span><strong>Mostra in Posts</strong><small>Accesso rapido dalla barra laterale; i nuovi elementi vengono aggiunti in cima.</small></span></label>';
 const SF_ROOT=()=>q('#root-schema');
@@ -10,6 +11,8 @@ function sfTypeChange(select) {
     nested.style.display=select.value==='array'?'flex':'none';
     nested.querySelectorAll('.sf-name').forEach(input=>input.required=select.value==='array');
     const posts=select.closest('.sf-row').querySelector(':scope > .sf-posts-label');if(posts)posts.hidden=select.value!=='array';
+    const choice=select.closest('.sf-row').querySelector(':scope > .sf-choice');
+    if(choice){choice.hidden=!['boolean','select'].includes(select.value);q('.sf-options',choice).hidden=select.value!=='select';}
     markAsDirty();
 }
 
@@ -47,7 +50,7 @@ function sfRemoveSection(group){
 function sfAddField(container) {
     const root=container===SF_ROOT();
     const row=document.createElement('div');row.className='sf-row';row.dataset.depth=root?'0':'1';
-    row.innerHTML=`<div class="sf-header">${root?'<button type="button" class="icon-button sf-drag" aria-label="Trascina per spostare il campo in un\'altra sezione" title="Trascina"><span aria-hidden="true">&#x2807;</span></button>':''}<input type="text" class="sf-name" placeholder="Nome tecnico" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+"><select class="sf-type" aria-label="Tipo del campo">${SF_TYPES.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select><button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo">&times;</button></div><label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" placeholder="Aiuta chi modifica il contenuto"></label>${root?'<label class="sf-section-label">Sezione<select class="sf-move"></select></label>'+SF_POSTS:''}<div class="sf-nested" style="display:none"><button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button></div>`;
+    row.innerHTML=`<div class="sf-header">${root?'<button type="button" class="icon-button sf-drag" aria-label="Trascina per spostare il campo in un\'altra sezione" title="Trascina"><span aria-hidden="true">&#x2807;</span></button>':''}<input type="text" class="sf-name" placeholder="Nome tecnico" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+"><select class="sf-type" aria-label="Tipo del campo">${SF_TYPES.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select><button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo">&times;</button></div><label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" placeholder="Aiuta chi modifica il contenuto"></label>${SF_CHOICE}${root?'<label class="sf-section-label">Sezione<select class="sf-move"></select></label>'+SF_POSTS:''}<div class="sf-nested" style="display:none"><button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button></div>`;
     if(root){
         q(':scope > .sf-group-fields',sfGroups().find(g=>g.dataset.sfGroup==='none')).appendChild(row);sfRefreshSections();
     }else{
@@ -62,6 +65,12 @@ function sfSerializeRows(rows,section) {
         if(section!==null)entry.section=section;
         if(entry.type==='array')entry.of=sfSerializeRows([...q('.sf-nested',row).children].filter(c=>c.classList.contains('sf-row')),null);
         const posts=row.querySelector(':scope > .sf-posts-label .sf-posts');if(posts)entry.posts=entry.type==='array'&&posts.checked;
+        const choice=row.querySelector(':scope > .sf-choice');
+        if(choice&&['boolean','select'].includes(entry.type)){
+            // Sempre esplicite: il server conserva le chiavi che non arrivano, e una spunta tolta tornerebbe
+            entry.localized=q('.sf-localized',choice).checked;
+            if(entry.type==='select'){entry.options=q('.sf-options-list',choice).value.split('\n').map(o=>o.trim()).filter(Boolean);entry.multiple=q('.sf-multiple',choice).checked;}
+        }
         return entry;
     });
 }

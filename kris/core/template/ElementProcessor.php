@@ -45,6 +45,9 @@ class ElementProcessor
                 $tokens[] = ['type' => 'if', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
             } elseif (preg_match('/^#elif\s+(\w+)\s*(==|!=|>=|<=|>|<|has)\s*(.+)$/', $tag, $m)) {
                 $tokens[] = ['type' => 'elif', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
+            } elseif (preg_match('/^#(if|elif)\s+(\w+)$/', $tag, $m)) {
+                // {{#if campo}}: vero se il campo ha un valore (un interruttore acceso, un testo non vuoto)
+                $tokens[] = ['type' => $m[1], 'field' => $m[2], 'op' => 'set', 'value' => ''];
             } elseif ($tag === '#else') {
                 $tokens[] = ['type' => 'else'];
             } elseif ($tag === '/if') {
@@ -214,6 +217,7 @@ class ElementProcessor
             case 'has':
                 $tags = array_map('trim', explode(',', (string)$a));
                 return in_array($b, $tags);
+            case 'set': return $a !== '' && $a !== '0' && $a !== false;
             default: throw new Exception("Invalid operator '{$op}'");
         }
     }

@@ -446,7 +446,7 @@ test('change_type converte i valori; da o verso un elenco solo se vuoto', functi
     assertSame(htmlspecialchars($before['it'], ENT_QUOTES, 'UTF-8'), $value['it']);
     assertSame($value['it'], $value['en'], 'il valore plain vale per ogni lingua');
     expectStaging(fn() => $s->operate(['op' => 'change_type', 'collection' => 'homepage', 'name' => 'steps', 'type' => 'text'], 'a'), 'vuoto');
-    expectStaging(fn() => $s->operate(['op' => 'change_type', 'collection' => 'homepage', 'name' => 'page_title', 'type' => 'boolean'], 'a'), 'non valido');
+    expectStaging(fn() => $s->operate(['op' => 'change_type', 'collection' => 'homepage', 'name' => 'page_title', 'type' => 'boolean'], 'a'), 'contiene valori');
     $types = array_column($s->state()['model']['homepage'], 'type', 'name');
     assertSame('richtext', $types['page_title']);
 });
@@ -604,4 +604,31 @@ test('gli avvisi segnalano campi senza sezione, campi non usati e font mancanti'
     assertContains('«servizi»: nessun template usa sottotitolo.', $warnings);
     assertNotContains('usa titolo', $warnings);
     assertContains('assets/css/tema.css cita il font manca.woff2', $warnings);
+});
+
+test('interruttori e scelte: condivisi o per lingua, con le opzioni dello schema', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operate(['op' => 'add_field', 'collection' => 'homepage', 'field' => ['name' => 'in_vetrina', 'type' => 'boolean']], 'a');
+    $s->operate(['op' => 'add_field', 'collection' => 'homepage', 'field' => ['name' => 'visibile', 'type' => 'boolean', 'localized' => true]], 'a');
+    $s->operate(['op' => 'add_field', 'collection' => 'homepage', 'field' => ['name' => 'tag', 'type' => 'select', 'multiple' => true, 'options' => ['web', 'app', 'seo']]], 'a');
+    $s->operate(['op' => 'add_field', 'collection' => 'homepage', 'field' => ['name' => 'stato', 'type' => 'select', 'options' => ['bozza', 'pronto']]], 'a');
+    expectStaging(fn() => $s->operate(['op' => 'add_field', 'collection' => 'homepage', 'field' => ['name' => 'vuota', 'type' => 'select']], 'a'), 'servono le opzioni');
+
+    $set = fn(string $field, mixed $value, ?string $lang = null) => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => $field, 'value' => $value] + ($lang ? ['lang' => $lang] : []), 'a');
+    $set('in_vetrina', true);
+    $set('visibile', false);
+    $set('visibile', true, 'en');
+    $set('tag', ['seo', 'web']);
+    $set('stato', 'pronto');
+    $data = "{$root}/data/staging/data/k_data.json";
+    assertSame('1', siteValue($data, 'homepage', 0, 'in_vetrina'));
+    assertSame(['it' => '', 'en' => '1'], siteValue($data, 'homepage', 0, 'visibile'));
+    assertSame('web,seo', siteValue($data, 'homepage', 0, 'tag'), 'nell ordine delle opzioni');
+    assertSame('pronto', siteValue($data, 'homepage', 0, 'stato'));
+
+    expectStaging(fn() => $set('tag', 'mobile'), 'non ha l\'opzione');
+    expectStaging(fn() => $set('stato', ['bozza', 'pronto']), 'una sola opzione');
+    expectStaging(fn() => $set('in_vetrina', 'forse'), 'interruttore');
+    expectStaging(fn() => $set('in_vetrina', true, 'it'), 'togli "lang"');
 });

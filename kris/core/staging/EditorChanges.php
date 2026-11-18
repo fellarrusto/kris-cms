@@ -31,7 +31,7 @@ final class EditorChanges
             $name = (string) ($def['name'] ?? '');
             $type = (string) ($def['type'] ?? '');
             if ($type === 'array' || !array_key_exists($name, $new)) continue;
-            if ($type === 'plain') {
+            if (\Kris\Entity\Entity::isShared($def)) {
                 $o = self::scalar($old[$name] ?? '');
                 $n = self::scalar($new[$name]);
                 if ($o !== $n) $ops[] = $base + ['field' => $name, 'value' => $n];
