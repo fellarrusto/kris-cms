@@ -127,7 +127,7 @@ Sono tipi a contenuto unico con prefisso `kris_`. Lo schema lo gestiscono le mig
 
 - i visitatori ricevono la pagina di lavorazione con stato 503 e `Retry-After`, sitemap compresa;
 - chi ha la sessione dell'editor aperta vede il sito normale, con una barra che ricorda che è in lavorazione;
-- `/editor/` e l'endpoint dell'agente restano raggiungibili.
+- `/kris-admin/` e l'endpoint dell'agente restano raggiungibili.
 
 Regola sull'iniezione: Kris inietta nell'`<head>` solo se il template non ha già quel tag (favicon, canonical, hreflang, tag del gruppo SEO, JSON-LD). Nel corpo della pagina non aggiunge elementi; l'unica eccezione sono gli attributi delle immagini ottimizzate (vedi 3.7), e solo se il tag non li ha già.
 
@@ -165,10 +165,11 @@ Le foto caricate sono spesso troppo pesanti. Al caricamento di un'immagine Kris 
 - Ogni pagina dichiara template, tipo, indirizzo, presenza in sitemap, priorità nella sitemap e `noindex`. Tutto si cambia dall'editor e dall'agente.
 - Lingua: la principale senza prefisso (`/menu`), le altre con prefisso (`/en/menu`). La lingua principale si sceglie in Impostazioni › Lingue e decide anche l'`x-default` degli hreflang, il canonical e `og:locale`.
 - Sitemap: generata dalle pagine, con `lastmod` preso dall'ultima modifica del contenuto e le alternative per lingua (già presenti nella 1.9).
-- `robots.txt`: generato da Kris con l'indirizzo assoluto della sitemap e `Disallow: /editor/`, più le righe aggiuntive scritte in `kris_site`. Un `robots.txt` fisico nella root continua a vincere.
-- Anteprima: la modalità anteprima resta attiva per tutta la sessione dell'editor, non solo per i link che la portano nell'indirizzo. Oggi è un parametro (`kris_preview=1`): un indirizzo scritto a mano lo perde e mostra il sito pubblico, dove una pagina nuova non esiste ancora. «Da pubblicare» e lo stato dello staging dell'agente elencano le pagine e i contenuti toccati, ognuno con il suo link di anteprima.
+- `robots.txt`: generato da Kris con l'indirizzo assoluto della sitemap e `Disallow: /kris-admin/`, più le righe aggiuntive scritte in `kris_site`. Un `robots.txt` fisico nella root continua a vincere.
+- Anteprima: `/kris-admin/preview/` seguito dall'indirizzo pubblico (`/kris-admin/preview/en/menu`, `/kris-admin/preview/lavagna-7k3q`) mostra quella pagina con le modifiche in attesa. Si scrive anche a mano, quindi raggiunge le pagine non collegate da nessun link; richiede la sessione dell'editor, altrimenti risponde 404; i link interni restano nell'anteprima. Sostituisce il parametro `kris_preview=1`, che si perde scrivendo un indirizzo a mano. «Indirizzi», «Da pubblicare» e lo stato dello staging dell'agente danno il link di anteprima di ogni pagina.
+- Editor: si sposta da `/editor/` a `/kris-admin/`, così `editor` torna un nome libero per le pagine dei siti. Nessun reindirizzamento dal vecchio indirizzo: i siti sono pochi. L'aggiornamento alla 2.0 fa tutto da solo: crea lo stub `kris-admin/`, elimina `editor/`, aggiorna l'indirizzo dell'editor salvato in `config/auth.php` (usato per i link di reset della password) e, a installazione finita, porta il browser al nuovo indirizzo.
 - Dettaglio: `/progetto/{id}` oppure, se il contenuto ha uno slug, `/progetto/casa-rossi`. Vedi «Slug» qui sotto.
-- Nomi riservati rifiutati alla creazione di una pagina: `editor`, `kris`, `assets`, `data`, `config`, `template`, `sitemap`, i codici lingua attivi e i nomi dei file nella root.
+- Nomi riservati rifiutati alla creazione di una pagina: `kris`, `kris-admin`, `assets`, `data`, `config`, `template`, `sitemap`, i codici lingua attivi e i nomi dei file nella root.
 - Percorsi relativi: con indirizzi a più livelli `assets/...` non si risolve più dalla root. Kris riscrive al rendering gli attributi `href`, `src`, `srcset`, `poster` e gli `url()` negli attributi `style` che iniziano con `assets/`, `kris/` o `index.php`, anteponendo la root del sito. Non si usa `<base href>`, che romperebbe i link interni alla pagina (`#contatti`). Per gli indirizzi costruiti nel JavaScript del tema c'è `{{base_path}}`. Va provato in sottocartella.
 - Redirect: tabella gestibile dall'editor. Kris ne aggiunge uno da solo quando cambia l'indirizzo di una pagina.
 - Vecchi indirizzi: `?page=…&key=…&id=…` e `path=lista/ID` rispondono con 301 al nuovo indirizzo, con la mappa registrata dalla migrazione.

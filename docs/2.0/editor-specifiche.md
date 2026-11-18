@@ -4,7 +4,7 @@ Questo documento descrive cosa deve fare l'editor di Kris: schermate, contenuti,
 
 ## 1. Il prodotto
 
-Kris è un CMS per siti vetrina. Uno sviluppatore costruisce il sito in HTML e CSS; il proprietario del sito ne modifica testi, immagini ed elenchi da un pannello raggiungibile all'indirizzo `/editor/` del sito stesso. Quel pannello è l'editor, oggetto di questo documento.
+Kris è un CMS per siti vetrina. Uno sviluppatore costruisce il sito in HTML e CSS; il proprietario del sito ne modifica testi, immagini ed elenchi da un pannello raggiungibile all'indirizzo `/kris-admin/` del sito stesso. Quel pannello è l'editor, oggetto di questo documento.
 
 Un sito ha un solo account per l'editor. Non ci sono ruoli né elenchi di utenti.
 
@@ -343,6 +343,7 @@ Se il salvataggio elimina, rinomina o cambia tipo a campi che contengono già va
 - Elenco con: nome, indirizzo (`/menu`, `/progetto/…`), tipo collegato, modello grafico, presenza nella mappa del sito, indicizzabile o no, apertura della pagina.
 - Un indirizzo è collegato a un contenuto unico (che così diventa una pagina) oppure a ogni contenuto di una raccolta.
 - Modifica di un indirizzo: percorso, tipo, modello grafico, mappa del sito sì o no, priorità nella mappa del sito, indicizzabile sì o no.
+- Per ogni indirizzo, il link di anteprima, anche senza modifiche in attesa (pagine sospese, non indicizzate, fuori dalla mappa del sito).
 - Collegamenti in sola lettura alla mappa del sito e a `robots.txt` generati.
 - L'indirizzo viene verificato: nomi riservati e indirizzi già usati sono rifiutati con il motivo.
 - Quando l'indirizzo cambia, l'editor avvisa che il vecchio verrà reindirizzato al nuovo.
@@ -528,7 +529,7 @@ Non fanno parte dell'editor ma dello stesso pacchetto. Sono viste dai visitatori
 | Lavori in corso, di serie | Interruttore acceso e sito senza una pagina propria | Titolo e testo modificabili |
 | 404, di serie | Indirizzo inesistente e sito senza una pagina propria | Titolo, testo, pulsante modificabili |
 | Errore dei dati | L'editor non riesce a leggere i contenuti | Il problema e a chi rivolgersi; nessuna navigazione |
-| Barra dell'anteprima | Sopra ogni pagina vista in anteprima | Indica che è un'anteprima, quante modifiche contiene, rimando a «Da pubblicare», uscita dall'anteprima. L'anteprima resta attiva finché non se ne esce, anche scrivendo un indirizzo a mano |
+| Barra dell'anteprima | Sopra ogni pagina vista in anteprima | Indica che è un'anteprima, quante modifiche contiene, rimando a «Da pubblicare», uscita dall'anteprima. L'anteprima ha un indirizzo proprio (`/kris-admin/preview/` più l'indirizzo della pagina): si può scrivere a mano per vedere anche le pagine che nessun link raggiunge |
 | Approvazione del codice in anteprima | All'apertura di un'anteprima con codice non approvato | Elenco dei file; «Approva ed esegui», dopo l'assunzione di responsabilità; «Guarda senza eseguire» |
 
 ## 7. Componenti
