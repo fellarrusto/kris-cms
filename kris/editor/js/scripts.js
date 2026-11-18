@@ -16,6 +16,14 @@ const qa = (s, root = document) => [...root.querySelectorAll(s)];
 // Impostazioni: i vecchi link con l'ancora (#versione, #account, #kris-agent) aprono la sotto-pagina giusta.
 {const params=new URLSearchParams(location.search);const tabs={'#versione':'versione','#account':'account','#kris-agent':'agent'};
 if(params.get('action')==='settings'&&!params.has('tab')&&tabs[location.hash]){params.set('tab',tabs[location.hash]);location.replace('?'+params.toString());}}
+// Aggiornamenti suggeriti: «Più tardi» vale per quella versione, in questo browser.
+{const banner=q('[data-update-banner]');
+if(banner){const later=()=>{try{return localStorage.getItem('kris-update-later');}catch{return null;}};
+const show=v=>{if(!v||v===later())return;q('[data-update-version]',banner).textContent=v;banner.hidden=false;};
+q('[data-update-later]',banner).addEventListener('click',()=>{try{localStorage.setItem('kris-update-later',q('[data-update-version]',banner).textContent);}catch{}banner.hidden=true;});
+show(banner.dataset.latest);
+if('check' in banner.dataset)window.addEventListener('load',()=>setTimeout(async()=>{const body=new FormData();body.append('op','check');body.append('csrf',csrf());
+try{const r=await(await fetch('update.php',{method:'POST',body,credentials:'same-origin',cache:'no-store'})).json();if(r.ok&&r.target)show(r.target);}catch{}},1500));}}
 
 function snapshot() {
     if (!currentForm) return '';

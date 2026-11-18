@@ -242,6 +242,15 @@ if ($maintenance !== null) {
     }
 }
 
+// Aggiornamenti suggeriti: il canale si legge al massimo una volta al giorno, dal browser dopo il caricamento;
+// nel frattempo vale l'esito dell'ultimo controllo. Mai durante un blocco o nella scheda della versione.
+$updateHint = null;
+if ($editorLock === '' && ($_GET['action'] ?? '') !== 'settings' && isset($siteState) && \Kris\Update\Updater::loadConfig(KRIS_ROOT)['enabled']) {
+    $lastCheck = is_array($siteState['last_check'] ?? null) ? $siteState['last_check'] : [];
+    $latest = is_string($lastCheck['latest'] ?? null) && version_compare($lastCheck['latest'], $krisVersion, '>') ? $lastCheck['latest'] : '';
+    $updateHint = ['latest' => $latest, 'check' => (int) strtotime((string) ($lastCheck['at'] ?? '')) < time() - 86400];
+}
+
 // --- MODALITA: SITO PUBBLICO O MODIFICHE IN ATTESA ---
 // Con le modifiche in attesa l'editor mostra lo staging e ogni salvataggio
 // diventa un'operazione dello staging: il sito cambia solo alla pubblicazione.
@@ -412,6 +421,9 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
             </div>
         <?php elseif ($frameworkNotice !== ''): ?>
             <div class="alert system-alert" role="status"><p><?= h($frameworkNotice) ?></p></div>
+        <?php endif; ?>
+        <?php if ($updateHint !== null): ?>
+            <div class="alert system-alert" role="status" data-update-banner data-latest="<?= h($updateHint['latest']) ?>"<?= $updateHint['check'] ? ' data-check' : '' ?> hidden><p><strong>È disponibile Kris <span data-update-version></span>.</strong> Prima di installarla puoi leggere le novità.</p><a class="btn btn-primary" href="?action=settings&amp;tab=versione">Aggiorna ora</a><button type="button" class="text-link" data-update-later>Più tardi</button></div>
         <?php endif; ?>
         <?php foreach ($data as $wipEntity): if (($wipEntity['name'] ?? null) !== 'kris_wip') continue; foreach ($wipEntity['data'] ?? [] as $wipField): if (($wipField['name'] ?? null) === 'enabled' && ($wipField['value'] ?? '') === '1'): ?>
             <div class="alert system-alert" role="status"><p><strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor aperto.</p><a class="btn btn-white" href="?action=edit&amp;group=kris_wip&amp;id=0">Lavori in corso</a></div>
