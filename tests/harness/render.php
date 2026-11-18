@@ -13,6 +13,8 @@ declare(strict_types=1);
 // sostituisce i '%' con spazi e corromperebbe i valori urlencoded.
 parse_str(getenv('KRIS_QUERY') ?: '', $query);
 $_GET = $query;
+parse_str(getenv('KRIS_COOKIES') ?: '', $cookies);
+$_COOKIE = $cookies;
 $_SERVER['REQUEST_METHOD'] = 'GET';
 
 ob_start();

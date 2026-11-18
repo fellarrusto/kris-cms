@@ -380,7 +380,7 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
             <?php if ($stagingMode): ?>
                 <a href="../index.php?kris_preview=1" target="_blank" rel="noopener" class="btn btn-white">Apri l'anteprima <span aria-hidden="true">↗</span></a>
             <?php else: ?>
-                <a href="../" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
+                <a href="../index.php?kris_preview=0" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
             <?php endif; ?>
         </div>
     </header>

@@ -44,7 +44,7 @@ final class Staging
     ];
 
     /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
-    private const PAGE_OPS = ['register_page', 'unregister_page', 'remove_collection', 'rename_collection'];
+    private const PAGE_OPS = ['register_page', 'unregister_page', 'set_sitemap', 'remove_collection', 'rename_collection'];
     private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection', 'set_collection_info', 'move_collection'];
 
     private string $root;
@@ -420,6 +420,84 @@ final class Staging
     }
 
     /**
+     * Le pagine toccate dalle modifiche in attesa, ognuna con il suo indirizzo
+     * di anteprima: anche quelle che nessun link del sito raggiunge (pagine
+     * nuove, landing, schermi). Si ricavano dalle operazioni sui contenuti e
+     * dalle pagine registrate, e dai template delle pagine modificati.
+     *
+     * @return list<array{label: string, url: string}> url relativo alla root del sito
+     */
+    public function previewPages(?array $state = null): array
+    {
+        $state ??= $this->state();
+        $pages = array_values(array_filter((array) ($state['pages'] ?? []), 'is_string'));
+        $templates = [];
+        foreach ($this->templateSources() as $relative => $html) $templates[substr(basename($relative), 0, -5)] = $html;
+        $contexts = TemplateUsage::contexts($templates, [$this->siteState()['model'], $state['model'] ?? []], (array) ($state['seo']['sitemap'] ?? []));
+        $roots = function (string $page) use ($contexts, $state): array {
+            $roots = array_values(array_filter($contexts[$page] ?? [], fn($c) => !str_contains($c, '/')));
+            // Una pagina che nessun link raggiunge: di solito rende la raccolta con il suo nome
+            if (!$roots && isset($state['model'][$page])) $roots = [$page];
+            return $roots;
+        };
+
+        $out = [];
+        $add = function (string $page, ?string $key = null, ?int $id = null, array $path = []) use (&$out): void {
+            $query = ['page' => $page];
+            if ($key !== null) $query['key'] = $key;
+            if ($id !== null) $query['id'] = $id;
+            if ($path) $query['path'] = implode('/', $path);
+            $query['kris_preview'] = '1';
+            $label = $page . ($key !== null ? " · {$key}" . ($id !== null ? " #{$id}" : '') : '') . ($path ? ' › ' . implode('/', $path) : '');
+            $out['index.php?' . http_build_query($query)] = $label;
+        };
+
+        foreach ($this->operations() as $op) {
+            $type = (string) ($op['op'] ?? '');
+            if ($type === 'register_page') {
+                $page = (string) ($op['page'] ?? '');
+                $key = $roots($page)[0] ?? null;
+                $add($page, $key, $key !== null ? 0 : null);
+                continue;
+            }
+            if (!isset($op['key']) || in_array($type, ['remove_entity'], true)) continue;
+            $collection = (string) $op['key'];
+            $id = $type === 'create_entity' ? (int) ($op['assigned_id'] ?? 0) : (int) ($op['id'] ?? 0);
+            $path = array_map('strval', (array) ($op['path'] ?? []));
+            if ($type === 'add_item' && isset($op['assigned_id'])) $path = array_merge($path, [(string) ($op['array'] ?? ''), (string) $op['assigned_id']]);
+            $names = [];
+            for ($i = 0; $i < count($path); $i += 2) $names[] = $path[$i];
+            foreach ($pages as $page) {
+                if (in_array($collection, $roots($page), true)) $add($page, $collection, $id);
+                if ($names && count($path) % 2 === 0 && in_array(TemplateUsage::context($collection, $names), $contexts[$page] ?? [], true)) {
+                    $add($page, $collection, $id, $path);
+                }
+            }
+        }
+        foreach ($this->changes() as $change) {
+            if ($change['kind'] === 'deleted' || preg_match('#^template/(.+)\.html$#', $change['file'], $m) !== 1 || !in_array($m[1], $pages, true)) continue;
+            $key = $roots($m[1])[0] ?? null;
+            $add($m[1], $key, $key !== null ? 0 : null);
+        }
+        $list = [];
+        foreach ($out as $url => $label) $list[] = ['label' => $label, 'url' => $url];
+        return $list;
+    }
+
+    /** @return array<string, string> template/<nome>.html => HTML, del sito con quelli dello staging sopra, senza gli eliminati */
+    private function templateSources(): array
+    {
+        $templates = [];
+        foreach ([$this->root, $this->dir] as $base) {
+            foreach (glob("{$base}/template/*.html") ?: [] as $file) {
+                $templates['template/' . basename($file)] = (string) file_get_contents($file);
+            }
+        }
+        foreach ($this->deletedFiles() as $relative) unset($templates[$relative]);
+        return $templates;
+    }
+
+    /**
      * Template che usano ancora campi tolti o rinominati dalle operazioni:
      * dopo la pubblicazione mostrerebbero un vuoto.
      *
@@ -430,7 +508,7 @@ final class Staging
         $retired = [];
         $collections = [];
         foreach ($this->operations() as $op) {
-            foreach (Operations::retiredNames($op) as $name) $retired[$name] = true;
+            foreach (Operations::retiredNames($op) as $field) $retired[$field['name']][$field['context']] = true;
             foreach (Operations::retiredCollections($op) as $name) $collections[$name] = true;
         }
         $deleted = [];
@@ -446,9 +524,25 @@ final class Staging
             }
         }
         foreach (array_keys($deleted) as $name) unset($templates["template/{$name}.html"]);
+        // Quale raccolta rende ogni template: un campo omonimo di un'altra raccolta non e un problema
+        $usage = [];
+        if ($retired) {
+            $site = $this->siteState();
+            $preview = $this->state();
+            $byName = [];
+            foreach ($templates as $relative => $html) $byName[substr(basename($relative), 0, -5)] = $html;
+            $usage = TemplateUsage::contexts(
+                $byName,
+                [$site['model'], $preview['model']],
+                array_merge((array) ($site['seo']['sitemap'] ?? []), (array) ($preview['seo']['sitemap'] ?? []))
+            );
+        }
         $problems = [];
         foreach ($templates as $relative => $html) {
-            foreach (array_keys($retired) as $name) {
+            $contexts = $usage[substr(basename($relative), 0, -5)] ?? null;
+            foreach ($retired as $name => $where) {
+                // Contesto sconosciuto: il template potrebbe rendere qualunque raccolta
+                if ($contexts !== null && !array_intersect($contexts, array_keys($where))) continue;
                 $q = preg_quote((string) $name, '/');
                 if (preg_match('/\{\{\s*' . $q . '\s*\}\}|\{\{#(?:if|elif)\s+' . $q . '\b|k-array=["\']' . $q . '["\']/', $html) === 1) {
                     $problems[] = "{$relative} usa ancora «{$name}»";
