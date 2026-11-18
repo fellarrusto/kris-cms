@@ -118,7 +118,7 @@ Sono tipi a contenuto unico con prefisso `kris_`. Lo schema lo gestiscono le mig
 
 | Tipo | Contenuto | Come arriva sul sito |
 | --- | --- | --- |
-| `kris_site` | Nome del sito, indirizzo pubblico, favicon, immagine di condivisione predefinita, descrizione predefinita, meta di verifica | `{{kris_site.name}}`, `{{site_url}}`; favicon e tag iniettati nell'head |
+| `kris_site` | Nome del sito, indirizzo pubblico, favicon, modello del titolo («{pagina} \| {sito}»), immagine di condivisione e descrizione predefinite, codici di verifica (Search Console, Bing), dati dell'attività (nome, logo, indirizzo, telefono, orari, social), righe aggiuntive di `robots.txt` | `{{kris_site.name}}`, `{{site_url}}`; favicon, titolo, meta, `og:locale` e JSON-LD dell'attività iniettati nell'head |
 | `kris_legal` | Titolare, informative, testi del banner e delle categorie cookie | Pagine `privacy` e `cookie` del tema; banner con `k-component` |
 | `kris_notfound` | Testi e immagine della 404 | `template/404.html` del tema o pagina di serie |
 | `kris_wip` | Interruttore «sito in lavorazione» più i campi scelti dal tema | `template/kris_wip.html` del tema o pagina di serie |
@@ -129,7 +129,9 @@ Sono tipi a contenuto unico con prefisso `kris_`. Lo schema lo gestiscono le mig
 - chi ha la sessione dell'editor aperta vede il sito normale, con una barra che ricorda che è in lavorazione;
 - `/editor/` e l'endpoint dell'agente restano raggiungibili.
 
-Regola sull'iniezione: Kris inietta solo nell'`<head>` e solo se il template non ha già quel tag (favicon, canonical, hreflang, e i tag del gruppo SEO). Nel corpo della pagina non inietta mai nulla.
+Regola sull'iniezione: Kris inietta nell'`<head>` solo se il template non ha già quel tag (favicon, canonical, hreflang, tag del gruppo SEO, JSON-LD). Nel corpo della pagina non aggiunge elementi; l'unica eccezione sono gli attributi delle immagini ottimizzate (vedi 3.7), e solo se il tag non li ha già.
+
+I dati dell'attività generano un JSON-LD schema.org generico (`Organization` o `LocalBusiness` con il sottotipo scelto). Un template che ha già un suo JSON-LD dell'attività lo disattiva.
 
 `config/` resta solo per ciò che è privato o tecnico: credenziali, agente, aggiornamenti, connessione al database.
 
@@ -146,12 +148,25 @@ Tutte additive.
 
 ### 3.6 Gruppo SEO per pagina
 
-Attivabile sui tipi che hanno una pagina: aggiunge titolo, descrizione e immagine nell'editor; Kris inietta `<title>`, description e tag Open Graph se il template non li ha. I siti che usano campi propri (`meta_title`) continuano a funzionare.
+Attivabile sui tipi che hanno una pagina: aggiunge titolo, descrizione, immagine e canonical personalizzato nell'editor; Kris inietta `<title>` (con il modello di `kris_site`), description, canonical e tag Open Graph se il template non li ha. Index o noindex si sceglie sull'indirizzo (sezione 4). I siti che usano campi propri (`meta_title`) continuano a funzionare.
+
+### 3.7 Immagini ottimizzate
+
+Le foto caricate sono spesso troppo pesanti. Al caricamento di un'immagine Kris genera più larghezze in WebP accanto all'originale (per esempio 480, 960, 1600 px, mai oltre la larghezza originale). Il cliente carica come sempre: niente da scegliere.
+
+- Al rendering, un `<img>` che punta a un file con varianti riceve `srcset`, `width` e `height`, se il tag non li ha già; `sizes` resta del tema, con un valore predefinito.
+- Lo stesso strumento si può avviare in qualunque momento su un'immagine già in libreria, e su tutta la libreria in una volta: le varianti si generano sul posto e l'indirizzo del file non cambia.
+- Senza GD o senza supporto WebP le varianti non si generano e il tag resta com'è.
+- Le varianti seguono l'originale: eliminando il file si eliminano anche loro, e non compaiono come file separati in libreria.
+- Valgono anche per i caricamenti dell'agente e dello staging.
 
 ## 4. Indirizzi
 
-- Ogni pagina dichiara template, tipo, indirizzo, presenza in sitemap e `noindex`.
-- Lingua: la principale senza prefisso (`/menu`), le altre con prefisso (`/en/menu`).
+- Ogni pagina dichiara template, tipo, indirizzo, presenza in sitemap, priorità nella sitemap e `noindex`. Tutto si cambia dall'editor e dall'agente.
+- Lingua: la principale senza prefisso (`/menu`), le altre con prefisso (`/en/menu`). La lingua principale si sceglie in Impostazioni › Lingue e decide anche l'`x-default` degli hreflang, il canonical e `og:locale`.
+- Sitemap: generata dalle pagine, con `lastmod` preso dall'ultima modifica del contenuto e le alternative per lingua (già presenti nella 1.9).
+- `robots.txt`: generato da Kris con l'indirizzo assoluto della sitemap e `Disallow: /editor/`, più le righe aggiuntive scritte in `kris_site`. Un `robots.txt` fisico nella root continua a vincere.
+- Anteprima: la modalità anteprima resta attiva per tutta la sessione dell'editor, non solo per i link che la portano nell'indirizzo. Oggi è un parametro (`kris_preview=1`): un indirizzo scritto a mano lo perde e mostra il sito pubblico, dove una pagina nuova non esiste ancora. «Da pubblicare» e lo stato dello staging dell'agente elencano le pagine e i contenuti toccati, ognuno con il suo link di anteprima.
 - Dettaglio: `/progetto/{id}` oppure, se il contenuto ha uno slug, `/progetto/casa-rossi`. Vedi «Slug» qui sotto.
 - Nomi riservati rifiutati alla creazione di una pagina: `editor`, `kris`, `assets`, `data`, `config`, `template`, `sitemap`, i codici lingua attivi e i nomi dei file nella root.
 - Percorsi relativi: con indirizzi a più livelli `assets/...` non si risolve più dalla root. Kris riscrive al rendering gli attributi `href`, `src`, `srcset`, `poster` e gli `url()` negli attributi `style` che iniziano con `assets/`, `kris/` o `index.php`, anteponendo la root del sito. Non si usa `<base href>`, che romperebbe i link interni alla pagina (`#contatti`). Per gli indirizzi costruiti nel JavaScript del tema c'è `{{base_path}}`. Va provato in sottocartella.
@@ -301,13 +316,18 @@ Strumenti dell'agente (aggiunte, richiedono lavoro anche in `kris-agent`):
 - HTML finito di una pagina in staging, compreso ciò che Kris inietta;
 - lettura di sitemap generata, `robots.txt` e configurazione SEO;
 - una sola approvazione degli script quando la stessa modifica tocca più file;
-- operazione per mettere o togliere una pagina dalla sitemap.
+- operazione per mettere o togliere una pagina dalla sitemap;
+- link di anteprima per ogni pagina e contenuto toccati nello stato dello staging, e anteprima che resta attiva anche scrivendo l'indirizzo a mano;
+- caricamento su un indirizzo del dominio del sito invece che su `workers.dev`, bloccato da alcuni ambienti;
+- elenco dei file caricati non più usati da nessun contenuto, e loro eliminazione.
+
+Da verificare sulla 1.9.0: `add_item` con campi fuori da `fields` o con liste annidate dentro `fields` crea elementi vuoti senza errore. La 1.9.0 rifiuta le chiavi sconosciute; se la segnalazione viene da un sito non aggiornato è già risolta, altrimenti va corretta.
 
 ## 11. Impatto fuori da questa repository
 
 - **`kris-agent`**: le operazioni dello staging cambiano con il formato 2 (tipi, pagine, campi nuovi). Il Worker deve riconoscere la versione del sito.
 - **Skill `kris-dev`** e `AGENTS.md`: da riscrivere per il modello 2. Nella skill c'è anche un refuso segnalato (sezione 3, riga sul JS: i due esempi dell'escape sono identici).
-- **Siti installati**: su lettera32bar.it la pagina `lavagna-7k3q` va tolta a mano da `config/seo.json`.
+- **Siti installati**: su lettera32bar.it la pagina `lavagna-7k3q` va tolta a mano da `config/seo.json`; istruzioni inviate a Fabrizio il 18 novembre 2026.
 
 ## 12. Punti aperti
 

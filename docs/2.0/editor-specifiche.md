@@ -265,6 +265,7 @@ Un selettore fra le lingue attive del sito. Cambiando lingua cambiano i valori d
 - Mostra l'anteprima del file scelto: immagine, video riproducibile, o icona e nome per un PDF.
 - Azioni: scegliere dalla libreria, caricare un file nuovo, togliere il file.
 - L'indirizzo del file è un'informazione secondaria.
+- Per un'immagine: se è ottimizzata (più misure in formato leggero) e quanto pesa rispetto all'originale. Se non lo è, l'azione «Ottimizza» la ottimizza sul posto, senza cambiarne l'indirizzo.
 
 **Campo lista**
 
@@ -341,7 +342,8 @@ Se il salvataggio elimina, rinomina o cambia tipo a campi che contengono già va
 
 - Elenco con: nome, indirizzo (`/menu`, `/progetto/…`), tipo collegato, modello grafico, presenza nella mappa del sito, indicizzabile o no, apertura della pagina.
 - Un indirizzo è collegato a un contenuto unico (che così diventa una pagina) oppure a ogni contenuto di una raccolta.
-- Modifica di un indirizzo: percorso, tipo, modello grafico, mappa del sito sì o no, indicizzabile sì o no.
+- Modifica di un indirizzo: percorso, tipo, modello grafico, mappa del sito sì o no, priorità nella mappa del sito, indicizzabile sì o no.
+- Collegamenti in sola lettura alla mappa del sito e a `robots.txt` generati.
 - L'indirizzo viene verificato: nomi riservati e indirizzi già usati sono rifiutati con il motivo.
 - Quando l'indirizzo cambia, l'editor avvisa che il vecchio verrà reindirizzato al nuovo.
 
@@ -364,7 +366,8 @@ Un interruttore con una spiegazione breve: il sito propone la lingua del visitat
 
 - Area di caricamento: per trascinamento, per scelta di uno o più file, da fotocamera su telefono. Indica formati ammessi e peso massimo (immagini e PDF fino a 8 MB, video fino a 50 MB).
 - Ricerca per nome; numero di file.
-- Per ogni file: anteprima, nome, peso, formato, stato «in attesa» se non ancora pubblicato.
+- Per ogni file: anteprima, nome, peso, formato, stato «in attesa» se non ancora pubblicato; per le immagini, ottimizzata o no.
+- Filtro dei file non usati da nessun contenuto.
 
 **Azioni**
 
@@ -385,6 +388,7 @@ Una finestra aperta da un campo media. Contiene la stessa libreria con ricerca e
 **Contenuto**, in ordine di importanza:
 
 1. **Riepilogo**: quante modifiche e di che genere, chi le ha preparate e quando, apertura dell'anteprima.
+   - **Pagine toccate**: l'elenco delle pagine e dei contenuti con un indirizzo che cambiano, ognuno con il proprio link di anteprima. Serve soprattutto per le pagine nuove o non collegate dal menu, che altrimenti non si raggiungono.
 2. **Problemi da controllare**, se presenti:
    - un file è stato cambiato anche sul sito dopo la preparazione;
    - una modifica non è più applicabile perché il contenuto è cambiato o non esiste più;
@@ -408,7 +412,7 @@ Quattro contenuti unici di sistema. Usano la schermata di modifica (6.4), ciascu
 
 | Voce | Campi | Particolarità |
 | --- | --- | --- |
-| **Proprietà del sito** | Nome del sito, indirizzo pubblico, icona del sito, immagine di condivisione predefinita, descrizione predefinita, codici di verifica dei motori di ricerca | L'icona mostra un'anteprima di come appare nella scheda del browser |
+| **Proprietà del sito** | Nome del sito, indirizzo pubblico, icona del sito, modello del titolo delle pagine («Pagina \| Nome del sito»), immagine di condivisione e descrizione predefinite, codici di verifica dei motori di ricerca; dati dell'attività per i motori di ricerca (tipo di attività, nome, logo, indirizzo, telefono, orari, profili social); righe aggiuntive per `robots.txt` | L'icona mostra un'anteprima di come appare nella scheda del browser; il modello del titolo mostra un esempio con una pagina vera |
 | **Privacy e cookie** | Dati del titolare; informativa sulla privacy e informativa sui cookie (testo formattato); testi dell'avviso sui cookie; nome e descrizione delle categorie di cookie | Mostra in sola lettura l'elenco dei cookie dichiarati dai plugin: nome, durata, fornitore, categoria |
 | **Pagina 404** | Titolo, testo, etichetta e indirizzo del pulsante, immagine | Anteprima della pagina |
 | **Lavori in corso** | Interruttore acceso / spento; i campi definiti dallo sviluppatore per la pagina di lavorazione | Accendere richiede una conferma che dice cosa vedranno i visitatori. Da spento la pagina si può vedere in anteprima. Da acceso, il promemoria compare in tutto l'editor |
@@ -481,7 +485,7 @@ Più sezioni, una visibile per volta. I plugin possono aggiungerne.
 | Sezione | Contenuto | Stati particolari |
 | --- | --- | --- |
 | **Lingue** | Lingue attive del sito, lingua principale, ordine. Nota: disattivare una lingua conserva le traduzioni già salvate | Almeno una lingua deve restare attiva |
-| **Caricamenti** | Prefisso dei nomi dei file; larghezza massima delle foto; conversione in formato leggero | Il server non può elaborare le immagini: le opzioni non sono disponibili, con il motivo |
+| **Caricamenti** | Prefisso dei nomi dei file; larghezza massima delle foto; conversione in formato leggero; ottimizzazione automatica delle immagini al caricamento (più misure per schermi diversi), con «Ottimizza tutta la libreria» per i file già caricati e il suo avanzamento | Il server non può elaborare le immagini: le opzioni non sono disponibili, con il motivo |
 | **Account** | Nome utente; email di recupero; invio di un'email di prova; cambio password (attuale, nuova, ripetizione) | Email di prova inviata o non inviata; password attuale errata; password nuova troppo corta o diversa dalla ripetizione |
 | **Assistente AI** | Vedi sotto | — |
 | **Archivio dei dati** | Dove sono salvati i contenuti (file o database), stato del collegamento, data dell'ultima copia. In sola lettura | Collegamento al database non riuscito |
@@ -524,7 +528,7 @@ Non fanno parte dell'editor ma dello stesso pacchetto. Sono viste dai visitatori
 | Lavori in corso, di serie | Interruttore acceso e sito senza una pagina propria | Titolo e testo modificabili |
 | 404, di serie | Indirizzo inesistente e sito senza una pagina propria | Titolo, testo, pulsante modificabili |
 | Errore dei dati | L'editor non riesce a leggere i contenuti | Il problema e a chi rivolgersi; nessuna navigazione |
-| Barra dell'anteprima | Sopra ogni pagina vista in anteprima | Indica che è un'anteprima, quante modifiche contiene, rimando a «Da pubblicare», uscita dall'anteprima |
+| Barra dell'anteprima | Sopra ogni pagina vista in anteprima | Indica che è un'anteprima, quante modifiche contiene, rimando a «Da pubblicare», uscita dall'anteprima. L'anteprima resta attiva finché non se ne esce, anche scrivendo un indirizzo a mano |
 | Approvazione del codice in anteprima | All'apertura di un'anteprima con codice non approvato | Elenco dei file; «Approva ed esegui», dopo l'assunzione di responsabilità; «Guarda senza eseguire» |
 
 ## 7. Componenti
