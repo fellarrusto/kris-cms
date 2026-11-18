@@ -1008,15 +1008,19 @@ final class Staging
 
     private function siteState(): array
     {
-        $read = fn(string $relative, array $default): array => is_file("{$this->root}/{$relative}")
-            ? (new JsonStore("{$this->root}/{$relative}"))->read($default) : $default;
-        $pages = $read(self::STATE_FILES['pages'], ['allowed_pages' => ['homepage']]);
+        // Il sito com'è nell'archivio, mai la sovrapposizione dell'anteprima
+        $store = \Kris\Store\Stores::site($this->root);
+        $read = function (string $doc, array $default) use ($store): array {
+            $snapshot = $store->read($doc);
+            return $snapshot->rev === '' ? $default : $snapshot->value;
+        };
+        $pages = $read('pages', ['allowed_pages' => ['homepage']]);
         return [
-            'data' => $read(self::STATE_FILES['data'], []),
-            'model' => $read(self::STATE_FILES['model'], []),
+            'data' => $read('data', []),
+            'model' => $read('model', []),
             'pages' => is_array($pages['allowed_pages'] ?? null) ? array_values($pages['allowed_pages']) : ['homepage'],
-            'seo' => $read(self::STATE_FILES['seo'], []),
-            'settings' => $read(self::STATE_FILES['settings'], []),
+            'seo' => $read('seo', []),
+            'settings' => $read('settings', []),
         ];
     }
 
@@ -1028,8 +1032,7 @@ final class Staging
     /** Le lingue attive del sito, come le legge il sito pubblico. */
     private function languages(): array
     {
-        $file = "{$this->root}/data/cms_settings.json";
-        $settings = is_file($file) ? (new JsonStore($file))->read([]) : [];
+        $settings = \Kris\Store\Stores::site($this->root)->read('settings')->value;
         return !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
     }
 

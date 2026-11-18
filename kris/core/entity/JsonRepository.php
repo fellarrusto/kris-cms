@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Kris\Entity;
 
 use Kris\Site\Paths;
+use Kris\Store\Stores;
 
 class JsonRepository {
     // Per percorso letto: con l'anteprima dello staging lo stesso archivio puo venire da due file diversi
@@ -24,20 +25,26 @@ class JsonRepository {
         return array_filter($data, fn($item) => $item['name'] === $name);
     }
 
-    /** Scrive sempre nel file del sito, mai nella sovrapposizione dell'anteprima. */
+    /** Scrive sempre nel sito, mai nella sovrapposizione dell'anteprima. */
     public function save(string $file, int $index, array $entity): void {
         $data = $this->load($file);
         $data[$index] = $entity;
-        $path = KRIS_ROOT . '/data/' . $file . '.json';
-        (new JsonStore($path))->write($data);
-        self::$cache[$path] = $data;
+        Stores::site()->write(self::doc($file), $data);
+        self::$cache[Paths::data($file)] = $data;
     }
 
+    /** Per chiave il file letto: con l'anteprima dello staging lo stesso documento può venire da due file diversi. */
     private function load(string $file): array {
         $path = Paths::data($file);
         if (!isset(self::$cache[$path])) {
-            self::$cache[$path] = (new JsonStore($path))->read();
+            self::$cache[$path] = Stores::site(null, true)->read(self::doc($file))->value;
         }
         return self::$cache[$path];
+    }
+
+    /** I contenuti del formato 1 sono il documento data dell'archivio. */
+    private static function doc(string $file): string {
+        if ($file !== 'k_data') throw new StorageException("Archivio sconosciuto: {$file}");
+        return 'data';
     }
 }

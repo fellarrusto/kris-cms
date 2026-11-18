@@ -46,11 +46,15 @@ final class MediaStore
         $this->options = self::normalizeOptions($options ?? (defined('KRIS_ROOT') ? self::siteOptions(KRIS_ROOT) : []));
     }
 
-    /** Le opzioni di caricamento di un sito, da data/cms_settings.json. */
+    /** Le opzioni di caricamento di un sito, dalle impostazioni dell'archivio. */
     public static function siteOptions(string $root): array
     {
-        $file = $root . '/data/cms_settings.json';
-        $settings = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
+        try {
+            $settings = \Kris\Store\Stores::site($root)->read('settings')->value;
+        } catch (StorageException $e) {
+            // Impostazioni illeggibili: si carica con le opzioni predefinite
+            return [];
+        }
         return is_array($settings['uploads'] ?? null) ? $settings['uploads'] : [];
     }
 

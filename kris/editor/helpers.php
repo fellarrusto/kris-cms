@@ -12,13 +12,35 @@ if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno
 // Lettura e scrittura passano da JsonStore: un archivio illeggibile solleva
 // un'eccezione invece di diventare un array vuoto (che alla prima azione
 // successiva verrebbe riscritto, cancellando tutti i contenuti).
+/**
+ * Lettura e scrittura dei dati dell'editor: i file di contenuti, schema e
+ * impostazioni passano dall'archivio del sito (Kris\Store), gli altri
+ * restano file JSON.
+ */
 function getJson(string $path, array $def = []): array
 {
-    return (new JsonStore($path))->read($def);
+    $doc = editorStoreDocument($path);
+    if ($doc === null) return (new JsonStore($path))->read($def);
+    $snapshot = \Kris\Store\Stores::site()->read($doc);
+    return $snapshot->rev === '' ? $def : $snapshot->value;
 }
 function saveJson(string $path, array $data): void
 {
-    (new JsonStore($path))->write($data);
+    $doc = editorStoreDocument($path);
+    if ($doc === null) {
+        (new JsonStore($path))->write($data);
+        return;
+    }
+    \Kris\Store\Stores::site()->write($doc, $data);
+}
+/** Il documento dell'archivio che corrisponde a un file del sito, o null. */
+function editorStoreDocument(string $path): ?string
+{
+    $normalize = fn(string $p): string => strtolower(str_replace('\\', '/', $p));
+    foreach (\Kris\Store\Store::DOCUMENTS as $doc) {
+        if ($normalize($path) === $normalize(KRIS_ROOT . '/' . \Kris\Store\FileStore::relativePath($doc))) return $doc;
+    }
+    return null;
 }
 
 function h(mixed $value): string

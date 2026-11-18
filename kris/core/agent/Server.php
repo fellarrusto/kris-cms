@@ -270,8 +270,7 @@ final class Server
     private function siteConfig(): array
     {
         $state = $this->staging->state();
-        $settingsFile = $this->root . '/data/cms_settings.json';
-        $settings = is_file($settingsFile) ? (new JsonStore($settingsFile))->read([]) : [];
+        $settings = \Kris\Store\Stores::site($this->root)->read('settings')->value;
         $langs = !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
         $seo = \Kris\Template\Seo::config($this->root);
         $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : $seo['sitemap'];
@@ -293,8 +292,7 @@ final class Server
     {
         // Un solo replay delle operazioni per stato e riepilogo: sui siti grandi ogni replay costa
         [$state, $report] = $this->staging->stateAndReport();
-        $settingsFile = $this->root . '/data/cms_settings.json';
-        $settings = is_file($settingsFile) ? (new JsonStore($settingsFile))->read([]) : [];
+        $settings = \Kris\Store\Stores::site($this->root)->read('settings')->value;
         $languages = !empty($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
 
         $entities = [];
