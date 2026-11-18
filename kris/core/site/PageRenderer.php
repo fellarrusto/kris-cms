@@ -7,6 +7,7 @@ use Exception;
 use Kris\Entity\Entity;
 use Kris\Template\Assets;
 use Kris\Template\Seo;
+use Kris\Store\Stores;
 use Kris\Template\TemplateEngine;
 use Throwable;
 
@@ -34,7 +35,8 @@ final class PageRenderer
         $rawPath = is_string($query['path'] ?? null) ? $query['path'] : '';
         $path = $rawPath === '' ? [] : array_values(array_filter(explode('/', $rawPath), fn($s) => $s !== ''));
 
-        $pages = json_decode((string) @file_get_contents(Paths::file('config/allowed_pages.json')), true)['allowed_pages'] ?? ['homepage'];
+        $pagesDoc = Stores::site(null, true)->read('pages');
+        $pages = $pagesDoc->rev === '' ? ['homepage'] : ($pagesDoc->value['allowed_pages'] ?? ['homepage']);
         // La 404 del tema non e una pagina navigabile: si vede solo come 404
         if ($page === '404' || !in_array($page, (array) $pages, true)) {
             return ['status' => 404, 'html' => self::notFound($lang), 'lang' => $lang];
@@ -61,13 +63,15 @@ final class PageRenderer
      */
     public static function language(array $query): array
     {
-        $settingsFile = KRIS_ROOT . '/data/cms_settings.json';
         $langs = ['it', 'en'];
-        if (is_file($settingsFile)) {
-            $settings = json_decode((string) file_get_contents($settingsFile), true);
-            if (!empty($settings['languages']) && is_array($settings['languages'])) {
-                $langs = array_values($settings['languages']);
-            }
+        try {
+            $settings = Stores::site()->read('settings')->value;
+        } catch (\Kris\Entity\StorageException $e) {
+            // Impostazioni illeggibili: le lingue predefinite, la pagina si vede comunque
+            $settings = [];
+        }
+        if (!empty($settings['languages']) && is_array($settings['languages'])) {
+            $langs = array_values($settings['languages']);
         }
         $lang = $query['ln'] ?? $langs[0];
         return [in_array($lang, $langs, true) ? (string) $lang : $langs[0], $langs];

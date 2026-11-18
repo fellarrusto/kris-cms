@@ -21,9 +21,10 @@ if ($maintenance !== null && !$maintenance['stale']) {
 }
 
 try {
-    $data = (new JsonStore(Paths::data('k_data')))->read([]);
-    $settings = (new JsonStore(KRIS_ROOT . '/data/cms_settings.json'))->read([]);
-    $pages = (new JsonStore(Paths::file('config/allowed_pages.json')))->read([]);
+    $store = \Kris\Store\Stores::site(null, true);
+    $data = $store->read('data')->value;
+    $settings = \Kris\Store\Stores::site()->read('settings')->value;
+    $pages = $store->read('pages')->value;
 } catch (Throwable) {
     http_response_code(503);
     exit;

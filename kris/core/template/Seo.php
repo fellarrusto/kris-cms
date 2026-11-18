@@ -32,9 +32,12 @@ final class Seo
 {
     public static function config(string $root): array
     {
-        $file = $root . '/config/seo.json';
-        $config = is_file($file) ? json_decode((string) file_get_contents($file), true) : null;
-        $config = is_array($config) ? $config : [];
+        try {
+            $config = \Kris\Store\Stores::site($root)->read('seo')->value;
+        } catch (\Kris\Entity\StorageException $e) {
+            // seo.json rovinato: valori predefiniti, la pagina si rende comunque
+            $config = [];
+        }
         $sitemap = $config['sitemap'] ?? null;
         return [
             'base_url' => is_string($config['base_url'] ?? null) ? rtrim($config['base_url'], '/') : null,
