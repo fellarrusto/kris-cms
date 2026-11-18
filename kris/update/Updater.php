@@ -157,7 +157,7 @@ final class Updater
         if (self::major((string) ($release['version'] ?? '0')) === self::major($current)) return [];
         $warnings = [];
         $htaccess = rtrim($root, '/\\') . '/.htaccess';
-        if (!is_file($htaccess) || !str_contains((string) file_get_contents($htaccess), 'index.php?page=404 [L]')) {
+        if (!is_file($htaccess) || !preg_match('/index\.php(\?page=404)? \[L/', (string) file_get_contents($htaccess))) {
             $warnings[] = 'Il .htaccess del sito non ha la regola di Kris: gli indirizzi leggibili della 2.0 non funzioneranno finché non la aggiungi (il sito continua a funzionare con gli indirizzi di sempre).';
         }
         foreach (['index.php', 'upload.php', 'update.php'] as $stub) {
