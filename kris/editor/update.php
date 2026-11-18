@@ -154,5 +154,8 @@ function kris_present_check(array $result): array
         'blocked' => $result['blocked']['version'] ?? null,
         'unmet' => $result['unmet'],
         'notes' => $notes,
+        // Passaggio a una versione principale nuova: cosa cambia e cosa controllare prima
+        'major' => $until !== null && (int) explode('.', $until)[0] !== (int) explode('.', $result['current'])[0],
+        'warnings' => $result['target'] ? \Kris\Update\Updater::upgradeWarnings(KRIS_ROOT, $result['current'], $result['target']) : [],
     ];
 }

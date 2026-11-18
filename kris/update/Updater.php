@@ -110,7 +110,7 @@ final class Updater
         $unmet = null;
         foreach ($newer as $release) {
             $fromOk = !self::isVersion($release['min_from'] ?? null) || version_compare($current, $release['min_from'], '>=');
-            $safe = self::major($release['version']) === $major && empty($release['breaking']);
+            $safe = self::editorInstallable($current, $release);
             if (!$safe) {
                 $blocked ??= $release;
                 continue;
@@ -131,6 +131,42 @@ final class Updater
             $blocked = null;
         }
         return ['target' => $target, 'blocked' => $blocked, 'unmet' => $target === null ? $unmet : null, 'newer' => $newer];
+    }
+
+    /**
+     * Una release si installa dall'editor se non è "breaking" e ha la stessa
+     * versione principale, oppure è la successiva e lo dichiara
+     * ("editor_upgrade": true, dalla 1.10: il passaggio 1.x → 2.0).
+     */
+    public static function editorInstallable(string $current, array $release): bool
+    {
+        if (!empty($release['breaking']) || !self::isVersion($release['version'] ?? null)) return false;
+        $from = self::major($current);
+        $to = self::major((string) $release['version']);
+        return $to === $from || ($to === $from + 1 && ($release['editor_upgrade'] ?? false) === true);
+    }
+
+    /**
+     * Avvisi prima di passare a una versione principale nuova: cose che
+     * l'aggiornamento non può sistemare da solo. Non bloccano.
+     *
+     * @return string[]
+     */
+    public static function upgradeWarnings(string $root, string $current, array $release): array
+    {
+        if (self::major((string) ($release['version'] ?? '0')) === self::major($current)) return [];
+        $warnings = [];
+        $htaccess = rtrim($root, '/\\') . '/.htaccess';
+        if (!is_file($htaccess) || !str_contains((string) file_get_contents($htaccess), 'index.php?page=404 [L]')) {
+            $warnings[] = 'Il .htaccess del sito non ha la regola di Kris: gli indirizzi leggibili della 2.0 non funzioneranno finché non la aggiungi (il sito continua a funzionare con gli indirizzi di sempre).';
+        }
+        foreach (['index.php', 'upload.php', 'update.php'] as $stub) {
+            $file = rtrim($root, '/\\') . '/editor/' . $stub;
+            if (is_file($file) && !str_contains((string) file_get_contents($file), "'/../kris/editor/{$stub}'")) {
+                $warnings[] = "editor/{$stub} è stato modificato: l'aggiornamento non lo trasforma nel rimando al nuovo editor in /kris-admin/.";
+            }
+        }
+        return $warnings;
     }
 
     /** Motivo per cui l'hosting non soddisfa i requisiti della release, o null. */
@@ -329,7 +365,7 @@ final class Updater
         if (version_compare($version, $current, '<=')) {
             throw new UpdateException("Il pacchetto contiene Kris {$version}, non più recente di quella installata ({$current}).");
         }
-        if (self::major($version) !== self::major($current) || !empty($release['breaking'])) {
+        if (!self::editorInstallable($current, $release)) {
             throw new UpdateException("Kris {$version} cambia versione principale: va installata dallo sviluppatore, non dall'editor.");
         }
         if (self::isVersion($release['min_from'] ?? null) && version_compare($current, $release['min_from'], '<')) {

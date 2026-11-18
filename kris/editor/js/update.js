@@ -65,7 +65,7 @@
     }
 
     function message(kind, title, text) {
-        const box = el('div', kind === 'error' ? 'alert alert-error' : 'notice');
+        const box = el('div', kind === 'error' ? 'alert alert-error' : (kind === 'warning' ? 'notice notice-warning' : 'notice'));
         if (kind === 'error') box.setAttribute('role', 'alert');
         box.append(el('strong', '', title));
         if (text) box.append(el('p', '', text));
@@ -114,6 +114,8 @@
             box.append(el('strong', '', 'È disponibile Kris ' + r.target));
             box.append(el('p', 'hint', 'Installata ora: Kris ' + r.current + '.'));
             if (r.notes && r.notes.length) box.append(notesList(r.notes));
+            if (r.major) box.append(el('p', 'hint', 'È una versione principale nuova. Dopo l’aggiornamento l’editor si apre da /kris-admin/ (il vecchio indirizzo rimanda lì); serve PHP 8.3. Contenuti e template restano com’erano.'));
+            (r.warnings || []).forEach(w => box.append(message('warning', 'Da controllare', w)));
             const button = el('button', 'btn btn-primary', 'Aggiorna a Kris ' + r.target);
             button.type = 'button';
             button.addEventListener('click', () => install('prepare', null));
