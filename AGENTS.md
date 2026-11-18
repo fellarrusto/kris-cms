@@ -219,6 +219,10 @@ La 404 del tema è `template/404.html`, un template come gli altri: lo rende il 
 
 Perché un indirizzo inventato (`/pagina-che-non-esiste`) arrivi a Kris serve una regola del server: l'aggiornamento crea nella root il `.htaccess` con la regola (`Stubs::HTACCESS`) **solo se non esiste**; se il sito ne ha già uno, va aggiunta a mano. La regola è una riscrittura interna, non un redirect: lo stato resta 404, funziona anche in sottocartella, e i file mancanti di `assets/` o con estensione di file rispondono con la 404 semplice di Apache. Su Nginx serve una regola equivalente (`try_files $uri $uri/ /index.php?page=404`, con `error_page` a 404 se si vuole lo stato corretto). Non va in `config/allowed_pages.json` né nella sitemap: `?page=404` risponde comunque 404. Si può preparare anche dallo staging e vedere in anteprima aprendo un indirizzo inesistente con `?kris_preview=1`. Se il template ha un errore, Kris usa la 404 di riserva invece di un errore 500.
 
+## Lavori in corso
+
+Ogni sito ha la sezione riservata **Lavori in corso** nell'editor: raccolta `kris_wip` (contenuto con ID `0`, migrazione `0007_lavori_in_corso.php`) con `enabled` (interruttore), `title` e `text`. Con l'interruttore acceso i visitatori ricevono una pagina 503 con `Retry-After` (anche `sitemap.php`), chi ha la sessione dell'editor vede il sito normale e l'editor mostra un promemoria in ogni schermata. La pagina è `template/kris_wip.html` del tema, resa con i campi della sezione (e con `kris_head.html`), oppure quella di serie di Kris (`kris/wip.php`). Staging e agente ne scrivono i valori con `set_field`, come per la 404.
+
 ## Privacy e cookie
 
 Ogni sito Kris ha la raccolta riservata `kris_legal`, con un solo contenuto (ID `0`) e campi fissi. Il cliente li compila da **Privacy e cookie** nell'editor; non compare tra le raccolte e non si modifica da Struttura. I template la usano solo se vogliono, come qualunque raccolta.

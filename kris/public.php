@@ -21,6 +21,15 @@ if ($maintenance !== null && !$maintenance['stale']) {
 // usata cosi com'e (finisce nei contenuti e negli attributi delle pagine).
 [$lang] = PageRenderer::language($_GET);
 
+// Lavori in corso: i visitatori ricevono la pagina di lavorazione (503); chi ha l'editor aperto vede il sito
+$wip = PageRenderer::workInProgress($lang);
+if ($wip !== null && !Preview::isAdmin()) {
+    http_response_code(503);
+    header('Retry-After: 3600');
+    header('Cache-Control: no-store');
+    echo $wip;
+    exit;
+}
 // Anteprima dello staging: solo con una sessione dell'editor. Senza, la
 // pagina non esiste: chi riceve il link dell'anteprima vede la 404.
 $preview = null;

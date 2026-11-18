@@ -196,3 +196,29 @@ test('lingua automatica: la homepage senza lingua segue cookie e browser, non i 
         unset($GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'], $GLOBALS['KRIS_TEST_USER_AGENT']);
     }
 });
+
+test('lavori in corso: i visitatori ricevono la pagina 503, chi ha l editor aperto vede il sito', function () {
+    $root = pageSandboxCopy();
+    $migration = require KRIS_ROOT . '/kris/migrations/0007_lavori_in_corso.php';
+    $files = ['k_data' => json_decode((string) file_get_contents("{$root}/data/k_data.json"), true), 'k_model' => json_decode((string) file_get_contents("{$root}/data/k_model.json"), true), 'cms_settings' => []];
+    $files = $migration['up']($files);
+    assertSame($files, $migration['up']($files), 'la migrazione è idempotente');
+    assertSame(200, renderPage([], $root)['status'], 'con l interruttore spento non cambia nulla');
+    foreach ($files['k_data'] as &$entity) {
+        if ($entity['name'] !== 'kris_wip') continue;
+        foreach ($entity['data'] as &$field) if ($field['name'] === 'enabled') $field['value'] = '1';
+    }
+    unset($entity, $field);
+    file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
+    file_put_contents("{$root}/data/k_model.json", json_encode($files['k_model']));
+
+    $guest = renderPage([], $root);
+    assertSame(503, $guest['status']);
+    assertContains('Sito in lavorazione', $guest['output']);
+    assertContains('noindex', $guest['output']);
+    assertSame(200, renderPage([], $root, 'index.php', true)['status'], 'l admin vede il sito');
+    assertSame(503, renderPage([], $root, 'sitemap.php')['status']);
+
+    file_put_contents("{$root}/template/kris_wip.html", '<!doctype html><html><head></head><body><h1>TEMA: {{title}}</h1></body></html>');
+    assertContains('TEMA: Sito in lavorazione', renderPage([], $root)['output'], 'il template del tema, se c è');
+});

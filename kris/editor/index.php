@@ -345,12 +345,13 @@ if ($stagingMode && in_array($action, ['structure', 'structure_impact'], true)) 
 $inLegal = $action === 'edit' && $group === 'kris_legal';
 $inSite = $action === 'edit' && $group === 'kris_site';
 $inNotFound = $action === 'edit' && $group === 'kris_notfound';
+$inWip = $action === 'edit' && $group === 'kris_wip';
 // La voce compare quando ci sono modifiche da pubblicare o una pubblicazione da poter annullare.
 $stagingCount = count($stagingNav->changes()) + count($stagingNav->operations()) + count($stagingNav->manifest()['uploads']) + count($stagingNav->manifest()['fonts']);
 $stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
 $sectionLabel = match ($action) {
     'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts', 'staging' => 'Modifiche in attesa',
-    'edit' => $inLegal ? 'Privacy e cookie' : ($inSite ? 'Favicon' : ($inNotFound ? 'Pagina 404' : 'Contenuti')),
+    'edit' => $inLegal ? 'Privacy e cookie' : ($inSite ? 'Favicon' : ($inNotFound ? 'Pagina 404' : ($inWip ? 'Lavori in corso' : 'Contenuti'))),
     'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
 };
 
@@ -412,6 +413,9 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
         <?php elseif ($frameworkNotice !== ''): ?>
             <div class="alert system-alert" role="status"><p><?= h($frameworkNotice) ?></p></div>
         <?php endif; ?>
+        <?php foreach ($data as $wipEntity): if (($wipEntity['name'] ?? null) !== 'kris_wip') continue; foreach ($wipEntity['data'] ?? [] as $wipField): if (($wipField['name'] ?? null) === 'enabled' && ($wipField['value'] ?? '') === '1'): ?>
+            <div class="alert system-alert" role="status"><p><strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor aperto.</p><a class="btn btn-white" href="?action=edit&amp;group=kris_wip&amp;id=0">Lavori in corso</a></div>
+        <?php endif; endforeach; endforeach; ?>
         <?php // Siti installati prima della 1.2.0: l'email di recupero si aggiunge da qui, in un passo.
         $authConfig = kris_auth_config() ?? [];
         if (!Kris\Auth\Credentials::validEmail((string) ($authConfig['email'] ?? '')) && empty($_SESSION['kris_email_later']) && $editorLock === ''): ?>
