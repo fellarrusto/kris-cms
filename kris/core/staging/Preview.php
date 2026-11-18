@@ -25,10 +25,40 @@ final class Preview
 
     private static ?string $nonce = null;
 
+    /**
+     * Cookie della modalità anteprima: aperta l'anteprima, resta attiva anche
+     * per gli indirizzi scritti a mano (che non hanno ?kris_preview=1), così
+     * si vedono le pagine che nessun link raggiunge. Si chiude con
+     * ?kris_preview=0 («Esci») o con il browser.
+     */
+    public const MODE_COOKIE = 'kris_preview_mode';
+
     /** Vero se la richiesta chiede l'anteprima o un suo file. Solo allora si apre la sessione. */
-    public static function requested(array $query): bool
+    public static function requested(array $query, array $cookies = []): bool
     {
-        return isset($query['kris_preview']) || isset($query['kris_preview_asset']);
+        if (($query['kris_preview'] ?? null) === '0') return false;
+        return isset($query['kris_preview']) || isset($query['kris_preview_asset']) || self::modeCookie($cookies);
+    }
+
+    /** Vero se l'anteprima la chiede l'indirizzo e non solo il cookie della modalità. */
+    public static function explicit(array $query): bool
+    {
+        return (isset($query['kris_preview']) && $query['kris_preview'] !== '0') || isset($query['kris_preview_asset']);
+    }
+
+    public static function modeCookie(array $cookies): bool
+    {
+        return ($cookies[self::MODE_COOKIE] ?? null) === '1';
+    }
+
+    /** Attiva (o chiude) la modalità anteprima per le richieste successive di questo browser. */
+    public static function rememberMode(bool $on): void
+    {
+        if (headers_sent()) return;
+        setcookie(self::MODE_COOKIE, $on ? '1' : '', [
+            'expires' => $on ? 0 : time() - 3600, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax',
+            'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        ]);
     }
 
     /** Vero se chi chiede ha una sessione dell'editor. La sessione si legge e si chiude subito. */
@@ -220,11 +250,12 @@ final class Preview
             : $bar . $html;
     }
 
-    /** La stessa pagina senza anteprima. */
+    /** La stessa pagina senza anteprima: kris_preview=0 chiude anche la modalità. */
     public static function exitUrl(array $query): string
     {
         unset($query['kris_preview'], $query['kris_preview_asset'], $query['kris_preview_noscript'], $query['kris_preview_approve']);
-        return 'index.php' . ($query ? '?' . http_build_query($query) : '');
+        $query['kris_preview'] = '0';
+        return 'index.php?' . http_build_query($query);
     }
 
     /**

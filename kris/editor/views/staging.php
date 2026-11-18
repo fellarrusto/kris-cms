@@ -25,6 +25,10 @@ $codeApproved = $staging->codeApproved();
     <section class="card"><div class="card-body"><p>Non ci sono modifiche in attesa.</p></div></section>
 <?php else: ?>
     <p class="staging-origin">Preparate da <?= h($manifest['created_by'] ?: '—') ?><?= $manifest['created_at'] ? ' il ' . h($when($manifest['created_at'])) : '' ?>.</p>
+    <?php $previewPages = $staging->previewPages(); if ($previewPages): ?>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('arrow') ?></span><div><h2>Pagine da guardare</h2><p>Le pagine che cambiano, ognuna con la sua anteprima: anche quelle che nessun link del sito raggiunge. Aperta un'anteprima, puoi anche scrivere a mano l'indirizzo di un'altra pagina.</p></div></header>
+    <div class="card-body"><ul class="staging-problems"><?php foreach ($previewPages as $p): ?><li><a class="text-link" href="<?= h($siteRoot . '/' . $p['url']) ?>" target="_blank" rel="noopener"><?= h($p['label']) ?> <span aria-hidden="true">↗</span></a></li><?php endforeach; ?></ul></div></section>
+    <?php endif; ?>
     <?php if ($blocked): ?>
         <div class="alert alert-error" role="alert"><div><strong>Prima di pubblicare, controlla:</strong>
             <ul class="staging-problems">

@@ -77,7 +77,7 @@ function runScript(string $sandbox, string $script, array $query = []): string
     return renderPage($query, $sandbox, $script)['output'];
 }
 
-function renderPage(array $query, ?string $sandbox = null, string $script = 'index.php', bool $asAdmin = false): array
+function renderPage(array $query, ?string $sandbox = null, string $script = 'index.php', bool $asAdmin = false, array $cookies = []): array
 {
     $sandbox ??= projectSandbox();
     $harness = KRIS_TESTS . '/harness/render.php';
@@ -90,6 +90,7 @@ function renderPage(array $query, ?string $sandbox = null, string $script = 'ind
     $env['KRIS_QUERY'] = http_build_query($query);
     $env['KRIS_SCRIPT'] = $script;
     $env['KRIS_TEST_ADMIN'] = $asAdmin ? '1' : '0';
+    $env['KRIS_COOKIES'] = http_build_query($cookies);
 
     $descriptors = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
     $proc = proc_open($cmd, $descriptors, $pipes, $sandbox, $env);
