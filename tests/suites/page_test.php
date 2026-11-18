@@ -144,3 +144,14 @@ test('una lingua sconosciuta ricade sui contenuti disponibili', function () {
     assertSame(3, substr_count($out, 'class="feature-item"'), 'la pagina ha perso i contenuti');
     assertContains('class="hero-title"', $out);
 });
+
+test('{{tipo.campo}} legge il primo contenuto di un altra raccolta, anche nelle condizioni', function () {
+    $root = sys_get_temp_dir() . '/kris-globali-' . bin2hex(random_bytes(4));
+    rcopy(projectSandbox(), $root);
+    register_shutdown_function(fn() => rrmdir($root));
+    $home = (string) file_get_contents("{$root}/template/homepage.html");
+    file_put_contents("{$root}/template/homepage.html", str_replace('<body>', '<body><p id="g">[{{navbar.page_title}}]</p><p>{{#if navbar.page_title}}SI{{#else}}NO{{/if}}{{#if nessuna.cosa}}X{{/if}}</p>', $home));
+    $out = renderPage([], $root)['output'];
+    assertContains('<p id="g">[Kris 2]</p>', $out);
+    assertContains('<p>SI</p>', $out);
+});

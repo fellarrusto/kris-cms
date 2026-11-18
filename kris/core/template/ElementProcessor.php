@@ -41,11 +41,11 @@ class ElementProcessor
             // Gli operatori a due caratteri vanno prima di quelli a uno:
             // altrimenti '>' matcherebbe la prima meta di '>=' e il resto
             // finirebbe nel valore da confrontare.
-            if (preg_match('/^#if\s+(\w+)\s*(==|!=|>=|<=|>|<|has)\s*(.+)$/', $tag, $m)) {
+            if (preg_match('/^#if\s+([\w.]+)\s*(==|!=|>=|<=|>|<|has)\s*(.+)$/', $tag, $m)) {
                 $tokens[] = ['type' => 'if', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
-            } elseif (preg_match('/^#elif\s+(\w+)\s*(==|!=|>=|<=|>|<|has)\s*(.+)$/', $tag, $m)) {
+            } elseif (preg_match('/^#elif\s+([\w.]+)\s*(==|!=|>=|<=|>|<|has)\s*(.+)$/', $tag, $m)) {
                 $tokens[] = ['type' => 'elif', 'field' => $m[1], 'op' => $m[2], 'value' => trim($m[3])];
-            } elseif (preg_match('/^#(if|elif)\s+(\w+)$/', $tag, $m)) {
+            } elseif (preg_match('/^#(if|elif)\s+([\w.]+)$/', $tag, $m)) {
                 // {{#if campo}}: vero se il campo ha un valore (un interruttore acceso, un testo non vuoto)
                 $tokens[] = ['type' => $m[1], 'field' => $m[2], 'op' => 'set', 'value' => ''];
             } elseif ($tag === '#else') {
@@ -171,6 +171,8 @@ class ElementProcessor
             return htmlspecialchars($this->lang, ENT_QUOTES, 'UTF-8');
         }
 
+        [$entity, $name] = $this->resolve($name, $entity);
+        if ($entity === null) return '';
         $value = $entity->getData($name, $this->lang);
         if ($value === null || \is_array($value)) {
             return '';
@@ -181,15 +183,37 @@ class ElementProcessor
             : htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
     }
 
+    /**
+     * {{tipo.campo}}: un campo del primo contenuto di un'altra raccolta (le
+     * impostazioni, il footer), da qualunque template. Senza punto, il
+     * contenuto corrente.
+     *
+     * @return array{0: ?Entity, 1: string}
+     */
+    /** @var array<string, ?Entity> i contenuti delle altre raccolte letti in questo rendering */
+    private array $globals = [];
+
+    private function resolve(string $name, Entity $entity): array
+    {
+        if (!str_contains($name, '.')) return [$entity, $name];
+        [$type, $field] = explode('.', $name, 2);
+        if (!array_key_exists($type, $this->globals)) {
+            $first = array_values((new \Kris\Entity\JsonRepository())->findAll('k_data', $type))[0] ?? null;
+            $this->globals[$type] = $first === null ? null : Entity::fromArray($first, $type);
+        }
+        return [$this->globals[$type], $field];
+    }
+
     private function evaluateConditional(array $node, Entity $entity): string
     {
         foreach ($node['branches'] as $branch) {
             // Stessa risoluzione linguistica dell'interpolazione: senza lingua
             // un campo multilingua tornerebbe come array e il confronto con una
             // stringa sarebbe sempre falso.
+            [$source, $field] = $this->resolve($branch['field'], $entity);
             $fieldValue = ($branch['field'] === 'language')
                 ? $this->lang
-                : $entity->getData($branch['field'], $this->lang);
+                : ($source === null ? null : $source->getData($field, $this->lang));
 
             if ($fieldValue !== null && $this->compare($fieldValue, $branch['op'], $branch['value'])) {
                 return $this->evaluate(['children' => $branch['children']], $entity);
