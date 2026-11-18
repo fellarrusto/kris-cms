@@ -22,9 +22,10 @@ use Kris\Update\UpdateException;
 session_set_cookie_params([
     'httponly' => true,
     'samesite' => 'Lax',
-    'secure'   => !empty($_SERVER['HTTPS']),
+    'secure'   => kris_is_https(),
 ]);
 session_start();
+kris_security_headers();
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');

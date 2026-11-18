@@ -247,6 +247,54 @@ test('con la sessione dell editor l anteprima mostra lo staging e i suoi fogli d
     }
 });
 
+test('la modalita anteprima resta attiva per gli indirizzi scritti a mano', function () {
+    $sandbox = projectSandbox();
+    $s = new Staging($sandbox);
+    $file = 'template/homepage.html';
+    $original = (string) file_get_contents("{$sandbox}/{$file}");
+    $s->write($file, str_replace('</body>', '<p>SOLO-IN-STAGING</p></body>', $original), Staging::hash($original), 'test');
+    $mode = [Preview::MODE_COOKIE => '1'];
+    try {
+        // Indirizzo senza ?kris_preview, ma con la modalità attiva: l'anteprima
+        $typed = renderPage(['page' => 'homepage'], null, 'index.php', true, $mode);
+        assertSame(200, $typed['status']);
+        assertContains('SOLO-IN-STAGING', $typed['output']);
+        assertContains('id="kris-preview-bar"', $typed['output']);
+        assertContains('kris_preview=0', $typed['output'], 'Esci chiude la modalità');
+
+        // «Esci»: il sito pubblico anche con il cookie ancora presente
+        $out = renderPage(['kris_preview' => '0'], null, 'index.php', true, $mode);
+        assertNotContains('SOLO-IN-STAGING', $out['output']);
+
+        // Senza la sessione il cookie da solo non apre nulla e non da una 404
+        $guest = renderPage(['page' => 'homepage'], null, 'index.php', false, $mode);
+        assertSame(200, $guest['status']);
+        assertNotContains('SOLO-IN-STAGING', $guest['output']);
+    } finally {
+        $s->discard();
+    }
+});
+
+test('le pagine toccate hanno ognuna il suo indirizzo di anteprima', function () {
+    $sandbox = projectSandbox();
+    $s = new Staging($sandbox);
+    try {
+        $s->write('template/lavagna.html', '<!doctype html><html><body>{{page_title}}</body></html>', null, 'test');
+        $s->operate(['op' => 'create_collection', 'name' => 'lavagna', 'fields' => [['name' => 'page_title', 'type' => 'text']]], 'test');
+        $s->operate(['op' => 'create_entity', 'key' => 'lavagna', 'fields' => ['page_title' => 'Oggi']], 'test');
+        $s->operate(['op' => 'register_page', 'page' => 'lavagna', 'sitemap' => false], 'test');
+        $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'path' => ['features', 0], 'field' => 'title', 'lang' => 'it', 'value' => 'Nuovo'], 'test');
+        $urls = array_column($s->previewPages(), 'url');
+        // La pagina nuova, senza link nel sito e fuori dalla sitemap, ha la sua anteprima
+        assertTrue(in_array('index.php?page=lavagna&key=lavagna&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
+        // Un elemento di un elenco: la pagina di dettaglio con il suo path
+        assertTrue(in_array('index.php?page=detail&key=homepage&id=0&path=features%2F0&kris_preview=1', $urls, true), implode(' ', $urls));
+        assertTrue(in_array('index.php?page=homepage&key=homepage&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
+    } finally {
+        $s->discard();
+    }
+});
+
 // --- JavaScript, SVG, eliminazioni e approvazione degli script -----------------
 
 test('JavaScript e SVG del tema si scrivono; un SVG puo avere la dichiarazione XML ma non PHP', function () {

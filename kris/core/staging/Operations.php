@@ -36,6 +36,8 @@ final class Operations
     private const KEYS = [
         'add_item' => ['op', 'key', 'id', 'path', 'array', 'fields', 'position'],
         'create_entity' => ['op', 'key', 'fields'],
+        'register_page' => ['op', 'page', 'sitemap'],
+        'set_sitemap' => ['op', 'page', 'sitemap'],
     ];
 
     /**
@@ -61,6 +63,7 @@ final class Operations
             'change_type' => 'changeType', 'move_field' => 'moveField', 'set_posts' => 'setPosts',
             'set_post_collection' => 'setPostCollection', 'unregister_page' => 'unregisterPage',
             'set_collection_info' => 'setCollectionInfo', 'move_collection' => 'moveCollection',
+            'set_sitemap' => 'setSitemap',
         ][$type] ?? null;
         if ($method === null) {
             throw new StagingException("Operazione sconosciuta: '{$type}'.");
@@ -95,7 +98,9 @@ final class Operations
             'rename_field' => "Rinomina il campo «{$op['from']}» in «{$op['to']}» in " . self::schemaWhere($op),
             'describe_field' => (array_key_exists('description', $op) ? 'Nuova descrizione' : 'Nuova sezione') . " del campo «{$op['name']}» in " . self::schemaWhere($op),
             'create_collection' => "Nuova raccolta «{$op['name']}»",
-            'register_page' => "Nuova pagina pubblica «{$op['page']}»" . (isset($op['sitemap']) ? ', aggiunta alla sitemap' : ''),
+            'register_page' => "Nuova pagina pubblica «{$op['page']}»" . (!array_key_exists('sitemap', $op) ? '' : ($op['sitemap'] === false || $op['sitemap'] === null ? ', fuori dalla sitemap' : ', aggiunta alla sitemap')),
+            'set_sitemap' => ($op['sitemap'] ?? null) === false || ($op['sitemap'] ?? null) === null
+                ? "Toglie la pagina «{$op['page']}» dalla sitemap" : "Mette la pagina «{$op['page']}» nella sitemap",
             'remove_collection' => "Elimina la raccolta «{$op['name']}», con tutti i suoi contenuti",
             'rename_collection' => "Rinomina la raccolta «{$op['from']}» in «{$op['to']}»",
             'change_type' => "Cambia il tipo del campo «{$op['name']}» in {$op['type']} in " . self::schemaWhere($op),
@@ -119,14 +124,72 @@ final class Operations
         };
     }
 
-    /** Nomi di campi tolti o rinominati: i template che li usano ancora vanno aggiornati. */
+    /**
+     * I testi richtext che un'operazione scrive (set_field, add_item,
+     * create_entity): sono HTML che il sito emette così com'è, quindi codice
+     * da far approvare come quello dei file. $model è lo schema in cui
+     * l'operazione si applica.
+     *
+     * @return list<string>
+     */
+    public static function richtextValues(array $model, array $op): array
+    {
+        try {
+            $key = (string) ($op['key'] ?? '');
+            switch ($op['op'] ?? '') {
+                case 'set_field':
+                    $def = self::fieldDef(self::schemaAt($model, $key, self::arrayNames(self::path($op))), (string) ($op['field'] ?? ''));
+                    return $def['type'] === 'richtext' ? self::strings($op['value'] ?? null) : [];
+                case 'add_item':
+                    $names = array_merge(self::arrayNames(self::path($op)), [(string) ($op['array'] ?? '')]);
+                    return self::richtextIn(self::schemaAt($model, $key, $names), (array) ($op['fields'] ?? []));
+                case 'create_entity':
+                    return self::richtextIn(self::schemaAt($model, $key, []), (array) ($op['fields'] ?? []));
+            }
+        } catch (StagingException $e) {
+            // Un'operazione che non si applica più non scrive nulla
+        }
+        return [];
+    }
+
+    private static function richtextIn(array $schema, array $fields): array
+    {
+        $found = [];
+        foreach ($schema as $def) {
+            if (!is_array($def) || !array_key_exists($def['name'] ?? '', $fields)) continue;
+            $value = $fields[$def['name']];
+            if (($def['type'] ?? null) === 'richtext') {
+                array_push($found, ...self::strings($value));
+            } elseif (($def['type'] ?? null) === 'array' && is_array($value)) {
+                foreach ($value as $item) {
+                    if (is_array($item)) array_push($found, ...self::richtextIn($def['of'] ?? [], $item));
+                }
+            }
+        }
+        return $found;
+    }
+
+    /** @return list<string> */
+    private static function strings(mixed $value): array
+    {
+        if (is_string($value)) return [$value];
+        return is_array($value) ? array_values(array_filter($value, 'is_string')) : [];
+    }
+
+    /**
+     * Campi tolti o rinominati: i template che li usano ancora vanno aggiornati.
+     *
+     * @return list<array{name: string, context: string}> nome e contesto (raccolta ed elenchi, vedi TemplateUsage)
+     */
     public static function retiredNames(array $op): array
     {
-        return match ($op['op'] ?? '') {
-            'remove_field' => [(string) $op['name']],
-            'rename_field' => [(string) $op['from']],
-            default => [],
+        $name = match ($op['op'] ?? '') {
+            'remove_field' => (string) ($op['name'] ?? ''),
+            'rename_field' => (string) ($op['from'] ?? ''),
+            default => null,
         };
+        if ($name === null) return [];
+        return [['name' => $name, 'context' => TemplateUsage::context((string) ($op['collection'] ?? ''), (array) ($op['path'] ?? []))]];
     }
 
     // --- contenuti -----------------------------------------------------------
@@ -726,10 +789,7 @@ final class Operations
             throw new StagingException(self::conflict($op, "«{$page}» non è una pagina pubblica"));
         }
         $state['pages'] = self::withoutValue($state['pages'], $page);
-        if (is_array($state['seo']['sitemap'] ?? null)) {
-            $state['seo']['sitemap'] = array_values(array_filter($state['seo']['sitemap'], fn($r) => !is_array($r) || ($r['page'] ?? null) !== $page));
-        }
-        return [$state, $op];
+        return [self::withoutSitemapRules($state, $page), $op];
     }
 
     private static function registerPage(array $state, array $op, array $ctx): array
@@ -741,17 +801,68 @@ final class Operations
         if (!in_array($page, $state['pages'], true)) {
             $state['pages'][] = $page;
         }
-        if (isset($op['sitemap'])) {
-            $entry = ['page' => $page];
-            foreach (['key', 'children'] as $k) {
-                if (isset($op['sitemap'][$k])) $entry[$k] = (string) $op['sitemap'][$k];
-            }
-            if (isset($op['sitemap']['id'])) $entry['id'] = (int) $op['sitemap']['id'];
+        if (!array_key_exists('sitemap', $op)) return [$state, $op];
+        $rule = self::sitemapRule($page, $op['sitemap']);
+        // false: una pagina raggiungibile solo da chi conosce l'indirizzo, senza regole nella sitemap
+        if ($rule === null) return [self::withoutSitemapRules($state, $page), $op];
+        $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : [['page' => 'homepage']];
+        if (!in_array($rule, $sitemap, true)) $sitemap[] = $rule;
+        $state['seo']['sitemap'] = $sitemap;
+        return [$state, $op];
+    }
+
+    /**
+     * Mette o toglie dalla sitemap una pagina già pubblica: le sue regole
+     * vengono sostituite da quella indicata, o tolte con false.
+     */
+    private static function setSitemap(array $state, array $op, array $ctx): array
+    {
+        $page = (string) ($op['page'] ?? '');
+        if (!in_array($page, $state['pages'], true)) {
+            throw new StagingException(self::conflict($op, "«{$page}» non è una pagina pubblica: registrala con register_page"));
+        }
+        if (!array_key_exists('sitemap', $op)) {
+            throw new StagingException('set_sitemap vuole «sitemap»: false per toglierla, true o una regola ({"key", "id", "children"}) per metterla.');
+        }
+        $rule = self::sitemapRule($page, $op['sitemap']);
+        $state = self::withoutSitemapRules($state, $page);
+        if ($rule !== null) {
             $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : [['page' => 'homepage']];
-            if (!in_array($entry, $sitemap, true)) $sitemap[] = $entry;
+            $sitemap[] = $rule;
             $state['seo']['sitemap'] = $sitemap;
         }
         return [$state, $op];
+    }
+
+    /**
+     * Regola della sitemap per una pagina: null con false, solo la pagina con
+     * true, altrimenti la pagina con key, id e children dati.
+     */
+    private static function sitemapRule(string $page, mixed $value): ?array
+    {
+        if ($value === false || $value === null) return null;
+        if ($value === true) return ['page' => $page];
+        if (!is_array($value)) {
+            throw new StagingException('«sitemap» è false, true o una regola con "key", "id" e "children".');
+        }
+        $unknown = array_diff(array_map('strval', array_keys($value)), ['key', 'id', 'children']);
+        if ($unknown) {
+            throw new StagingException('La regola della sitemap non conosce ' . implode(', ', array_map(fn($k) => "«{$k}»", $unknown)) . '. Chiavi ammesse: key, id, children.');
+        }
+        $rule = ['page' => $page];
+        foreach (['key', 'children'] as $k) {
+            if (isset($value[$k])) $rule[$k] = (string) $value[$k];
+        }
+        if (isset($value['id'])) $rule['id'] = (int) $value['id'];
+        return $rule;
+    }
+
+    private static function withoutSitemapRules(array $state, string $page): array
+    {
+        if (is_array($state['seo']['sitemap'] ?? null)) {
+            $state['seo']['sitemap'] = array_values(array_filter($state['seo']['sitemap'], fn($r) => !is_array($r) || ($r['page'] ?? null) !== $page));
+        }
+        return $state;
     }
 
     // --- valori --------------------------------------------------------------

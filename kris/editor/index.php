@@ -24,9 +24,10 @@ use Kris\Update\UpdateException;
 session_set_cookie_params([
     'httponly' => true,
     'samesite' => 'Lax',
-    'secure'   => !empty($_SERVER['HTTPS']),
+    'secure'   => kris_is_https(),
 ]);
 session_start();
+kris_security_headers();
 
 // Use the script path even when the editor is opened without a trailing slash.
 $BASE = $_SERVER['SCRIPT_NAME'];
@@ -129,8 +130,12 @@ if (!kris_is_logged_in()) {
 
 // Login
 if ($isPost && isset($_POST['do_login'])) {
+    $wait = kris_login_wait();
     if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
         $login_error = "Sessione scaduta: riprova.";
+    } elseif ($wait > 0) {
+        // La password non viene nemmeno verificata: niente tentativi in più
+        $login_error = 'Troppi tentativi sbagliati. Riprova tra ' . max(1, (int) ceil($wait / 60)) . ' minuti.';
     } elseif (kris_login((string) ($_POST['user'] ?? ''), (string) ($_POST['pass'] ?? ''))) {
         header("Location: $BASE");
         exit;
@@ -353,7 +358,7 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
     <meta name="kris-csrf" content="<?= htmlspecialchars(kris_csrf_token()) ?>">
     <title><?= h($sectionLabel) ?> · Kris CMS</title>
     <script>/* Tema scelto nell'editor, prima del CSS: niente lampo chiaro */try{var t=localStorage.getItem('kris-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" integrity="sha512-6JR4bbn8rCKvrkdoTJd/VFyXAN4CE9XMtgykPWgKiHjou56YDJxWsi90hAeMTYxNwUnKSQu9JPc3SQUg+aGCHw==" crossorigin="anonymous" referrerpolicy="origin"></script>
     <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css<?= $assetVersion ?>">
 </head>
 
@@ -375,7 +380,7 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
             <?php if ($stagingMode): ?>
                 <a href="../index.php?kris_preview=1" target="_blank" rel="noopener" class="btn btn-white">Apri l'anteprima <span aria-hidden="true">↗</span></a>
             <?php else: ?>
-                <a href="../" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
+                <a href="../index.php?kris_preview=0" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
             <?php endif; ?>
         </div>
     </header>
@@ -401,7 +406,7 @@ $assetVersion = '?v=' . rawurlencode($krisVersion);
         if (!Kris\Auth\Credentials::validEmail((string) ($authConfig['email'] ?? '')) && empty($_SESSION['kris_email_later']) && $editorLock === ''): ?>
             <div class="alert account-alert" role="status">
                 <p><strong>Aggiungi la tua email.</strong> Se dimentichi la password, ti manderemo lì un link per sceglierne una nuova.</p>
-                <form method="POST" class="account-alert-form" data-account-form><input type="hidden" name="save_account_email" value="1"><label class="sr-only" for="account-email-quick">Email</label><input id="account-email-quick" type="email" name="account_email" autocomplete="email" placeholder="nome@esempio.it" required><button class="btn btn-primary">Salva email</button></form>
+                <form method="POST" class="account-alert-form" data-account-form><input type="hidden" name="save_account_email" value="1"><label class="sr-only" for="account-email-quick">Email</label><input id="account-email-quick" type="email" name="account_email" autocomplete="email" placeholder="nome@esempio.it" required><label class="sr-only" for="account-email-quick-password">Password attuale</label><input id="account-email-quick-password" type="password" name="current_password" autocomplete="current-password" placeholder="Password attuale" required><button class="btn btn-primary">Salva email</button></form>
                 <form method="POST"><input type="hidden" name="account_email_later" value="1"><button class="text-link" type="submit">Più tardi</button></form>
             </div>
         <?php endif; ?>
