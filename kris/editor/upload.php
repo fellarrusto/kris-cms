@@ -8,6 +8,7 @@ use Kris\Entity\MediaStore;
 use Kris\Entity\StorageException;
 
 session_start();
+kris_security_headers();
 
 if (!kris_is_logged_in()) {
     http_response_code(403);

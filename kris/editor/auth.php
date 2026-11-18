@@ -43,9 +43,27 @@ function kris_is_logged_in(): bool
     return ($_SESSION['kris_auth'] ?? false) === true;
 }
 
+const KRIS_ATTEMPTS_FILE = KRIS_ROOT . '/config/auth_attempts.json';
+
+function kris_login_throttle(): \Kris\Auth\LoginThrottle
+{
+    return new \Kris\Auth\LoginThrottle(KRIS_ATTEMPTS_FILE);
+}
+
+/** Secondi da aspettare prima di poter riprovare ad accedere da questo indirizzo. */
+function kris_login_wait(): int
+{
+    return kris_login_throttle()->waitSeconds((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+}
+
 function kris_login(string $user, string $pass): bool
 {
-    if (!kris_credentials()->verify($user, $pass)) return false;
+    $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    if (!kris_credentials()->verify($user, $pass)) {
+        kris_login_throttle()->fail($ip);
+        return false;
+    }
+    kris_login_throttle()->succeed($ip);
 
     // Nuovo id di sessione al login: impedisce il riuso di un id noto
     // impostato prima dell'autenticazione (session fixation).
@@ -74,11 +92,17 @@ function kris_save_credentials(string $user, string $pass, string $email = ''): 
     return kris_credentials()->save($changes);
 }
 
+/** La richiesta arriva in https, anche attraverso il proxy dell'hosting. */
+function kris_is_https(): bool
+{
+    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+}
+
 /** Indirizzo dell'editor nella richiesta corrente (solo per richieste fidate). */
 function kris_current_editor_url(): string
 {
-    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+    $https = kris_is_https();
     $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
     if (!preg_match('/^[a-z0-9.-]+(:\d+)?$/', $host)) $host = 'localhost';
     return ($https ? 'https' : 'http') . '://' . $host . (string) ($_SERVER['SCRIPT_NAME'] ?? '/editor/index.php');
@@ -116,6 +140,20 @@ function kris_send_reset_link(): bool
         . "Se non sei stato tu, ignora questa email: la password attuale resta valida.\n\n"
         . "Nome utente: {$config['user']}\n";
     return kris_send_mail((string) $config['email'], 'Reimposta la password dell\'editor', $body);
+}
+
+/**
+ * Intestazioni di ogni risposta dell'editor: niente pagina dentro un iframe
+ * di un altro sito (clickjacking su «Pubblica», «Approva gli script»…), niente
+ * interpretazione dei tipi, niente indirizzo dell'editor ai siti esterni.
+ */
+function kris_security_headers(): void
+{
+    if (headers_sent()) return;
+    header('X-Frame-Options: DENY');
+    header("Content-Security-Policy: frame-ancestors 'none'");
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: same-origin');
 }
 
 // --- CSRF ---------------------------------------------------------------
