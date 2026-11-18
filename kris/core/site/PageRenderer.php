@@ -53,7 +53,7 @@ final class PageRenderer
         if ($seo['head']) {
             $html = Seo::inject($html, Seo::headTags(Seo::baseUrl($seo, $server), $page, $key, $id, $path, $lang, $langs, self::routes()));
         }
-        return ['status' => 200, 'html' => self::finish($html, $lang), 'lang' => $lang];
+        return ['status' => 200, 'html' => self::finish(self::withHead($html, $entity, $lang), $lang), 'lang' => $lang];
     }
 
     /** Le rotte degli indirizzi leggibili, o null se il sito non li usa (seo.json, pretty_urls). */
@@ -134,7 +134,7 @@ final class PageRenderer
                         $entity = new Entity('k_data', 'not_found', 0, ['name' => 'not_found', 'id' => 0, 'data' => []]);
                     }
                 }
-                return self::finish((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $lang);
+                return self::finish(self::withHead((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $entity, $lang), $lang);
             } catch (Throwable $e) {
                 // Un template rotto non deve trasformare la 404 in un errore: si usa quella di riserva
             }
@@ -160,6 +160,21 @@ final class PageRenderer
             if (is_string($value) && trim($value) !== '') $texts[$field] = trim($value);
         }
         return $texts;
+    }
+
+    /**
+     * template/kris_head.html, se il tema ce l'ha: inserito prima di </head> in
+     * ogni pagina, reso con il contenuto della pagina. Il posto per meta di
+     * verifica, script globali, dati strutturati: una volta sola invece che in
+     * ogni template.
+     */
+    private static function withHead(string $html, Entity $entity, string $lang): string
+    {
+        $file = Paths::template('kris_head');
+        if (!is_file($file)) return $html;
+        $head = (new TemplateEngine($lang))->render((string) file_get_contents($file), $entity);
+        $pos = stripos($html, '</head>');
+        return $pos === false ? $html : substr($html, 0, $pos) . $head . "\n" . substr($html, $pos);
     }
 
     /** Ultimi ritocchi di ogni pagina, 404 compresa: favicon e versione dei file del tema. */

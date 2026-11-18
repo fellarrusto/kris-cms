@@ -155,3 +155,44 @@ test('{{tipo.campo}} legge il primo contenuto di un altra raccolta, anche nelle 
     assertContains('<p id="g">[Kris 2]</p>', $out);
     assertContains('<p>SI</p>', $out);
 });
+
+function pageSandboxCopy(): string
+{
+    $root = sys_get_temp_dir() . '/kris-page-' . bin2hex(random_bytes(4));
+    rcopy(projectSandbox(), $root);
+    register_shutdown_function(fn() => rrmdir($root));
+    return $root;
+}
+
+test('template/kris_head.html entra prima di </head> in ogni pagina e nella 404 del tema', function () {
+    $root = pageSandboxCopy();
+    file_put_contents("{$root}/template/kris_head.html", '<meta name="kris-test" content="{{page_title}}"><script type="application/ld+json">{"@type":"Organization"}</script>');
+    $out = renderPage([], $root)['output'];
+    $meta = strpos($out, '<meta name="kris-test" content="Kris 2">');
+    assertTrue($meta !== false, 'il frammento c è, con il campo della pagina');
+    assertTrue($meta < strpos($out, '</head>'), 'prima di </head>');
+    assertContains('application/ld+json', $out);
+    // Anche nella 404 del tema; quella di serie di Kris non usa i template
+    file_put_contents("{$root}/template/404.html", '<!doctype html><html><head><title>404</title></head><body>{{title}}</body></html>');
+    assertContains('name="kris-test"', renderPage(['page' => 'inesistente'], $root)['output']);
+});
+
+test('lingua automatica: la homepage senza lingua segue cookie e browser, non i motori di ricerca', function () {
+    $root = pageSandboxCopy();
+    $seo = json_decode((string) file_get_contents("{$root}/config/seo.json"), true);
+    file_put_contents("{$root}/config/seo.json", json_encode($seo + ['auto_language' => true]));
+    try {
+        $GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'] = 'en-US,en;q=0.9,it;q=0.5';
+        assertSame(302, renderPage([], $root)['status'], 'browser in inglese');
+        assertSame(200, renderPage([], $root, 'index.php', false, ['kris_lang' => 'it'])['status'], 'scelta già fatta: italiano');
+        assertSame(200, renderPage(['ln' => 'en'], $root)['status'], 'lingua nell indirizzo: nessun redirect');
+        assertSame(200, renderPage(['page' => 'privacy', 'key' => 'kris_legal'], $root)['status'], 'solo la homepage');
+        $GLOBALS['KRIS_TEST_USER_AGENT'] = 'Mozilla/5.0 (compatible; Googlebot/2.1)';
+        assertSame(200, renderPage([], $root)['status'], 'i motori di ricerca vedono la lingua principale');
+        unset($GLOBALS['KRIS_TEST_USER_AGENT']);
+        $GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'] = 'de-DE,fr;q=0.8';
+        assertSame(200, renderPage([], $root)['status'], 'lingua non attiva: la principale');
+    } finally {
+        unset($GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'], $GLOBALS['KRIS_TEST_USER_AGENT']);
+    }
+});
