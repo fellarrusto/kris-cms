@@ -140,7 +140,7 @@ final class Server
                 return ['deleted' => true];
 
             case 'get_entity':
-                return ['entity' => $this->entity($s->state()['data'], $this->string($r, 'key'), (int) ($r['id'] ?? 0), (array) ($r['path'] ?? []))];
+                return ['entity' => $this->entity($s->state()['content'], $this->string($r, 'key'), (int) ($r['id'] ?? 0), (array) ($r['path'] ?? []))];
 
             case 'operate':
                 if (!is_array($r['operation'] ?? null)) throw new AgentException('Serve "operation", un oggetto con "op".', 400);
@@ -271,25 +271,24 @@ final class Server
         return ['status' => $page['status'], 'lang' => $page['lang'], 'html' => $page['html']];
     }
 
-    /** Configurazione pubblica del sito, in sola lettura: pagine, seo.json e sitemap con le modifiche in attesa, robots.txt. */
+    /**
+     * Configurazione pubblica del sito, in sola lettura: pagine (con quello
+     * che rendono e la sitemap), opzioni SEO, reindirizzamenti e sitemap con
+     * le modifiche in attesa, robots.txt.
+     */
     private function siteConfig(): array
     {
         $state = $this->staging->state();
         $langs = \Kris\Store\Site::languages($this->root);
         $seo = \Kris\Template\Seo::config($this->root);
-        $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : [];
         $robots = $this->root . '/robots.txt';
         return [
-            'pages' => $state['pages'],
-            'seo' => $state['seo'] ?: (object) [],
+            'pages' => $state['schema']['pages'] ?: (object) [],
+            'seo' => is_array($state['settings']['seo'] ?? null) && $state['settings']['seo'] ? $state['settings']['seo'] : (object) [],
+            'redirects' => is_array($state['schema']['redirects'] ?? null) && $state['schema']['redirects'] ? $state['schema']['redirects'] : (object) [],
             'robots_txt' => is_file($robots) ? (string) file_get_contents($robots) : null,
             'sitemap_xml' => \Kris\Template\Seo::sitemapXml(
-                // shortcut: lo staging è ancora nel formato 1, convertito qui finché non passa al formato 2
-                \Kris\Template\Seo::sitemapEntries(...(function () use ($state): array {
-                    $f2 = ((require KRIS_DIR . '/migrations/0009_formato_2.php')['up'])(['k_data' => $state['data'], 'k_model' => $state['model'], 'cms_settings' => $state['settings'],
-                        'allowed_pages' => ['allowed_pages' => $state['pages']], 'seo' => $state['seo'], 'templates' => []]);
-                    return [$f2['schema'], $f2['content']];
-                })()),
+                \Kris\Template\Seo::sitemapEntries($state['schema'], $state['content']),
                 \Kris\Template\Seo::baseUrl($seo, $_SERVER),
                 $langs
             ),
@@ -304,8 +303,9 @@ final class Server
         $languages = \Kris\Store\Site::languages($this->root);
 
         $entities = [];
-        foreach ($state['data'] as $entity) {
-            $entities[$entity['name']][] = ['id' => $entity['id'], 'title' => $this->title($entity, $languages[0])] + (!empty($entity['hidden']) ? ['hidden' => true] : []);
+        foreach ($state['content'] as $item) {
+            $fields = $state['schema']['types'][$item['type']]['fields'] ?? [];
+            $entities[$item['type']][] = ['id' => $item['id'], 'title' => $this->title($item, (array) $fields, $languages[0])] + (!empty($item['hidden']) ? ['hidden' => true] : []);
         }
         $deleted = array_map('basename', $this->staging->deletedFiles());
         $files = fn(string $pattern): array => array_values(array_diff(array_unique(array_map(
@@ -314,11 +314,9 @@ final class Server
         )), $deleted));
         return [
             'languages' => $languages,
-            'pages' => $state['pages'],
-            'model' => $state['model'],
-            // Nome visibile, descrizione, contenuto unico e ordine delle raccolte nell'editor
-            'collections' => is_array($state['settings']['collections'] ?? null) ? $state['settings']['collections'] : (object) [],
-            'collection_order' => is_array($state['settings']['collection_order'] ?? null) ? $state['settings']['collection_order'] : [],
+            // Le pagine con il tipo che rendono, i tipi con nome visibile, contenuto unico, Posts e campi, nell'ordine dell'editor
+            'pages' => $state['schema']['pages'] ?: (object) [],
+            'types' => $state['schema']['types'] ?: (object) [],
             'entities' => $entities,
             'templates' => $files('template/*.html'),
             'stylesheets' => $files('assets/css/*.css'),
@@ -360,19 +358,15 @@ final class Server
     }
 
     /** @throws AgentException */
-    private function entity(array $data, string $key, int $id, array $path): array
+    private function entity(array $content, string $key, int $id, array $path): array
     {
-        foreach ($data as $entity) {
-            if (($entity['name'] ?? null) === $key && (int) ($entity['id'] ?? -1) === $id) {
-                $cur = $entity;
+        foreach ($content as $item) {
+            if (($item['type'] ?? null) === $key && (int) ($item['id'] ?? -1) === $id) {
+                $cur = $item;
                 for ($i = 0; $i + 1 < count($path); $i += 2) {
                     $next = null;
-                    foreach ($cur['data'] ?? [] as $field) {
-                        if (($field['name'] ?? null) === (string) $path[$i] && is_array($field['value'])) {
-                            foreach ($field['value'] as $child) {
-                                if ((int) ($child['id'] ?? -1) === (int) $path[$i + 1]) $next = $child;
-                            }
-                        }
+                    foreach (is_array($cur['values'][(string) $path[$i]] ?? null) ? $cur['values'][(string) $path[$i]] : [] as $child) {
+                        if ((int) ($child['id'] ?? -1) === (int) $path[$i + 1]) $next = $child;
                     }
                     if ($next === null) throw new AgentException("L'elemento {$path[$i]}/{$path[$i + 1]} non esiste.", 404);
                     $cur = $next;
@@ -383,13 +377,14 @@ final class Server
         throw new AgentException("Il contenuto «{$key}» con id {$id} non esiste.", 404);
     }
 
-    private function title(array $entity, string $lang): string
+    /** Il primo testo non vuoto del contenuto, nella lingua principale: per riconoscerlo nell'elenco. */
+    private function title(array $item, array $fields, string $lang): string
     {
-        foreach ($entity['data'] ?? [] as $field) {
-            if (in_array($field['type'] ?? '', ['text', 'plain'], true)) {
-                $value = is_array($field['value']) ? ($field['value'][$lang] ?? reset($field['value'])) : $field['value'];
-                if (is_string($value) && $value !== '') return mb_substr($value, 0, 80);
-            }
+        foreach ($fields as $def) {
+            if (($def['type'] ?? '') !== 'text') continue;
+            $value = $item['values'][$def['name']] ?? null;
+            $value = is_array($value) ? ($value[$lang] ?? reset($value)) : $value;
+            if (is_string($value) && $value !== '') return mb_substr($value, 0, 80);
         }
         return '';
     }

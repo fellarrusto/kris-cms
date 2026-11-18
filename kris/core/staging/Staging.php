@@ -25,7 +25,7 @@ use Kris\Entity\StorageException;
  *    alla pubblicazione.
  *
  * L'anteprima legge data/staging/ sovrapposta al sito (Kris\Site\Paths): per
- * i contenuti ci sono copie di k_data, k_model e delle pagine con le
+ * i contenuti ci sono copie di schema, contenuti e impostazioni con le
  * operazioni gia applicate, ricostruite da rebuild().
  *
  * La pubblicazione salva prima le versioni attuali in data/staging-backups/:
@@ -35,17 +35,12 @@ final class Staging
 {
     public const BACKUP_DAYS = 14;
 
+    /** I documenti del formato 2 e i loro file nella copia dell'anteprima. */
     private const STATE_FILES = [
-        'data' => 'data/k_data.json',
-        'model' => 'data/k_model.json',
-        'pages' => 'config/allowed_pages.json',
-        'seo' => 'config/seo.json',
-        'cms_settings' => 'data/cms_settings.json',
+        'schema' => 'data/schema.json',
+        'content' => 'data/content.json',
+        'settings' => 'data/settings.json',
     ];
-
-    /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
-    private const PAGE_OPS = ['register_page', 'unregister_page', 'set_sitemap', 'remove_collection', 'rename_collection'];
-    private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection', 'set_collection_info', 'move_collection'];
 
     private string $root;
     private string $dir;
@@ -190,7 +185,7 @@ final class Staging
         if ($current['hash'] !== $expectedHash) {
             throw new StagingException("Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo prima di eliminarlo.", ['current_hash' => $current['hash']]);
         }
-        if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1 && in_array($m[1], $this->state()['pages'], true)) {
+        if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1 && isset($this->state()['schema']['pages'][$m[1]])) {
             throw new StagingException("template/{$m[1]}.html è il template della pagina pubblica «{$m[1]}»: toglila prima con unregister_page.");
         }
         $manifest = $this->startManifest($by);
@@ -408,15 +403,7 @@ final class Staging
             @unlink("{$this->dir}/{$relative}");
         }
         if (!$ops) return;
-        self::writeJson("{$this->dir}/data/k_data.json", $state['data']);
-        self::writeJson("{$this->dir}/data/k_model.json", $state['model']);
-        if (self::touches($ops, self::PAGE_OPS)) {
-            self::writeJson("{$this->dir}/config/allowed_pages.json", ['allowed_pages' => array_values($state['pages'])]);
-            self::writeJson("{$this->dir}/config/seo.json", $state['seo']);
-        }
-        if (self::touches($ops, self::SETTINGS_OPS)) {
-            self::writeJson("{$this->dir}/data/cms_settings.json", $state['settings']);
-        }
+        foreach (self::STATE_FILES as $doc => $relative) self::writeJson("{$this->dir}/{$relative}", $state[$doc]);
     }
 
     /**
@@ -430,14 +417,15 @@ final class Staging
     public function previewPages(?array $state = null): array
     {
         $state ??= $this->state();
-        $pages = array_values(array_filter((array) ($state['pages'] ?? []), 'is_string'));
+        $pages = array_keys(array_filter((array) ($state['schema']['pages'] ?? []), 'is_array'));
         $templates = [];
         foreach ($this->templateSources() as $relative => $html) $templates[substr(basename($relative), 0, -5)] = $html;
-        $contexts = TemplateUsage::contexts($templates, [$this->siteState()['model'], $state['model'] ?? []], (array) ($state['seo']['sitemap'] ?? []));
+        $contexts = TemplateUsage::contexts($templates, [$this->siteState()['schema'], $state['schema'] ?? []]);
         $roots = function (string $page) use ($contexts, $state): array {
             $roots = array_values(array_filter($contexts[$page] ?? [], fn($c) => !str_contains($c, '/')));
-            // Una pagina che nessun link raggiunge: di solito rende la raccolta con il suo nome
-            if (!$roots && isset($state['model'][$page])) $roots = [$page];
+            // Il tipo che la pagina rende
+            $type = $state['schema']['pages'][$page]['type'] ?? null;
+            if (is_string($type) && !in_array($type, $roots, true)) array_unshift($roots, $type);
             return $roots;
         };
 
@@ -531,11 +519,7 @@ final class Staging
             $preview = $this->state();
             $byName = [];
             foreach ($templates as $relative => $html) $byName[substr(basename($relative), 0, -5)] = $html;
-            $usage = TemplateUsage::contexts(
-                $byName,
-                [$site['model'], $preview['model']],
-                array_merge((array) ($site['seo']['sitemap'] ?? []), (array) ($preview['seo']['sitemap'] ?? []))
-            );
+            $usage = TemplateUsage::contexts($byName, [$site['schema'], $preview['schema']]);
         }
         $problems = [];
         foreach ($templates as $relative => $html) {
@@ -590,9 +574,9 @@ final class Staging
         $templates = implode("\n", $read('template/*.html'));
         $out = [];
 
-        foreach ($state['model'] as $collection => $schema) {
-            if (!is_array($schema) || str_starts_with((string) $collection, 'kris_')) continue;
-            foreach (self::schemaLevels($schema, (string) $collection) as $where => $defs) {
+        foreach ((array) ($state['schema']['types'] ?? []) as $collection => $type) {
+            if (!is_array($type['fields'] ?? null) || str_starts_with((string) $collection, 'kris_')) continue;
+            foreach (self::schemaLevels($type['fields'], (string) $collection) as $where => $defs) {
                 $withSection = array_filter($defs, fn($d) => ($d['section'] ?? '') !== '');
                 $loose = array_column(array_filter($defs, fn($d) => ($d['section'] ?? '') === ''), 'name');
                 if ($withSection && $loose) {
@@ -628,7 +612,7 @@ final class Staging
         $defs = array_values(array_filter($schema, fn($d) => is_array($d) && isset($d['name'])));
         $levels = [$where => $defs];
         foreach ($defs as $def) {
-            if (($def['type'] ?? '') === 'array' && is_array($def['of'] ?? null) && $def['of']) {
+            if (($def['type'] ?? '') === 'list' && is_array($def['of'] ?? null) && $def['of']) {
                 $levels += self::schemaLevels($def['of'], "{$where} › {$def['name']}");
             }
         }
@@ -672,7 +656,7 @@ final class Staging
         $state = $this->siteState();
         $languages = $this->languages();
         foreach ($ops as $op) {
-            foreach (Operations::richtextValues($state['model'], $op) as $html) {
+            foreach (Operations::richtextValues($state['schema'], $op) as $html) {
                 if (FilePolicy::hasCodeSignal(FilePolicy::sensitive($html))) {
                     $label = 'contenuto: ' . Operations::describe($op);
                     $items[$label] = self::hash(($items[$label] ?? '') . "\n" . $html);
@@ -888,13 +872,8 @@ final class Staging
                 $writes[$change['file']] = $change['staged'];
             }
         }
-        // Contenuti, schema, pagine: documenti dell'archivio, scritti in una transazione
-        $docs = [];
-        if ($ops) {
-            $docs = ['data', 'model'];
-            if (self::touches($ops, self::PAGE_OPS)) array_push($docs, 'pages', 'seo');
-            if (self::touches($ops, self::SETTINGS_OPS)) $docs[] = 'cms_settings';
-        }
+        // Contenuti, schema e pagine: documenti dell'archivio, scritti in una transazione
+        $docs = $ops ? array_keys(self::STATE_FILES) : [];
         $uploads = array_keys($this->manifest()['uploads']);
         $fonts = array_values(array_filter(array_keys($this->manifest()['fonts']), fn($n) => is_file("{$this->dir}/assets/fonts/{$n}")));
         foreach ($uploads as $name) {
@@ -917,20 +896,20 @@ final class Staging
         try {
             if ($docs) {
                 // Sotto il lock dell'archivio: le operazioni si riapplicano ai dati di questo momento
-                \Kris\Store\Stores::site($this->root)->transaction($docs, function (array $current) use ($ops, $docs, $backup, &$meta): array {
-                    foreach ($docs as $doc) {
+                $store = \Kris\Store\Stores::site($this->root);
+                $store->transaction($docs, function (array $current) use ($ops, $docs, $backup, &$meta, $store, &$docs2): array {
+                    // Un sito ancora nel formato 1 riceve tutti e tre i documenti del formato 2
+                    $legacy = $store->read('schema')->rev === '' || $current['schema'] === [];
+                    [$state] = $this->replay($ops, true);
+                    $docs2 = array_values(array_filter($docs, fn($doc) => $legacy || $state[$doc] !== $current[$doc]));
+                    foreach ($docs2 as $doc) {
                         $meta['documents'][$doc] = ['existed' => $current[$doc] !== []];
                         (new JsonStore("{$backup}/documents/{$doc}.json"))->write($current[$doc]);
                     }
                     (new JsonStore("{$backup}/meta.json"))->write($meta);
-                    [$state] = $this->replay($ops, true);
-                    $new = [
-                        'data' => $state['data'], 'model' => $state['model'],
-                        'pages' => ['allowed_pages' => array_values($state['pages'])],
-                        'seo' => $state['seo'], 'cms_settings' => $state['settings'],
-                    ];
-                    return array_intersect_key($new, array_flip($docs));
+                    return array_intersect_key($state, array_flip($docs2));
                 });
+                $docs = $docs2 ?? [];
             } else {
                 (new JsonStore("{$backup}/meta.json"))->write($meta);
             }
@@ -1023,20 +1002,8 @@ final class Staging
 
     private function siteState(): array
     {
-        // Il sito com'è nell'archivio, mai la sovrapposizione dell'anteprima
-        $store = \Kris\Store\Stores::site($this->root);
-        $read = function (string $doc, array $default) use ($store): array {
-            $snapshot = $store->read($doc);
-            return $snapshot->rev === '' ? $default : $snapshot->value;
-        };
-        $pages = $read('pages', ['allowed_pages' => ['homepage']]);
-        return [
-            'data' => $read('data', []),
-            'model' => $read('model', []),
-            'pages' => is_array($pages['allowed_pages'] ?? null) ? array_values($pages['allowed_pages']) : ['homepage'],
-            'seo' => $read('seo', []),
-            'settings' => $read('cms_settings', []),
-        ];
+        // Il sito com'è nell'archivio in questo momento, mai la sovrapposizione dell'anteprima
+        return \Kris\Store\Site::current($this->root);
     }
 
     private static function touches(array $ops, array $types): bool

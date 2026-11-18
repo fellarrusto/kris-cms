@@ -75,6 +75,37 @@ function renderTemplate(string $html, Entity $entity, string $lang = 'it'): stri
 }
 
 /**
+ * I documenti del formato 1 delle fixture (contenuti, schema, due lingue,
+ * pagine della repo) convertiti nel formato 2 dalla migrazione 0009.
+ * $prepare cambia i documenti del formato 1 prima della conversione.
+ *
+ * @return array{schema: array, content: array, settings: array}
+ */
+function format2Fixture(?callable $prepare = null, array $templates = []): array
+{
+    $files = [
+        'k_data' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/k_data.json'), true),
+        'k_model' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/k_model.json'), true),
+        'cms_settings' => ['languages' => ['it', 'en']],
+        'allowed_pages' => json_decode((string) file_get_contents(KRIS_ROOT . '/config/allowed_pages.json'), true),
+        'seo' => null,
+    ];
+    if ($prepare !== null) $files = $prepare($files);
+    $files['templates'] = $templates;
+    return ((require KRIS_ROOT . '/kris/migrations/0009_formato_2.php')['up'])($files);
+}
+
+/** Scrive nel sito i documenti del formato 2 (data/schema.json, content.json, settings.json). */
+function writeFormat2(string $root, array $docs): void
+{
+    if (!is_dir("{$root}/data")) mkdir("{$root}/data", 0777, true);
+    foreach (['schema', 'content', 'settings'] as $doc) {
+        file_put_contents("{$root}/data/{$doc}.json", json_encode($docs[$doc], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+    \Kris\Store\Site::forget();
+}
+
+/**
  * Copia isolata del progetto con le fixture al posto di data/.
  * Creata una volta per esecuzione e riusata da tutti i test di pagina.
  */

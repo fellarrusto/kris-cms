@@ -182,8 +182,8 @@ test('la panoramica descrive lingue, pagine, schema, contenuti e file del tema',
     [$root, $worker] = agentSite();
     $overview = agentCall($root, $worker, ['action' => 'overview'])['body'];
     assertSame(['it', 'en'], $overview['languages']);
-    assertTrue(in_array('homepage', $overview['pages'], true));
-    assertTrue(isset($overview['model']['homepage']));
+    assertSame('homepage', $overview['pages']['homepage']['type']);
+    assertSame('list', array_column($overview['types']['homepage']['fields'], 'type', 'name')['steps']);
     assertSame(0, $overview['entities']['homepage'][0]['id']);
     assertTrue(in_array('homepage.html', $overview['templates'], true));
 });
@@ -322,7 +322,7 @@ test('site_config mostra pagine, seo, robots e sitemap con le modifiche in attes
     agentCall($root, $worker, ['action' => 'write_file', 'file' => 'template/lavagna.html', 'content' => '<p>{{page_title}}</p>']);
     agentCall($root, $worker, ['action' => 'operate', 'operation' => ['op' => 'register_page', 'page' => 'lavagna', 'sitemap' => false]]);
     $c = agentCall($root, $worker, ['action' => 'site_config'])['body'];
-    assertTrue(in_array('lavagna', $c['pages'], true));
+    assertSame(false, $c['pages']['lavagna']['sitemap']);
     assertContains('Disallow: /editor/', (string) $c['robots_txt']);
     assertContains('<urlset', $c['sitemap_xml']);
     assertNotContains('page=lavagna', $c['sitemap_xml']);

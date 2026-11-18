@@ -13,37 +13,39 @@ use Kris\Staging\Staging;
 
 function stagedIds(string $root, string $key): array
 {
-    $file = "{$root}/data/staging/data/k_data.json";
+    $file = "{$root}/data/staging/data/content.json";
     return array_map(fn($e) => (int) $e['id'], array_values(array_filter(
         json_decode((string) file_get_contents($file), true),
-        fn($e) => $e['name'] === $key
+        fn($e) => $e['type'] === $key
     )));
 }
 
 function addPage(string $root, int $id, string $title): void
 {
-    $file = "{$root}/data/k_data.json";
+    $file = "{$root}/data/content.json";
     $data = json_decode((string) file_get_contents($file), true);
-    $data[] = ['name' => 'navbar', 'id' => $id, 'data' => [['name' => 'page_title', 'type' => 'text', 'value' => ['it' => $title, 'en' => $title]]]];
+    $data[] = ['type' => 'navbar', 'id' => $id, 'values' => ['page_title' => ['it' => $title, 'en' => $title]]];
     file_put_contents($file, json_encode($data));
 }
 
-test('fieldOps cambia solo le lingue toccate, i plain per intero, e ignora gli elenchi', function () {
+test('fieldOps cambia solo le lingue toccate, i valori condivisi per intero, e ignora gli elenchi', function () {
     $schema = [
-        ['name' => 'title', 'type' => 'text'], ['name' => 'code', 'type' => 'plain'],
-        ['name' => 'items', 'type' => 'array'], ['name' => 'same', 'type' => 'text'],
+        ['name' => 'title', 'type' => 'text', 'localized' => true], ['name' => 'code', 'type' => 'text', 'localized' => false],
+        ['name' => 'items', 'type' => 'list', 'of' => []], ['name' => 'same', 'type' => 'text', 'localized' => true],
+        ['name' => 'on', 'type' => 'boolean', 'localized' => false],
     ];
     $before = [
-        ['name' => 'title', 'type' => 'text', 'value' => ['it' => 'Ciao', 'en' => 'Hi', 'de' => 'Hallo']],
-        ['name' => 'code', 'type' => 'plain', 'value' => 'a'],
-        ['name' => 'items', 'type' => 'array', 'value' => [['id' => 0, 'data' => []]]],
-        ['name' => 'same', 'type' => 'text', 'value' => ['it' => 'x', 'en' => 'y']],
+        'title' => ['it' => 'Ciao', 'en' => 'Hi', 'de' => 'Hallo'],
+        'code' => 'a',
+        'items' => [['id' => 0, 'values' => []]],
+        'same' => ['it' => 'x', 'en' => 'y'],
     ];
     $after = [
-        ['name' => 'title', 'type' => 'text', 'value' => ['it' => 'Salve', 'en' => 'Hi', 'de' => 'Hallo']],
-        ['name' => 'code', 'type' => 'plain', 'value' => 'b'],
-        ['name' => 'items', 'type' => 'array', 'value' => []],
-        ['name' => 'same', 'type' => 'text', 'value' => ['it' => 'x', 'en' => 'y']],
+        'title' => ['it' => 'Salve', 'en' => 'Hi', 'de' => 'Hallo'],
+        'code' => 'b',
+        'items' => [],
+        'same' => ['it' => 'x', 'en' => 'y'],
+        'on' => false,
     ];
 
     $ops = EditorChanges::fieldOps('homepage', 0, ['steps', 1], $schema, $before, $after, ['it', 'en']);
@@ -73,7 +75,7 @@ test('moves porta un ordine nell altro con uno spostamento per elemento fuori po
 test('salvare piu volte lo stesso campo lascia una sola modifica, e tornare al valore di partenza la toglie', function () {
     $root = contentSite();
     $s = new Staging($root);
-    $original = siteValue("{$root}/data/k_data.json", 'homepage', 0, 'page_title')['it'];
+    $original = siteValue("{$root}/data/content.json", 'homepage', 0, 'page_title')['it'];
     $set = fn(string $value, string $field = 'page_title') => ['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => $field, 'lang' => 'it', 'value' => $value];
 
     $s->operate($set('Primo'), 'editor');
@@ -124,18 +126,18 @@ test('eliminare, spostare e sospendere contenuti radice e elementi, fino alla pu
     expectStaging(fn() => $s->operate(['op' => 'remove_entity', 'key' => 'navbar', 'id' => 0], 'editor'), 'non esiste più');
 
     // Il sito non cambia finche non si pubblica
-    assertSame([0, 1, 2], array_map(fn($e) => (int) $e['id'], array_values(array_filter(json_decode((string) file_get_contents("{$root}/data/k_data.json"), true), fn($e) => $e['name'] === 'navbar'))));
+    assertSame([0, 1, 2], array_map(fn($e) => (int) $e['id'], array_values(array_filter(json_decode((string) file_get_contents("{$root}/data/content.json"), true), fn($e) => $e['type'] === 'navbar'))));
 
     $s->promote('admin');
-    $site = json_decode((string) file_get_contents("{$root}/data/k_data.json"), true);
-    $navbars = array_values(array_filter($site, fn($e) => $e['name'] === 'navbar'));
+    $site = json_decode((string) file_get_contents("{$root}/data/content.json"), true);
+    $navbars = array_values(array_filter($site, fn($e) => $e['type'] === 'navbar'));
     assertSame([2, 1], array_map(fn($e) => (int) $e['id'], $navbars));
     assertTrue(!empty($navbars[1]['hidden']), 'navbar 1 sospesa');
-    $steps = siteValue("{$root}/data/k_data.json", 'homepage', 0, 'steps');
+    $steps = siteValue("{$root}/data/content.json", 'homepage', 0, 'steps');
     assertTrue(!empty($steps[1]['hidden']), 'il passo 1 è sospeso');
     assertTrue(empty($steps[0]['hidden']), 'gli altri restano visibili');
     // Le altre raccolte restano dove sono
-    assertSame('homepage', $site[0]['name']);
+    assertSame('homepage', $site[0]['type']);
 });
 
 test('un elemento nuovo tiene alla pubblicazione l id avuto nell anteprima', function () {
@@ -145,19 +147,16 @@ test('un elemento nuovo tiene alla pubblicazione l id avuto nell anteprima', fun
     $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'path' => ['steps', $done['assigned_id']], 'field' => 'title', 'lang' => 'it', 'value' => 'Nuovo passo'], 'editor');
 
     // Intanto sul sito sparisce l'ultimo passo: l'id libero piu alto cambia
-    $file = "{$root}/data/k_data.json";
+    $file = "{$root}/data/content.json";
     $data = json_decode((string) file_get_contents($file), true);
-    foreach ($data[0]['data'] as &$field) {
-        if ($field['name'] === 'steps') array_pop($field['value']);
-    }
-    unset($field);
+    array_pop($data[0]['values']['steps']);
     file_put_contents($file, json_encode($data));
 
     $s->promote('admin');
     $steps = siteValue($file, 'homepage', 0, 'steps');
     $new = array_values(array_filter($steps, fn($c) => (int) $c['id'] === $done['assigned_id']));
     assertSame(1, count($new));
-    assertSame('Nuovo passo', $new[0]['data'][0]['value']['it']);
+    assertSame('Nuovo passo', $new[0]['values']['title']['it']);
 });
 
 test('un id gia preso sul sito nel frattempo e un conflitto, non un elemento sovrascritto', function () {

@@ -27,6 +27,17 @@ final class Site
         return self::$loaded[$key] ??= self::read(Stores::site($root, $preview), $root, $preview);
     }
 
+    /**
+     * I dati come sono nell'archivio in questo momento, senza la copia della
+     * richiesta: per chi li riscrive sotto lock (pubblicazione dello staging).
+     *
+     * @return array{schema: array, content: array, settings: array}
+     */
+    public static function current(string $root): array
+    {
+        return self::read(Stores::site(rtrim($root, '/\\')), rtrim($root, '/\\'), false);
+    }
+
     /** Dopo una scrittura: la prossima lettura rilegge l'archivio. */
     public static function forget(): void
     {
@@ -70,7 +81,8 @@ final class Site
     private static function read(Store $store, string $root, bool $preview): array
     {
         $schema = $store->read('schema');
-        if ($schema->rev !== '') {
+        // Uno schema vuoto è quello di una pubblicazione annullata su un sito del formato 1
+        if ($schema->rev !== '' && $schema->value !== []) {
             return [
                 'schema' => $schema->value,
                 'content' => $store->read('content')->value,

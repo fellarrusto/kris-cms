@@ -283,13 +283,12 @@ test('le pagine toccate hanno ognuna il suo indirizzo di anteprima', function ()
         $s->operate(['op' => 'create_collection', 'name' => 'lavagna', 'fields' => [['name' => 'page_title', 'type' => 'text']]], 'test');
         $s->operate(['op' => 'create_entity', 'key' => 'lavagna', 'fields' => ['page_title' => 'Oggi']], 'test');
         $s->operate(['op' => 'register_page', 'page' => 'lavagna', 'sitemap' => false], 'test');
-        $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'path' => ['features', 0], 'field' => 'title', 'lang' => 'it', 'value' => 'Nuovo'], 'test');
+        $s->operate(['op' => 'set_field', 'key' => 'features', 'id' => 0, 'field' => 'title', 'lang' => 'it', 'value' => 'Nuovo'], 'test');
         $urls = array_column($s->previewPages(), 'url');
         // La pagina nuova, senza link nel sito e fuori dalla sitemap, ha la sua anteprima
         assertTrue(in_array('index.php?page=lavagna&key=lavagna&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
-        // Un elemento di un elenco: la pagina di dettaglio con il suo path
-        assertTrue(in_array('index.php?page=detail&key=homepage&id=0&path=features%2F0&kris_preview=1', $urls, true), implode(' ', $urls));
-        assertTrue(in_array('index.php?page=homepage&key=homepage&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
+        // Un elemento promosso a tipo (era un elenco della homepage): la sua pagina di dettaglio
+        assertTrue(in_array('index.php?page=detail&key=features&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
     } finally {
         $s->discard();
     }
