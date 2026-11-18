@@ -62,11 +62,31 @@ final class PageRenderer
         if (!Seo::config(KRIS_ROOT)['pretty_urls']) return null;
         $store = Stores::site(null, true);
         $pages = $store->read('pages');
-        return Router::routes(
+        $routes = Router::routes(
             $pages->rev === '' ? ['homepage'] : (array) ($pages->value['allowed_pages'] ?? ['homepage']),
             Seo::config(KRIS_ROOT)['sitemap'],
             $store->read('model')->value
         );
+        // Gli slug dei contenuti, per lingua, dal campo indicato nella regola della sitemap
+        $langs = self::language([])[1];
+        $data = null;
+        foreach ($routes as &$route) {
+            if (!isset($route['slug'])) continue;
+            $data ??= $store->read('data')->value;
+            $route['slugs'] = [];
+            foreach ($data as $entity) {
+                if (($entity['name'] ?? null) !== $route['key'] || Entity::isHidden($entity)) continue;
+                $value = null;
+                foreach ((array) ($entity['data'] ?? []) as $field) {
+                    if (($field['name'] ?? null) === $route['slug']) $value = $field['value'] ?? null;
+                }
+                foreach ($langs as $lang) {
+                    $route['slugs'][(int) $entity['id']][$lang] = Router::slug((string) (is_array($value) ? ($value[$lang] ?? '') : ($value ?? '')));
+                }
+            }
+        }
+        unset($route);
+        return $routes;
     }
 
     /**

@@ -25,7 +25,9 @@ final class Router
             if (!is_array($rule) || !is_string($rule['page'] ?? null) || isset($routes[$rule['page']])) continue;
             $key = is_string($rule['key'] ?? null) ? $rule['key'] : 'homepage';
             $kind = is_string($rule['children'] ?? null) && $rule['children'] !== '' ? 'children' : (array_key_exists('id', $rule) || $key === 'homepage' ? 'single' : 'collection');
-            $routes[$rule['page']] = ['key' => $key, 'kind' => $kind, 'id' => (int) ($rule['id'] ?? 0), 'children' => (string) ($rule['children'] ?? '')];
+            $routes[$rule['page']] = ['key' => $key, 'kind' => $kind, 'id' => (int) ($rule['id'] ?? 0), 'children' => (string) ($rule['children'] ?? '')]
+                // "slug": il campo dei contenuti che dà l'indirizzo (/progetto/casa-rossi); vuoto = l'id
+                + ($kind === 'collection' && is_string($rule['slug'] ?? null) ? ['slug' => $rule['slug']] : []);
         }
         foreach ($pages as $page) {
             if (!is_string($page) || isset($routes[$page])) continue;
@@ -44,7 +46,7 @@ final class Router
         $path = array_values(array_map('strval', $path));
         $out = match ($route['kind']) {
             'single' => $id === $route['id'] && !$path ? $base : null,
-            'collection' => !$path ? "{$base}/{$id}" : null,
+            'collection' => !$path ? "{$base}/" . (self::slugOf($route, $id, $lang) ?? $id) : null,
             'children' => $id === $route['id'] && count($path) === 2 && $path[0] === $route['children'] && ctype_digit($path[1]) ? "{$base}/{$path[1]}" : null,
             default => null,
         };
@@ -74,7 +76,15 @@ final class Router
         if ($route['kind'] === 'single') {
             return $rest ? null : $query + ['id' => (string) $route['id']];
         }
-        if (count($rest) !== 1 || !ctype_digit($rest[0])) return null;
+        if (count($rest) !== 1) return null;
+        if ($route['kind'] === 'collection' && !ctype_digit($rest[0])) {
+            // Uno slug: si cerca fra quelli dei contenuti, nella lingua della richiesta
+            foreach (array_keys($route['slugs'] ?? []) as $id) {
+                if (self::slugOf($route, (int) $id, $query['ln'] ?? $defaultLang) === $rest[0]) return $query + ['id' => (string) $id];
+            }
+            return null;
+        }
+        if (!ctype_digit($rest[0])) return null;
         return $route['kind'] === 'collection'
             ? $query + ['id' => $rest[0]]
             : $query + ['id' => (string) $route['id'], 'path' => $route['children'] . '/' . $rest[0]];
@@ -117,6 +127,32 @@ final class Router
             },
             $html
         );
+    }
+
+    /**
+     * Lo slug di un contenuto in una lingua, o null (vale l'id). Due contenuti
+     * con lo stesso slug: dal secondo in poi si aggiunge -id.
+     * shortcut: niente storico degli slug, un indirizzo vecchio dopo una rinomina risponde 404; aggiungerlo con la tabella dei reindirizzamenti dell'editor.
+     */
+    private static function slugOf(array $route, int $id, string $lang): ?string
+    {
+        $slug = $route['slugs'][$id][$lang] ?? '';
+        if ($slug === '') return null;
+        foreach ($route['slugs'] as $other => $langs) {
+            if ((int) $other === $id) break;
+            if (($langs[$lang] ?? '') === $slug) return $slug . '-' . $id;
+        }
+        return $slug;
+    }
+
+    /** Un testo come segmento di indirizzo: "Casa Rossi, è qui" → "casa-rossi-e-qui". */
+    public static function slug(string $text): string
+    {
+        $text = strtr(mb_strtolower($text), ['à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e', 'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o', 'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u', 'ç' => 'c', 'ñ' => 'n', 'ß' => 'ss', 'œ' => 'oe', 'æ' => 'ae']);
+        $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', $text), '-');
+        // Solo cifre si confonderebbe con un id
+        return ctype_digit($slug) ? '' : substr($slug, 0, 80);
     }
 
     /** La cartella pubblica del sito, senza barra finale: "" alla radice del dominio, "/sito" in una sottocartella. */
