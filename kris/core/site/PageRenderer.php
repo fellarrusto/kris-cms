@@ -53,6 +53,7 @@ final class PageRenderer
         if ($seo['head']) {
             $html = Seo::inject($html, Seo::headTags(Seo::baseUrl($seo, $server), $page, $key, $id, $path, $lang, $langs, self::routes()));
         }
+        $html = self::withMeta($html, $entity, $lang, Seo::baseUrl($seo, $server));
         return ['status' => 200, 'html' => self::finish(self::withHead($html, $entity, $lang), $lang), 'lang' => $lang];
     }
 
@@ -191,6 +192,62 @@ final class PageRenderer
             if (is_string($value) && trim($value) !== '') $texts[$field] = trim($value);
         }
         return $texts;
+    }
+
+    /**
+     * Titolo, description, Open Graph e verifiche dalle proprietà del sito
+     * (kris_site) e dai campi seo_title, seo_description, seo_image della
+     * pagina, se il tipo li ha. Ogni tag si aggiunge solo se il template non
+     * ce l'ha già; il titolo esistente passa dal modello del titolo.
+     */
+    private static function withMeta(string $html, Entity $page, string $lang, string $base): string
+    {
+        $pos = stripos($html, '</head>');
+        if ($pos === false) return $html;
+        try {
+            $site = new Entity('k_data', 'kris_site', 0);
+        } catch (Throwable $e) {
+            $site = Entity::fromArray(['id' => 0, 'data' => []], 'kris_site');
+        }
+        $text = fn(Entity $e, string $field): string => is_string($v = $e->getData($field, $lang)) ? trim($v) : '';
+        $esc = fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $has = fn(string $pattern): bool => preg_match($pattern, substr($html, 0, $pos)) === 1;
+        $absolute = fn(string $url): string => $url === '' || preg_match('#^https?://#', $url) ? $url : $base . '/' . ltrim($url, '/');
+
+        // Titolo: quello SEO della pagina, altrimenti quello del template, passato dal modello
+        $siteName = $text($site, 'site_name');
+        $pattern = $text($site, 'title_template') ?: '{title}';
+        $current = preg_match('#<title[^>]*>(.*?)</title>#is', $html, $m) === 1 ? html_entity_decode(trim(strip_tags($m[1])), ENT_QUOTES | ENT_HTML5, 'UTF-8') : '';
+        $base_title = $text($page, 'seo_title') ?: ($current ?: $siteName);
+        $title = $base_title === '' ? '' : trim(str_replace(['{title}', '{site}'], [$base_title, $siteName], $pattern), " |-·");
+        if ($title !== '' && $title !== $current) {
+            $html = $current === '' && !preg_match('#<title[^>]*>#i', $html)
+                ? substr($html, 0, $pos) . '<title>' . $esc($title) . "</title>\n" . substr($html, $pos)
+                : (string) preg_replace_callback('#<title([^>]*)>.*?</title>#is', fn(array $t): string => '<title' . $t[1] . '>' . $esc($title) . '</title>', $html, 1);
+            $pos = stripos($html, '</head>');
+        }
+
+        $description = $text($page, 'seo_description') ?: $text($site, 'description');
+        $image = $absolute($text($page, 'seo_image') ?: $text($site, 'share_image'));
+        $tags = [];
+        if ($description !== '' && !$has('#<meta[^>]+name=["\']description["\']#i')) $tags[] = '<meta name="description" content="' . $esc($description) . '">';
+        // Open Graph solo se il sito ha qualcosa da dire: senza proprietà configurate le pagine restano com'erano
+        if (!$has('#property=["\']og:#i') && $title !== '' && ($siteName !== '' || $description !== '' || $image !== '')) {
+            $tags[] = '<meta property="og:type" content="website">';
+            $tags[] = '<meta property="og:title" content="' . $esc($title) . '">';
+            if ($siteName !== '') $tags[] = '<meta property="og:site_name" content="' . $esc($siteName) . '">';
+            if ($description !== '') $tags[] = '<meta property="og:description" content="' . $esc($description) . '">';
+            $tags[] = '<meta property="og:locale" content="' . $esc($lang) . '">';
+            if ($image !== '') {
+                $tags[] = '<meta property="og:image" content="' . $esc($image) . '">';
+                $tags[] = '<meta name="twitter:card" content="summary_large_image">';
+            }
+        }
+        foreach (['google_verification' => 'google-site-verification', 'bing_verification' => 'msvalidate.01'] as $field => $name) {
+            $code = $text($site, $field);
+            if ($code !== '' && !$has('#name=["\']' . preg_quote($name, '#') . '["\']#i')) $tags[] = '<meta name="' . $name . '" content="' . $esc($code) . '">';
+        }
+        return $tags ? substr($html, 0, $pos) . implode("\n", $tags) . "\n" . substr($html, $pos) : $html;
     }
 
     /**

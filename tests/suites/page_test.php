@@ -222,3 +222,37 @@ test('lavori in corso: i visitatori ricevono la pagina 503, chi ha l editor aper
     file_put_contents("{$root}/template/kris_wip.html", '<!doctype html><html><head></head><body><h1>TEMA: {{title}}</h1></body></html>');
     assertContains('TEMA: Sito in lavorazione', renderPage([], $root)['output'], 'il template del tema, se c è');
 });
+
+test('proprieta del sito e campi seo_* della pagina: titolo, description, Open Graph, verifiche', function () {
+    $root = pageSandboxCopy();
+    $migration = require KRIS_ROOT . '/kris/migrations/0008_proprieta_del_sito.php';
+    $files = $migration['up'](['k_data' => json_decode((string) file_get_contents("{$root}/data/k_data.json"), true), 'k_model' => json_decode((string) file_get_contents("{$root}/data/k_model.json"), true), 'cms_settings' => []]);
+    assertSame($files, $migration['up']($files), 'idempotente');
+    $set = function (array &$data, string $name, string $field, mixed $value): void {
+        foreach ($data as &$e) {
+            if ($e['name'] !== $name || (int) $e['id'] !== 0) continue;
+            foreach ($e['data'] as &$f) if ($f['name'] === $field) { $f['value'] = $value; return; }
+            $e['data'][] = ['name' => $field, 'type' => is_array($value) ? 'text' : 'plain', 'value' => $value];
+            return;
+        }
+    };
+    $set($files['k_data'], 'kris_site', 'site_name', ['it' => 'Bar Centrale', 'en' => 'Bar Centrale']);
+    $set($files['k_data'], 'kris_site', 'title_template', '{title} | {site}');
+    $set($files['k_data'], 'kris_site', 'description', ['it' => 'Il bar del paese', 'en' => 'The village bar']);
+    $set($files['k_data'], 'kris_site', 'share_image', ['it' => 'assets/uploads/condivisione.jpg', 'en' => 'assets/uploads/condivisione.jpg']);
+    $set($files['k_data'], 'kris_site', 'google_verification', 'abc123');
+    file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
+    file_put_contents("{$root}/data/k_model.json", json_encode($files['k_model']));
+
+    $out = renderPage([], $root)['output'];
+    assertContains('<title>Kris 2 - CMS leggero per HTML statico | Bar Centrale</title>', $out);
+    assertContains('<meta property="og:title" content="Kris 2 - CMS leggero per HTML statico | Bar Centrale">', $out);
+    assertContains('<meta property="og:image" content="http://localhost/assets/uploads/condivisione.jpg">', $out);
+    assertContains('<meta name="google-site-verification" content="abc123">', $out);
+    assertContains('<meta name="description" content="Il bar del paese">', $out);
+
+    // Il titolo SEO della pagina vince su quello del template
+    $set($files['k_data'], 'homepage', 'seo_title', ['it' => 'Colazioni a Sorrento', 'en' => 'Breakfast']);
+    file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
+    assertContains('<title>Colazioni a Sorrento | Bar Centrale</title>', renderPage([], $root)['output']);
+});

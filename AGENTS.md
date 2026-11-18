@@ -258,6 +258,10 @@ Kris Agent può preparare tutti i valori di `kris_legal`, informative e banner c
 - Lo stile del banner è del tema, in `assets/css/`. Il banner deve restare usabile da tastiera e su mobile.
 - Kris non scrive i testi legali e non sa quali cookie usa il sito: segnala al cliente cosa compilare, senza inventare informative.
 
+## Proprietà del sito
+
+Dalla migrazione `0008_proprieta_del_sito.php` la raccolta `kris_site` (in editor **Proprietà del sito**) ha, oltre alla favicon: `site_name`, `title_template` (`{title} | {site}`; `{title}` è il titolo della pagina), `description` e `share_image` predefinite, `google_verification` e `bing_verification` (solo il valore di `content`). Una pagina il cui tipo ha i campi `seo_title`, `seo_description` o `seo_image` usa i suoi. Kris aggiunge prima di `</head>` description, Open Graph (solo se il sito ha nome, descrizione o immagine) e verifiche, e passa il `<title>` dal modello, sempre e solo dove il template non ha già quei tag. Per dati strutturati e altri meta del tema usa `template/kris_head.html`.
+
 ## Favicon
 
 La favicon la sceglie il cliente da **Favicon** nell'editor: raccolta riservata `kris_site` (contenuto con ID `0`), campo `favicon` di tipo `image`, creata dalla migrazione `0004_favicon.php`. Kris aggiunge da solo `<link rel="icon">` prima di `</head>` in ogni pagina e nella 404, a meno che il template non abbia già un `rel="icon"`: i template non devono fare nulla.
