@@ -113,7 +113,7 @@ $codeApproved = $staging->codeApproved();
 <?php endif; ?>
 
 <?php if ($lastPromotion): ?>
-    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('back') ?></span><div><h2>Ultima pubblicazione</h2><p><?= h($when((string) $lastPromotion['promoted_at'])) ?> da <?= h((string) $lastPromotion['promoted_by']) ?>: <?= h(implode(', ', array_keys($lastPromotion['files']))) ?></p></div></header>
+    <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('back') ?></span><div><h2>Ultima pubblicazione</h2><p><?= h($when((string) $lastPromotion['promoted_at'])) ?> da <?= h((string) $lastPromotion['promoted_by']) ?>: <?= h(implode(', ', array_merge(array_keys($lastPromotion['files']), array_map([\Kris\Store\FileStore::class, 'relativePath'], array_keys(is_array($lastPromotion['documents'] ?? null) ? $lastPromotion['documents'] : []))))) ?></p></div></header>
     <div class="card-body"><form method="POST" action="?action=staging" data-confirm-title="Annullare la pubblicazione?" data-confirm="I file pubblicati, compresi contenuti e struttura, torneranno alla versione precedente. Le modifiche fatte dopo la pubblicazione a quei file andranno perse." data-confirm-label="Annulla pubblicazione">
         <input type="hidden" name="staging_undo" value="1"><button class="btn btn-white">Annulla la pubblicazione</button>
     </form></div></section>

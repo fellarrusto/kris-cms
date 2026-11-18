@@ -180,10 +180,10 @@ $DEFAULT_LANGS = [
 // Init Files/Dir
 if (!is_dir($uploadDir))
     mkdir($uploadDir, 0777, true);
-if (!file_exists($modelFile))
-    file_put_contents($modelFile, '{}');
-if (!file_exists($dataFile))
-    file_put_contents($dataFile, '[]');
+// Un sito nuovo parte con schema e contenuti vuoti nell'archivio
+foreach (['model', 'data'] as $doc) {
+    if (\Kris\Store\Stores::site()->read($doc)->rev === '') \Kris\Store\Stores::site()->write($doc, []);
+}
 
 // --- STATO DEL FRAMEWORK ---
 // Prima di leggere i contenuti: una migrazione puo cambiarli. Se

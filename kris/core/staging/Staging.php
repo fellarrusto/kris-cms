@@ -888,17 +888,12 @@ final class Staging
                 $writes[$change['file']] = $change['staged'];
             }
         }
+        // Contenuti, schema, pagine: documenti dell'archivio, scritti in una transazione
+        $docs = [];
         if ($ops) {
-            [$state] = $this->replay($ops, true);
-            $writes[self::STATE_FILES['data']] = self::encode($state['data']);
-            $writes[self::STATE_FILES['model']] = self::encode($state['model']);
-            if (self::touches($ops, self::PAGE_OPS)) {
-                $writes[self::STATE_FILES['pages']] = self::encode(['allowed_pages' => array_values($state['pages'])]);
-                $writes[self::STATE_FILES['seo']] = self::encode($state['seo']);
-            }
-            if (self::touches($ops, self::SETTINGS_OPS)) {
-                $writes[self::STATE_FILES['settings']] = self::encode($state['settings']);
-            }
+            $docs = ['data', 'model'];
+            if (self::touches($ops, self::PAGE_OPS)) array_push($docs, 'pages', 'seo');
+            if (self::touches($ops, self::SETTINGS_OPS)) $docs[] = 'settings';
         }
         $uploads = array_keys($this->manifest()['uploads']);
         $fonts = array_values(array_filter(array_keys($this->manifest()['fonts']), fn($n) => is_file("{$this->dir}/assets/fonts/{$n}")));
@@ -917,10 +912,28 @@ final class Staging
             $files[$relative] = ['existed' => is_file($target)];
             if (is_file($target)) self::writeFile("{$backup}/files/{$relative}", (string) file_get_contents($target));
         }
-        $meta = ['id' => $id, 'promoted_at' => gmdate('c'), 'promoted_by' => $by, 'files' => $files];
-        (new JsonStore("{$backup}/meta.json"))->write($meta);
+        $meta = ['id' => $id, 'promoted_at' => gmdate('c'), 'promoted_by' => $by, 'files' => $files, 'documents' => []];
 
         try {
+            if ($docs) {
+                // Sotto il lock dell'archivio: le operazioni si riapplicano ai dati di questo momento
+                \Kris\Store\Stores::site($this->root)->transaction($docs, function (array $current) use ($ops, $docs, $backup, &$meta): array {
+                    foreach ($docs as $doc) {
+                        $meta['documents'][$doc] = ['existed' => $current[$doc] !== []];
+                        (new JsonStore("{$backup}/documents/{$doc}.json"))->write($current[$doc]);
+                    }
+                    (new JsonStore("{$backup}/meta.json"))->write($meta);
+                    [$state] = $this->replay($ops, true);
+                    $new = [
+                        'data' => $state['data'], 'model' => $state['model'],
+                        'pages' => ['allowed_pages' => array_values($state['pages'])],
+                        'seo' => $state['seo'], 'settings' => $state['settings'],
+                    ];
+                    return array_intersect_key($new, array_flip($docs));
+                });
+            } else {
+                (new JsonStore("{$backup}/meta.json"))->write($meta);
+            }
             foreach ($writes as $relative => $content) {
                 self::writeFile("{$this->root}/{$relative}", $content);
             }
@@ -948,7 +961,7 @@ final class Staging
 
         $this->discard();
         $this->pruneBackups();
-        return ['backup' => $id, 'files' => array_keys($files)];
+        return ['backup' => $id, 'files' => array_merge(array_keys($files), array_map([\Kris\Store\FileStore::class, 'relativePath'], $docs))];
     }
 
     /** L'ultima pubblicazione che si puo ancora annullare, o null. */
@@ -1059,6 +1072,18 @@ final class Staging
 
     private function restore(array $meta): void
     {
+        // Documenti dell'archivio (pubblicazioni dalla 2.0): tornano tutti insieme
+        $documents = is_array($meta['documents'] ?? null) ? $meta['documents'] : [];
+        if ($documents) {
+            \Kris\Store\Stores::site($this->root)->transaction(array_keys($documents), function () use ($documents, $meta): array {
+                $values = [];
+                foreach ($documents as $doc => $info) {
+                    $file = "{$this->backups}/{$meta['id']}/documents/{$doc}.json";
+                    $values[$doc] = !empty($info['existed']) && is_file($file) ? (new JsonStore($file))->read([]) : [];
+                }
+                return $values;
+            });
+        }
         foreach ($meta['files'] as $relative => $info) {
             FilePolicy::assertRestorable((string) $relative);
             $target = "{$this->root}/{$relative}";
