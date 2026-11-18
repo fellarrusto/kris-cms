@@ -1,0 +1,628 @@
+{
+    "format": 2,
+    "types": {
+        "homepage": {
+            "fields": [
+                {
+                    "name": "meta_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della pagina per i motori di ricerca",
+                    "section": "Meta"
+                },
+                {
+                    "name": "page_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo principale visibile nell'hero",
+                    "section": "Intestazione"
+                },
+                {
+                    "name": "page_subtitle",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Sottotitolo dell'hero",
+                    "section": "Intestazione"
+                },
+                {
+                    "name": "hero_description",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Testo descrittivo nella sezione hero",
+                    "section": "Intestazione"
+                },
+                {
+                    "name": "btn_get_started",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo del pulsante di avvio rapido",
+                    "section": "Intestazione"
+                },
+                {
+                    "name": "btn_why_kris",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo del pulsante 'Perché Kris'",
+                    "section": "Intestazione"
+                },
+                {
+                    "name": "code_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della sezione con esempio di codice",
+                    "section": "Esempio di codice"
+                },
+                {
+                    "name": "code_example",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Snippet di codice mostrato nella homepage",
+                    "section": "Esempio di codice"
+                },
+                {
+                    "name": "features_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della sezione funzionalità",
+                    "section": "Funzionalità"
+                },
+                {
+                    "name": "how_it_works_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della sezione 'Come funziona'",
+                    "section": "Come funziona"
+                },
+                {
+                    "name": "steps",
+                    "type": "list",
+                    "of": [
+                        {
+                            "name": "title",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Titolo del passaggio"
+                        },
+                        {
+                            "name": "description",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Descrizione del passaggio"
+                        }
+                    ],
+                    "description": "Passaggi della sezione 'Come funziona'",
+                    "section": "Come funziona"
+                },
+                {
+                    "name": "blog_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della sezione blog",
+                    "section": "Blog"
+                },
+                {
+                    "name": "cta_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della call to action",
+                    "section": "Call to action"
+                },
+                {
+                    "name": "cta_subtitle",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Sottotitolo della call to action",
+                    "section": "Call to action"
+                },
+                {
+                    "name": "btn_download",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo del pulsante di download",
+                    "section": "Call to action"
+                },
+                {
+                    "name": "btn_docs",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo del pulsante per la documentazione",
+                    "section": "Call to action"
+                },
+                {
+                    "name": "logo",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Logo principale del sito",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_logo_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Nome/testo del logo nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_tagline",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Tagline breve nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_resources_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della colonna risorse nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_docs",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Link alla documentazione nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_community_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della colonna community nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_github",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Link GitHub nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_legal_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della colonna legale nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_privacy",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Link alla privacy policy nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_cookies",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Link alla cookie policy nel footer",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_cookie_settings",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Link per riaprire il banner cookie",
+                    "section": "Footer"
+                },
+                {
+                    "name": "footer_copyright",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo di copyright nel footer",
+                    "section": "Footer"
+                }
+            ]
+        },
+        "features": {
+            "label": "Lista delle funzionalità principali",
+            "fields": [
+                {
+                    "name": "category",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Categoria di appartenenza della funzionalità"
+                },
+                {
+                    "name": "icon",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Icona rappresentativa della funzionalità"
+                },
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Nome della funzionalità"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Breve descrizione della funzionalità"
+                },
+                {
+                    "name": "tags",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Tag associati alla funzionalità"
+                },
+                {
+                    "name": "highlights",
+                    "type": "list",
+                    "of": [
+                        {
+                            "name": "title",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Titolo del punto saliente"
+                        },
+                        {
+                            "name": "description",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Dettaglio del punto saliente"
+                        }
+                    ],
+                    "description": "Punti salienti della funzionalità"
+                }
+            ]
+        },
+        "posts": {
+            "label": "Articoli del blog",
+            "newest_first": true,
+            "fields": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo dell'articolo"
+                },
+                {
+                    "name": "date",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Data di pubblicazione (AAAA-MM-GG)"
+                },
+                {
+                    "name": "excerpt",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Anteprima mostrata nell'elenco e nei motori di ricerca"
+                },
+                {
+                    "name": "cover",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Immagine di copertina (opzionale)"
+                },
+                {
+                    "name": "cover_alt",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo alternativo della copertina"
+                },
+                {
+                    "name": "body",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Testo dell'articolo"
+                }
+            ]
+        },
+        "navbar": {
+            "fields": [
+                {
+                    "name": "logo",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Logo nella barra di navigazione"
+                },
+                {
+                    "name": "page_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Nome del sito nella navbar"
+                },
+                {
+                    "name": "nav_features",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu per le funzionalità"
+                },
+                {
+                    "name": "nav_docs",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu per la documentazione"
+                },
+                {
+                    "name": "nav_github",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu per GitHub"
+                }
+            ]
+        },
+        "kris_legal": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "owner_name",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Titolare del trattamento (ragione sociale o nome)"
+                },
+                {
+                    "name": "owner_address",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo del titolare"
+                },
+                {
+                    "name": "owner_vat",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Partita IVA o codice fiscale"
+                },
+                {
+                    "name": "privacy_email",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Email per le richieste sulla privacy"
+                },
+                {
+                    "name": "updated_at",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Data di ultimo aggiornamento delle informative"
+                },
+                {
+                    "name": "privacy_policy",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Informativa privacy"
+                },
+                {
+                    "name": "cookie_policy",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Cookie policy"
+                },
+                {
+                    "name": "banner_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: titolo"
+                },
+                {
+                    "name": "banner_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: testo"
+                },
+                {
+                    "name": "banner_accept",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per accettare"
+                },
+                {
+                    "name": "banner_reject",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per rifiutare"
+                },
+                {
+                    "name": "banner_more",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: link all'informativa"
+                },
+                {
+                    "name": "banner_customize",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per scegliere le categorie"
+                },
+                {
+                    "name": "banner_save",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per salvare le scelte"
+                },
+                {
+                    "name": "category_thirdparty",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria contenuti di terze parti: nome"
+                },
+                {
+                    "name": "category_thirdparty_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria contenuti di terze parti: descrizione (mappe, video, social incorporati)"
+                },
+                {
+                    "name": "category_statistics",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria statistiche: nome"
+                },
+                {
+                    "name": "category_statistics_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria statistiche: descrizione (per esempio Google Analytics)"
+                },
+                {
+                    "name": "category_marketing",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria marketing: nome"
+                },
+                {
+                    "name": "category_marketing_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria marketing: descrizione (per esempio Pixel di Meta)"
+                }
+            ]
+        },
+        "kris_site": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "favicon",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Favicon: l'icona del sito nella scheda del browser (PNG quadrato, almeno 48×48 px)"
+                },
+                {
+                    "name": "site_name",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Nome del sito",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "title_template",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Modello del titolo delle pagine: {title} è il titolo della pagina, {site} il nome del sito",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Descrizione predefinita, per le pagine senza la loro",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "share_image",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Immagine di condivisione predefinita (1200×630 px)",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "google_verification",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Codice di verifica di Google Search Console (solo il valore di content)",
+                    "section": "Verifiche"
+                },
+                {
+                    "name": "bing_verification",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Codice di verifica di Bing Webmaster Tools (solo il valore di content)",
+                    "section": "Verifiche"
+                }
+            ]
+        },
+        "kris_notfound": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della pagina 404"
+                },
+                {
+                    "name": "text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo sotto il titolo"
+                },
+                {
+                    "name": "button_label",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Pulsante: testo"
+                },
+                {
+                    "name": "button_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Pulsante: link (di solito la homepage)"
+                },
+                {
+                    "name": "image",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Immagine (facoltativa)"
+                }
+            ]
+        },
+        "kris_wip": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "localized": false,
+                    "description": "Sito in lavorazione: i visitatori vedono questa pagina"
+                },
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo"
+                },
+                {
+                    "name": "text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo"
+                }
+            ]
+        }
+    },
+    "pages": {
+        "homepage": {
+            "template": "homepage",
+            "type": "homepage",
+            "item": 0,
+            "sitemap": true
+        },
+        "detail": {
+            "template": "detail",
+            "type": "features",
+            "sitemap": true
+        },
+        "post": {
+            "template": "post",
+            "type": "posts",
+            "sitemap": true
+        },
+        "privacy": {
+            "template": "privacy",
+            "type": "kris_legal",
+            "item": 0,
+            "sitemap": true
+        },
+        "cookie": {
+            "template": "cookie",
+            "type": "kris_legal",
+            "item": 0,
+            "sitemap": true
+        }
+    },
+    "promoted": [
+        {
+            "from": "homepage",
+            "id": 0,
+            "list": "features",
+            "to": "features"
+        },
+        {
+            "from": "homepage",
+            "id": 0,
+            "list": "posts",
+            "to": "posts"
+        }
+    ]
+}

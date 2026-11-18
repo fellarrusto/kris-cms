@@ -87,7 +87,7 @@ function format2Fixture(?callable $prepare = null, array $templates = []): array
         'k_data' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/k_data.json'), true),
         'k_model' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/k_model.json'), true),
         'cms_settings' => ['languages' => ['it', 'en']],
-        'allowed_pages' => json_decode((string) file_get_contents(KRIS_ROOT . '/config/allowed_pages.json'), true),
+        'allowed_pages' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/allowed_pages.json'), true),
         'seo' => null,
     ];
     if ($prepare !== null) $files = $prepare($files);
@@ -125,6 +125,8 @@ function projectSandbox(): string
         rcopy(KRIS_ROOT . '/' . $folder, $dir . '/' . $folder);
     }
     rcopy(KRIS_TESTS . '/fixtures', $dir . '/data');
+    // Le fixture sono un sito della 1.x: pagine e SEO stanno in config/
+    foreach (['allowed_pages', 'seo'] as $name) rename("{$dir}/data/{$name}.json", "{$dir}/config/{$name}.json");
 
     register_shutdown_function(fn() => rrmdir($dir));
     return $dir;

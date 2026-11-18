@@ -79,15 +79,52 @@ final class Migrator
         return array_values(array_filter(array_keys($this->all()), fn($n) => !isset($applied[$n])));
     }
 
-    /** Vero se ogni migrazione in sospeso si puo applicare senza chiedere. */
+    /**
+     * Vero se ogni migrazione in sospeso si puo applicare senza chiedere: è
+     * automatica, oppure sui dati di questo sito non cambierebbe niente (un
+     * sito nuovo, già nel formato 2, non deve sentirsi chiedere la 0009).
+     */
     public function pendingAreAutomatic(array $state): bool
     {
-        foreach ($this->pending($state) as $name) {
-            if (!$this->all()[$name]['auto']) {
-                return false;
+        $pending = $this->pending($state);
+        $manual = array_filter($pending, fn($name) => !$this->all()[$name]['auto']);
+        if (!$manual) return true;
+        try {
+            $store = \Kris\Store\Stores::site($this->root);
+            $current = [];
+            foreach (array_merge(self::LEGACY, self::FORMAT2) as $doc) $current[$doc] = $store->read($doc)->value;
+            $files = $this->files($store, $current)[0];
+            foreach ($pending as $name) {
+                $before = $files;
+                $files = ($this->all()[$name]['up'])($files);
+                if (!$this->all()[$name]['auto'] && $files !== $before) return false;
             }
+        } catch (\Throwable $e) {
+            return false;
         }
         return true;
+    }
+
+    /**
+     * I documenti come li vedono le migrazioni: quelli del formato 2 se il
+     * sito li ha, altrimenti quelli della 1.x con i template in lettura.
+     *
+     * @return array{0: array, 1: bool} documenti e formato 2 sì o no
+     */
+    private function files(\Kris\Store\Store $store, array $current): array
+    {
+        // Un documento che non esiste: null, come un file che manca nella 1.x
+        $exists = fn(string $doc): bool => $store->read($doc)->rev !== '';
+        $format2 = $exists('schema') && $current['schema'] !== [];
+        $files = [];
+        foreach ($format2 ? self::FORMAT2 : self::LEGACY as $key => $doc) {
+            $files[$key] = $exists($doc) || in_array($key, ['k_data', 'k_model', 'content'], true) ? $current[$doc] : null;
+        }
+        if (!$format2) {
+            $files['templates'] = [];
+            foreach (glob($this->root . '/template/*.html') ?: [] as $file) $files['templates'][basename($file, '.html')] = (string) file_get_contents($file);
+        }
+        return [$files, $format2];
     }
 
     /**
@@ -118,17 +155,8 @@ final class Migrator
         $docs = array_values(array_merge(self::LEGACY, self::FORMAT2));
         $converted = null;
         $store->transaction($docs, function (array $current) use ($pending, $store, &$applied, &$version, &$converted): array {
-            // Un documento che non esiste: null, come un file che manca nella 1.x
             $exists = fn(string $doc): bool => $store->read($doc)->rev !== '';
-            $format2 = $exists('schema');
-            $files = [];
-            foreach ($format2 ? self::FORMAT2 : self::LEGACY as $key => $doc) {
-                $files[$key] = $exists($doc) || in_array($key, ['k_data', 'k_model', 'content'], true) ? $current[$doc] : null;
-            }
-            if (!$format2) {
-                $files['templates'] = [];
-                foreach (glob($this->root . '/template/*.html') ?: [] as $file) $files['templates'][basename($file, '.html')] = (string) file_get_contents($file);
-            }
+            [$files, $format2] = $this->files($store, $current);
             $original = $files;
             foreach ($pending as $name) {
                 $def = $this->all()[$name];

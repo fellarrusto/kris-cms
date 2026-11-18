@@ -27,7 +27,7 @@ function agentSite(bool $enabled = true): array
     rcopy(KRIS_ROOT . '/template', "{$root}/template");
     copy(KRIS_TESTS . '/fixtures/k_data.json', "{$root}/data/k_data.json");
     copy(KRIS_TESTS . '/fixtures/k_model.json', "{$root}/data/k_model.json");
-    copy(KRIS_ROOT . '/config/allowed_pages.json', "{$root}/config/allowed_pages.json");
+    copy(KRIS_TESTS . '/fixtures/allowed_pages.json', "{$root}/config/allowed_pages.json");
     register_shutdown_function(fn() => rrmdir($root));
 
     $worker = sodium_crypto_sign_keypair();

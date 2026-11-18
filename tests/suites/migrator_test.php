@@ -27,7 +27,7 @@ function migrationSite(array $migrations, ?array $kData = null): array
 test('su un sito senza stato tutte le migrazioni sono in sospeso', function () {
     [, $m] = migrationSite([
         '0001_a' => "['version' => 1, 'auto' => true, 'up' => fn(\$f) => \$f]",
-        '0002_b' => "['version' => 2, 'up' => fn(\$f) => \$f]",
+        '0002_b' => "['version' => 2, 'up' => function (\$f) { \$f['k_model']['nuova'] = []; return \$f; }]",
     ]);
     assertSame(['0001_a', '0002_b'], $m->pending([]));
     assertSame(2, $m->latestDataVersion());
@@ -228,6 +228,17 @@ test('0009: interruttori, scelte, attributi delle raccolte; già nel formato 2 n
     assertSame(['homepage' => ['template' => 'homepage', 'type' => 'homepage', 'item' => 0, 'sitemap' => true]], $f['schema']['pages']);
     $m = require KRIS_ROOT . '/kris/migrations/0009_formato_2.php';
     assertSame($f, ($m['up'])($f), 'idempotente');
+});
+
+test('una migrazione da chiedere che sui dati del sito non cambia niente si applica da sola', function () {
+    [$root, $m] = migrationSite([
+        '0001_a' => "['version' => 1, 'auto' => true, 'up' => fn(\$f) => \$f]",
+        '0002_b' => "['version' => 2, 'up' => function (\$f) { if (isset(\$f['k_model']['vecchia'])) \$f['k_model']['nuova'] = []; return \$f; }]",
+    ]);
+    assertSame(true, $m->pendingAreAutomatic([]), 'il sito non ha la raccolta da convertire');
+    file_put_contents("{$root}/data/k_model.json", '{"homepage": [], "vecchia": []}');
+    \Kris\Store\Site::forget();
+    assertSame(false, (new Migrator($root, $root . '/migrations'))->pendingAreAutomatic([]), 'qui la migrazione cambia i dati: si chiede');
 });
 
 test('0009 nel Migrator: scrive schema, content e settings dai documenti del formato 1', function () {

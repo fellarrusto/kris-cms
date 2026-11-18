@@ -109,7 +109,7 @@ kris_slugs (type VARCHAR(64), lang VARCHAR(8), slug VARCHAR(190), id INT, curren
   PRIMARY KEY (type, lang, slug))
 ```
 
-**Implementato in 2.0 (fase 5):** solo `kris_documents`, con tutti i documenti (`data` compreso) uno per riga; revisione intera, scritture serializzate (`BEGIN IMMEDIATE` su SQLite, `GET_LOCK` su MySQL). `kris_items` e `kris_slugs` arrivano con il livello `Content`, quando servirà scrivere un contenuto senza riscrivere il documento. Il testo che segue descrive quel passo.
+**Implementato in 2.0 (fase 5):** solo `kris_documents`, con tutti i documenti (`content` compreso) uno per riga; revisione intera, scritture serializzate (`BEGIN IMMEDIATE` su SQLite, `GET_LOCK` su MySQL). `kris_items` e `kris_slugs` arrivano con il livello `Content`, quando servirà scrivere un contenuto senza riscrivere il documento. Il testo che segue descrive quel passo.
 
 I documenti `schema` e `settings` stanno in `kris_documents`. Il documento `content` non è salvato come documento: `read('content')` lo compone da `kris_items`, `write('content')` lo scompone in righe nella stessa transazione. Così staging e migrazioni funzionano identici sui due adapter.
 
@@ -133,6 +133,8 @@ Senza file vale `json`. Il passaggio da un adapter all'altro è `tools/store.php
 
 ## 2. Formato 2
 
+Implementato sul ramo `2.0-formato-2` (migrazione `0009_formato_2.php`). Questa sezione descrive il formato com'è; le differenze dalla bozza sono in fondo (2.7).
+
 ### 2.1 Documento `schema`
 
 ```json
@@ -144,94 +146,98 @@ Senza file vale `json`. Il passaggio da un adapter all'altro è `tools/store.php
       "description": "I lavori in portfolio",
       "single": false,
       "newest_first": false,
-      "seo": true,
-      "position": 3,
       "fields": [
-        {"name": "title", "type": "text", "localized": true, "label": "Titolo", "description": "…", "section": "Intestazione"},
-        {"name": "category", "type": "select", "localized": false, "multiple": false,
-         "options": [{"value": "web", "label": {"it": "Web", "en": "Web"}}]},
+        {"name": "title", "type": "text", "localized": true, "description": "Titolo", "section": "Intestazione"},
+        {"name": "category", "type": "select", "localized": false, "options": ["web", "app"], "multiple": false},
         {"name": "featured", "type": "boolean", "localized": false},
-        {"name": "cover", "type": "media", "localized": false},
+        {"name": "cover", "type": "media", "localized": true},
         {"name": "body", "type": "richtext", "localized": true},
-        {"name": "gallery", "type": "list", "of": [{"name": "photo", "type": "media", "localized": false}]}
+        {"name": "gallery", "type": "list", "of": [{"name": "photo", "type": "media", "localized": true}]}
       ]
     }
   },
   "pages": {
-    "homepage": {"template": "homepage", "type": "homepage", "path": "/", "sitemap": true, "noindex": false, "priority": 1.0},
-    "progetto": {"template": "progetto", "type": "progetti", "path": "/progetti/{item}", "sitemap": true, "noindex": false, "slug_from": "title"}
+    "homepage": {"template": "homepage", "type": "homepage", "item": 0, "sitemap": true},
+    "progetto": {"template": "progetto", "type": "progetti", "sitemap": true, "priority": 0.8, "slug": "url"},
+    "scatto": {"template": "scatto", "type": "progetti", "item": 0, "list": "gallery", "sitemap": false}
   },
-  "redirects": [
-    {"from": "/vecchio-menu", "to": "/menu", "auto": false}
-  ],
-  "auto_language": false,
-  "main_language": "it"
+  "promoted": [{"from": "homepage", "id": 0, "list": "posts", "to": "posts"}],
+  "redirects": {"/vecchio-menu": "/menu"}
 }
 ```
 
-- `types`: chiavi in `snake_case`. `single`: contenuto unico. `newest_first`: elenco di articoli, i nuovi in testa. `seo`: gruppo «motori di ricerca e condivisione» nell'editor.
-- Tipi riservati `kris_*`: stessi campi, più `"reserved": true`. Lo schema lo scrivono solo le migrazioni; `kris_wip` è l'unico con campi aggiunti dal tema, con `enabled` del framework non rimovibile.
-- `pages`: chiave = nome della pagina. `path` per un contenuto unico è fisso; per una raccolta contiene `{item}`, che vale lo slug o l'id. `type` è obbligatorio: una pagina rende sempre un tipo. `slug_from`: il campo da cui l'editor propone lo slug.
-- `main_language` sostituisce «la prima di `languages`».
+- `types`: chiavi in `snake_case`, nell'ordine dell'editor (la posizione è l'ordine). `label`, `description`, `single` (contenuto unico), `newest_first` (Posts: i nuovi in cima) ci sono solo se servono. I tipi `kris_*` hanno `"reserved": true`: il loro schema lo scrivono solo le migrazioni.
+- `pages`: chiave = nome della pagina e del suo indirizzo. `type` è il tipo che rende. Con `item` rende sempre quel contenuto; senza `item` un contenuto del tipo per id o per slug; con `item` e `list` un elemento dell'elenco. `sitemap` sì o no, `priority` (0–1), `slug` (il campo da cui viene l'indirizzo leggibile).
+- `promoted`: gli elenchi della 1.x diventati tipi alla conversione. I vecchi riferimenti `key=from&id=id&path=list/N` valgono il contenuto `N` del tipo `to`: rendering, link riscritti dal Router e contesti dei template li seguono.
+- `redirects`: 301, percorsi dalla cartella del sito o indirizzi https.
 
 ### 2.2 Tipi di campo
 
-| Tipo | Valore non localizzato | Valore localizzato | Uscita nel template |
+| Tipo | Valore condiviso (`localized: false`) | Valore per lingua (`localized: true`) | Uscita nel template |
 | --- | --- | --- | --- |
 | `text` | `"stringa"` | `{"it": "…", "en": "…"}` | escape HTML |
-| `richtext` | come text | come text | HTML filtrato (vedi 2.5) |
-| `media` | `"assets/uploads/x.webp"` | per lingua | escape; con varianti, `srcset` sugli `<img>` |
-| `select` | `"web"` o `["web", "app"]` con `multiple` | per lingua | il valore; `{{campo.label}}` l'etichetta nella lingua |
-| `boolean` | `true` / `false` | per lingua | `"1"` o `""`; nelle condizioni vero o falso |
-| `list` | lista di elementi `{"id", "hidden"?, "values"}` | — (sempre condivisa) | con `k-array` |
+| `richtext` | come text | come text | HTML filtrato (2.5) |
+| `media` | `"assets/uploads/x.webp"` | per lingua | escape; `srcset` sugli `<img>` |
+| `select` | `"web"`, o `["web", "app"]` con `multiple` | per lingua | il valore; una lista separata da virgole (per `has`) |
+| `boolean` | `true` / `false` | per lingua, senza ripiego su un'altra lingua | `"1"` o `""`; nelle condizioni vero o falso |
+| `list` | elementi `{"id", "hidden"?, "values"}` | — | con `k-array` |
 
-`localized` non si applica a `list`: i suoi campi decidono ciascuno.
+`localized` non si applica a `list`: i suoi campi decidono ciascuno. Le operazioni dello staging accettano anche i nomi della 1.x (`plain` = text condiviso, `image` = media, `array` = list).
 
 ### 2.3 Documento `content`
 
-Una lista nell'ordine, come oggi, con valori per nome invece della lista di oggetti `{name, type, value}`:
+Una lista nell'ordine, con i valori per nome:
 
 ```json
 [
-  {"type": "progetti", "id": 3, "rev": 7, "hidden": false,
-   "slug": {"it": "casa-rossi", "en": "rossi-house"}, "slug_history": {"it": ["casa-rossi-2025"]},
-   "updated_at": "2026-11-18T10:00:00Z",
+  {"type": "progetti", "id": 3, "hidden": true,
    "values": {"title": {"it": "Casa Rossi", "en": "Rossi House"}, "featured": true,
-              "gallery": [{"id": 0, "values": {"photo": "assets/uploads/casa.webp"}}]}}
+              "gallery": [{"id": 0, "values": {"photo": {"it": "assets/uploads/casa.webp", "en": "assets/uploads/casa.webp"}}}]}}
 ]
 ```
 
-Il tipo del campo sta solo nello schema. Un valore il cui campo non esiste più nello schema resta nel documento e non si rende (oggi si perde al salvataggio successivo): lo elimina solo un'operazione esplicita.
+Il tipo del campo sta solo nello schema. Un valore il cui campo non esiste più nello schema resta nel documento e non si rende: lo elimina solo `remove_field`.
 
 ### 2.4 Documento `settings`
 
 ```json
-{"languages": ["it", "en"], "uploads": {"prefix": "", "max_width": 2560, "webp": true, "variants": [480, 960, 1600]}}
+{"languages": ["it", "en"], "uploads": {"prefix": "", "max_width": 2560, "webp": true},
+ "seo": {"base_url": "https://www.esempio.it", "head": true, "pretty_urls": true, "auto_language": false, "robots": "Disallow: /bozze/"}}
 ```
+
+La prima lingua è la principale.
 
 ### 2.5 Richtext
 
-Al salvataggio (editor, staging, agente) e al rendering il richtext passa da un filtro con elenco di elementi ammessi: `p br strong b em i u s a ul ol li h2 h3 h4 h5 h6 blockquote code pre span img figure figcaption table thead tbody tr th td hr`. Attributi: `href` (solo `http`, `https`, `mailto`, `tel`, relativi e `#`), `title`, `target`, `rel`, `src` e `alt` di `img` (solo indirizzi del sito o `https`), `class`, `colspan`, `rowspan`. Tutto il resto si toglie. Un tema che ha bisogno di HTML libero (un embed) usa un campo `text` e lo inserisce nel template, dove lo controlla lo sviluppatore.
+`Kris\Template\Richtext`, al salvataggio (editor, staging, agente) e al rendering: restano `p br strong b em i u s a ul ol li h2 h3 h4 h5 h6 blockquote code pre span img figure figcaption table thead tbody tr th td hr`. Attributi: `class` e `title` ovunque, `href` (solo `http`, `https`, `mailto`, `tel`, relativi e `#`), `target` (`_blank` aggiunge `rel="noopener"`), `rel`, `src` e `alt` di `img` (solo indirizzi del sito o `https`), `colspan`, `rowspan`. Un elemento non ammesso lascia il suo contenuto; script, stili, iframe e simili spariscono con il loro contenuto. Un tema che ha bisogno di HTML libero (un embed) usa un campo `text` e lo inserisce nel template, dove lo controlla lo sviluppatore.
 
 ### 2.6 Migrazione dal formato 1
 
-Una sola migrazione, `0009_formato_2.php` (0007 e 0008 sono già lavori in corso e proprietà del sito), funzione pura sui documenti attuali → documenti nuovi. Confermato da Filippo il 2026-11-18: elenchi con dettaglio promossi a tipo, filtro del richtext (2.5), `media` per lingua come oggi. Il formato 1 della 2.0 ha già `boolean` e `select` con `localized` e `multiple`, `slug_from` nelle regole della sitemap e i reindirizzamenti in `seo.json`: la migrazione li porta in `schema`.
+Una sola migrazione, `0009_formato_2.php`, funzione pura: riceve i documenti della 1.x (`k_data`, `k_model`, `cms_settings`, `allowed_pages`, `seo`) e i template in lettura, restituisce `schema`, `content`, `settings`. Confermato da Filippo il 2026-11-18: elenchi con dettaglio promossi a tipo, filtro del richtext, `media` per lingua come oggi.
 
 | Da | A |
 | --- | --- |
 | `k_model.json[tipo]` | `schema.types[tipo].fields` |
 | `plain` | `text` con `localized: false` |
 | `text`, `richtext` | stesso tipo, `localized: true` |
-| `image` | `media`, `localized: true` (oggi è per lingua) |
+| `image` | `media`, `localized: true` |
+| `boolean`, `select` | stesso tipo, `localized` com'era; `"1"`/`""` → `true`/`false`, `"a,b"` → `["a", "b"]` |
 | `array` | `list` |
-| `posts: true` su un elenco di primo livello | l'elenco diventa un tipo (vedi sotto) |
-| `cms_settings.collections`, `collection_order`, `post_collections` | `label`, `description`, `single`, `position`, `newest_first` del tipo |
-| `allowed_pages.json` + `seo.json` | `schema.pages`; `type` dalle regole della sitemap e dai link dei template (`TemplateUsage`), altrimenti dal nome; `path` dal nome della pagina |
-| `k_data.json` | `content`, valori per nome, `rev: 1` |
+| `cms_settings.collections`, `collection_order`, `post_collections` | `label`, `description`, `single`, ordine dei tipi, `newest_first` |
+| `allowed_pages.json` + regole della sitemap | `schema.pages`: tipo, `item`, `list` dalla regola; senza regola dai link dei template (`page=…&key=…`), altrimenti il tipo con il nome della pagina o la homepage, `item` 0 |
+| `seo.json`: `redirects` / `base_url`, `head`, `pretty_urls`, `auto_language`, `robots` | `schema.redirects` / `settings.seo` |
+| `k_data.json` | `content`, valori per nome |
 
-**Elenchi con pagina di dettaglio promossi a tipo.** Un elenco `L` del tipo `T` diventa un tipo `L` (o `T_L` se `L` esiste già) quando una regola della sitemap ha `children: L` o un template contiene link con `path=L/`. Gli elementi diventano contenuti con lo stesso id; nel contenuto di `T` il campo `L` sparisce e `k-array="L"` continua a funzionare perché cerca la raccolta omonima. La mappa `vecchio path → nuovo id` va in `schema.redirects` per i 301.
+**Elenchi promossi a tipo.** Un elenco di primo livello `L` del tipo `T` diventa il tipo `L` (o `T_L` se `L` esiste già) quando una regola della sitemap ha `children: L`, un template contiene link con `path=L/`, o l'elenco era in Posts (`posts: true`, che diventa `newest_first`). Solo se `T` ha un solo contenuto: con più contenuti l'elenco resta un elenco, con la sua pagina (`item` e `list`). Gli elementi diventano contenuti con lo stesso id, subito dopo il contenuto da cui vengono; `k-array="L"` continua a funzionare perché rende il tipo omonimo; `promoted` ricorda la provenienza per i vecchi link.
 
-La migrazione è `auto: false`: l'editor la propone con il controllo di compatibilità della 1.10 (sezione 5), dopo lo snapshot.
+La migrazione è `auto: false`: l'editor la propone (e l'installer la applica con l'aggiornamento, dopo lo snapshot). Una migrazione da chiedere che sui dati del sito non cambierebbe niente si applica da sola: un sito nuovo, già nel formato 2, non se la vede chiedere. Dopo la conversione il Migrator toglie dall'archivio i documenti della 1.x e ne lascia una copia in `data/format1/`. Finché un sito non è convertito (per esempio aggiornato via FTP), `Kris\Store\Site` lo legge convertito al volo: il sito pubblico resta visibile.
+
+### 2.7 Differenze dalla bozza
+
+- **Rimandati al livello `Content`** (1.4), che oggi non c'è: `rev` e `updated_at` dei contenuti, `slug` e `slug_history` salvati nel contenuto. L'indirizzo leggibile viene ancora da un campo indicato dalla pagina (`slug`), come nella 1.x.
+- **Opzioni delle scelte**: restano stringhe (`["web", "app"]`), senza etichette per lingua.
+- **Pagine**: niente `path` personalizzato; l'indirizzo è il nome della pagina (`/progetto/3`), come nella 1.x. `noindex` non c'è.
+- **Editor**: le schermate di oggi lavorano ancora sulla forma della 1.x attraverso `kris/editor/format1.php`, che converte all'apertura e a ogni salvataggio; nessun altro codice la vede. Il passaggio diretto al formato 2 è nel rifacimento dell'editor.
 
 ## 3. Indirizzi
 
@@ -268,11 +274,11 @@ Contratto rimandato a una specifica separata, `plugin.md`, da scrivere prima del
 ## 5. Passaggio dalla 1.x
 
 - **1.10**: legge le release `breaking` con `min_from` uguale alla versione installata e mostra il controllo di compatibilità: versione di PHP (serve 8.3), riscrittura degli indirizzi disponibile, elenchi da promuovere, pagine senza tipo ricavabile, template con link scritti a mano, `.htaccess` personalizzato. Se tutto è risolvibile in automatico propone l'installazione.
-- **2.0.0**: l'installer converte con `0007_formato_2.php` dopo lo snapshot dei file attuali; i file del formato 1 restano in `data/format1/` per 14 giorni.
+- **2.0.0**: l'installer converte con `0009_formato_2.php` dopo lo snapshot dei file attuali; i file del formato 1 restano in `data/format1/`.
 
 ## 6. Ordine di lavoro
 
 1. **Fase 2a**: `Kris\Store` con adapter JSON sui file del formato 1 (`k_data`, `k_model`, `cms_settings`, pagine, SEO). Tutto il codice passa dall'archivio; test invariati.
 2. **Fase 2b**: `OverlayStore` per l'anteprima al posto di `Paths::useOverlay` per i dati.
-3. **Fase 3**: formato 2 dietro la stessa interfaccia, migrazione `0007`, tipi di campo nuovi.
+3. **Fase 3**: formato 2 dietro la stessa interfaccia, migrazione `0009`, tipi di campo nuovi.
 4. **Fase 5**: adapter PDO, verificato con gli stessi test dell'adapter JSON (suite comune eseguita su entrambi).

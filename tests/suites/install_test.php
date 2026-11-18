@@ -36,6 +36,7 @@ function updateSite(): string
     @unlink($dir . '/config/auth.php');
     @unlink($dir . '/config/update.php');
     rcopy(KRIS_TESTS . '/fixtures', $dir . '/data');
+    foreach (['allowed_pages', 'seo'] as $name) rename("{$dir}/data/{$name}.json", "{$dir}/config/{$name}.json");
     foreach (['RELEASE.json', 'MANIFEST.json', 'MANIFEST.sig'] as $f) {
         @unlink($dir . '/kris/' . $f);
     }
