@@ -2,6 +2,25 @@
     "format": 1,
     "releases": [
         {
+            "version": "1.9.1",
+            "min_from": "1.0.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.0",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Più sicurezza: dopo alcuni accessi sbagliati l'editor chiede di aspettare, per cambiare l'email di recupero serve la password e il primo accesso chiede un codice che si trova sul server. Nell'anteprima si vedono anche le pagine che nessun link raggiunge, con l'elenco delle pagine modificate in «Da pubblicare». Un campo con lo stesso nome in un'altra raccolta non blocca più la pubblicazione.",
+            "date": "2026-11-18",
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v1.9.1/kris-1.9.1.zip",
+            "sha256": "453b4e6ec4de2591e605238f1fe22afc4a07c79d9818315e9fda64fb1abed8c5",
+            "size": 214564
+        },
+        {
             "version": "1.9.0",
             "min_from": "1.0.0",
             "breaking": false,
