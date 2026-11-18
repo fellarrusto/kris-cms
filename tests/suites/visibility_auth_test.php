@@ -135,3 +135,30 @@ test('sul disco resta solo l hash del token', function () {
     $token = (new PasswordReset($file))->create();
     assertNotContains($token, (string) file_get_contents($file));
 });
+
+test('dopo cinque accessi sbagliati lo stesso indirizzo aspetta, gli altri no', function () {
+    $file = sys_get_temp_dir() . '/kris-attempts-' . bin2hex(random_bytes(4)) . '.json';
+    register_shutdown_function(fn() => @unlink($file));
+    $t = new \Kris\Auth\LoginThrottle($file);
+    $now = 1_000_000;
+    for ($i = 0; $i < 4; $i++) $t->fail('1.2.3.4', $now + $i);
+    assertSame(0, $t->waitSeconds('1.2.3.4', $now + 10));
+    $t->fail('1.2.3.4', $now + 5);
+    assertTrue($t->waitSeconds('1.2.3.4', $now + 10) > 0, 'il quinto errore blocca');
+    assertSame(0, $t->waitSeconds('5.6.7.8', $now + 10), 'un altro indirizzo no');
+    assertSame(0, $t->waitSeconds('1.2.3.4', $now + \Kris\Auth\LoginThrottle::WINDOW + 1), 'si sblocca da solo');
+    assertTrue(!str_contains((string) file_get_contents($file), '1.2.3.4'), 'l indirizzo non si salva in chiaro');
+
+    // Un accesso riuscito azzera gli errori di quell'indirizzo
+    $t->succeed('1.2.3.4', $now + 11);
+    assertSame(0, $t->waitSeconds('1.2.3.4', $now + 12));
+});
+
+test('troppi errori da molti indirizzi fermano l accesso per tutti', function () {
+    $file = sys_get_temp_dir() . '/kris-attempts-' . bin2hex(random_bytes(4)) . '.json';
+    register_shutdown_function(fn() => @unlink($file));
+    $t = new \Kris\Auth\LoginThrottle($file);
+    $now = 2_000_000;
+    for ($i = 0; $i < \Kris\Auth\LoginThrottle::MAX_TOTAL; $i++) $t->fail("10.0.0.{$i}", $now);
+    assertTrue($t->waitSeconds('192.168.1.1', $now + 1) > 0);
+});

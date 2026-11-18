@@ -227,8 +227,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
     // --- Account: email di recupero, email di prova, cambio password ---
     if (isset($_POST['save_account_email'])) {
         $email = trim((string) ($_POST['account_email'] ?? ''));
+        $config = kris_auth_config() ?? [];
         if (!Kris\Auth\Credentials::validEmail($email)) {
             $error = 'Indirizzo email non valido: nulla è stato modificato.';
+        } elseif (!kris_credentials()->verify((string) ($config['user'] ?? ''), (string) ($_POST['current_password'] ?? ''))) {
+            // L'email riceve i link di reset: cambiarla vale quanto cambiare la password
+            $error = 'Password non corretta: l\'email non è stata modificata.';
         } elseif (!kris_credentials()->save(['email' => $email, 'editor_url' => kris_current_editor_url()])) {
             $error = 'Non riesco a scrivere config/auth.php: controlla i permessi con l\'hosting.';
         } else {
