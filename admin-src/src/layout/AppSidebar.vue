@@ -17,6 +17,13 @@ const newest = computed(() => site.userTypes.filter((t) => isNewestFirst(site.sc
 const reserved = computed(() => siteItems.filter((i) => site.type(i.type)))
 const wipOn = computed(() => site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true)
 const siteName = computed(() => session.data?.site_name || 'Il tuo sito')
+// Plugin accesi: le loro schermate, o le impostazioni se non ne hanno
+const pluginItems = computed(() =>
+  (session.data?.plugins?.active || []).flatMap((p) => {
+    const views = p.views.filter((v) => v.nav).map((v) => ({ key: `${p.name}/${v.name}`, label: v.title, icon: v.icon, to: { name: 'plugin-view', params: { name: p.name, view: v.name } } }))
+    return views.length || !p.settings ? views : [{ key: p.name, label: p.title, icon: 'puzzle', to: { name: 'plugin-settings', params: { name: p.name } } }]
+  })
+)
 const typeParam = computed(() => String(route.params.type || ''))
 const contentsActive = computed(
   () => ['dashboard', 'collection', 'edit'].includes(route.name) && !typeParam.value.startsWith('kris_') && !newest.value.some((t) => t.name === typeParam.value)
@@ -63,6 +70,10 @@ function toggleTheme() {
       <router-link v-for="i in reserved" :key="i.type" class="nav-item" :class="{ 'is-active': typeParam === i.type }" :to="i.to">
         <KIcon :name="i.icon" /><span class="nav-text">{{ i.label }}</span><span v-if="i.type === 'kris_wip' && wipOn" class="nav-count">Attivi</span>
       </router-link>
+    </div>
+    <div v-if="pluginItems.length" class="nav-group">
+      <p class="nav-label">Plugin installati</p>
+      <router-link v-for="i in pluginItems" :key="i.key" class="nav-item" active-class="is-active" :to="i.to"><KIcon :name="i.icon" /><span class="nav-text">{{ i.label }}</span></router-link>
     </div>
     <div class="nav-group">
       <p class="nav-label">Sviluppo</p>

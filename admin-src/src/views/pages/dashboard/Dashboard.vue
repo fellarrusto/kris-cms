@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import KIcon from '@/components/KIcon.vue'
+import PluginWidget from '@/components/PluginWidget.vue'
 import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
 import { isNewestFirst, isSingle, typeDescription } from '@/lib/model'
@@ -32,6 +33,7 @@ const tiles = computed(() =>
     })
 )
 const singles = computed(() => tiles.value.filter((t) => t.single))
+const widgets = computed(() => (session.data?.plugins?.active || []).filter((p) => p.dashboard && p.module))
 const collections = computed(() => tiles.value.filter((t) => !t.single))
 const target = (t) => (t.single && t.count ? { name: 'edit', params: { type: t.name, id: site.items(t.name)[0].id } } : { name: 'collection', params: { type: t.name } })
 </script>
@@ -69,6 +71,11 @@ const target = (t) => (t.single && t.count ? { name: 'edit', params: { type: t.n
           </div>
         </router-link>
       </div>
+    </template>
+
+    <template v-if="widgets.length && !search">
+      <div class="section-head"><h2>Dai plugin</h2><span>Riquadri dei plugin accesi</span></div>
+      <div class="grid"><PluginWidget v-for="p in widgets" :key="p.name" :plugin="p" /></div>
     </template>
 
     <div v-if="!tiles.length" class="empty-state">

@@ -258,6 +258,8 @@ final class Server
             $this->staging->rebuild();
             \Kris\Site\Paths::useOverlay($this->staging->dir(), $this->staging->deletedFiles());
         }
+        // Come l'anteprima dell'admin: senza plugin
+        \Kris\Plugin\Plugins::suspend();
         try {
             $page = \Kris\Site\PageRenderer::render($query, $_SERVER);
             // Con gli indirizzi leggibili i link escono come li vedono i visitatori

@@ -57,7 +57,8 @@ final class PageRenderer
             $html = Seo::inject($html, Seo::headTags(Seo::baseUrl($seo, $server), $page, $key, $id, $path, $lang, $langs, self::routes()));
         }
         $html = self::withMeta($html, $entity, $lang, Seo::baseUrl($seo, $server));
-        return ['status' => 200, 'html' => self::finish(self::withHead($html, $entity, $lang), $lang), 'lang' => $lang];
+        $info = ['page' => $page, 'type' => $key, 'id' => $id, 'path' => $path, 'lang' => $lang, 'status' => 200];
+        return ['status' => 200, 'html' => self::finish(self::withHead($html, $entity, $lang), $lang, $info), 'lang' => $lang];
     }
 
     /** Le rotte degli indirizzi leggibili, o null se il sito non li usa (seo.json, pretty_urls). */
@@ -124,7 +125,7 @@ final class PageRenderer
                         $entity = new Entity('not_found', 0);
                     }
                 }
-                return self::finish(self::withHead((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $entity, $lang), $lang);
+                return self::finish(self::withHead((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $entity, $lang), $lang, ['page' => '404', 'lang' => $lang, 'status' => 404]);
             } catch (Throwable $e) {
                 // Un template rotto non deve trasformare la 404 in un errore: si usa quella di riserva
             }
@@ -133,7 +134,7 @@ final class PageRenderer
         $notFound = self::notFoundTexts($lang);
         ob_start();
         require is_file($site) ? $site : KRIS_DIR . '/404.php';
-        return self::finish((string) ob_get_clean(), $lang);
+        return self::finish((string) ob_get_clean(), $lang, ['page' => '404', 'lang' => $lang, 'status' => 404]);
     }
 
     /**
@@ -152,7 +153,7 @@ final class PageRenderer
         $template = Paths::template('kris_wip');
         if (is_file($template)) {
             try {
-                return self::finish(self::withHead((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $entity, $lang), $lang);
+                return self::finish(self::withHead((new TemplateEngine($lang))->render((string) file_get_contents($template), $entity), $entity, $lang), $lang, ['page' => 'kris_wip', 'lang' => $lang, 'status' => 503]);
             } catch (Throwable $e) {
                 // Template rotto: la pagina di serie
             }
@@ -164,7 +165,7 @@ final class PageRenderer
         }
         ob_start();
         require KRIS_DIR . '/wip.php';
-        return self::finish((string) ob_get_clean(), $lang);
+        return self::finish((string) ob_get_clean(), $lang, ['page' => 'kris_wip', 'lang' => $lang, 'status' => 503]);
     }
 
     /** I testi della sezione Pagina 404 per la 404 di serie; vuoti se mancano (valgono quelli predefiniti). */
@@ -254,10 +255,14 @@ final class PageRenderer
         return $pos === false ? $html : substr($html, 0, $pos) . $head . "\n" . substr($html, $pos);
     }
 
-    /** Ultimi ritocchi di ogni pagina, 404 compresa: favicon e versione dei file del tema. */
-    public static function finish(string $html, string $lang): string
+    /**
+     * Ultimi ritocchi di ogni pagina, 404 compresa: favicon, agganci dei plugin
+     * (blocchi, head, body_end), versione dei file del tema e dei plugin.
+     */
+    public static function finish(string $html, string $lang, array $page = []): string
     {
-        return \Kris\Entity\MediaStore::srcset(Assets::version(self::withFavicon($html, $lang), KRIS_ROOT), KRIS_ROOT);
+        $html = \Kris\Plugin\Plugins::decorate(self::withFavicon($html, $lang), $page + ['lang' => $lang, 'status' => 200]);
+        return \Kris\Entity\MediaStore::srcset(Assets::version($html, KRIS_ROOT), KRIS_ROOT);
     }
 
     /** La favicon scelta nell'editor (raccolta kris_site), se c'e. */

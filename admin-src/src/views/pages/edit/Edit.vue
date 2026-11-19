@@ -5,6 +5,7 @@ import KIcon from '@/components/KIcon.vue'
 import KSwitch from '@/components/KSwitch.vue'
 import SortableList from '@/components/SortableList.vue'
 import FieldInput from '@/views/pages/edit/components/FieldInput.vue'
+import PluginCookies from '@/components/PluginCookies.vue'
 import { useDirty } from '@/components/dirty'
 import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
@@ -286,6 +287,7 @@ const isChanged = (def) => JSON.stringify(valueFor(def) ?? '') !== JSON.stringif
         <p class="note">{{ session.isStaging ? 'Salvando, le modifiche restano in attesa: il sito cambia quando pubblichi.' : 'Salvando, le modifiche sono subito visibili sul sito.' }}</p>
       </nav>
     </div>
+    <PluginCookies v-if="type === 'kris_legal'" style="margin-top: 24px" />
   </div>
 </template>
 

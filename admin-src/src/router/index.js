@@ -26,6 +26,8 @@ const router = createRouter({
         { path: 'struttura/:type', name: 'structure-type', component: () => import('@/views/pages/structure/StructureType.vue') },
         { path: 'indirizzi', name: 'addresses', component: () => import('@/views/pages/addresses/Addresses.vue') },
         { path: 'impostazioni/:tab?', name: 'settings', component: () => import('@/views/pages/settings/Settings.vue') },
+        { path: 'plugin/:name', name: 'plugin-settings', component: () => import('@/views/pages/plugins/PluginSettings.vue') },
+        { path: 'plugin/:name/:view', name: 'plugin-view', component: () => import('@/views/pages/plugins/PluginView.vue') },
       ],
     },
     { path: '/:catchAll(.*)*', redirect: '/' },

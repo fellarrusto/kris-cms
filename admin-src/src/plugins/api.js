@@ -77,7 +77,7 @@ export async function updateOp(op, fields = {}) {
 
 export const api = {
   get: (name, query) => request(name, { query }),
-  post: (name, body = {}) => request(name, { body }),
+  post: (name, body = {}, query) => request(name, { body, query }),
 }
 
 export default api

@@ -325,6 +325,12 @@ $boot = ['csrf' => kris_csrf_token(), 'api' => 'index.php', 'assets' => $distBas
 echo '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kris</title>'
     . '<script>try{var t=localStorage.getItem(\'kris-theme\');if(t===\'light\'||t===\'dark\')document.documentElement.dataset.theme=t;}catch(e){}</script>';
 foreach ((array) ($entry['css'] ?? []) as $css) echo '<link rel="stylesheet" href="' . h($distBase . $css) . '">';
+// I moduli dei plugin importano "vue" e "@kris/editor": gli stessi file dell'editor, quindi la stessa istanza
+$imports = [];
+foreach (['vue' => 'src/vue.js', '@kris/editor' => 'src/kit.js'] as $specifier => $source) {
+    if (is_string($manifest[$source]['file'] ?? null)) $imports[$specifier] = $distBase . $manifest[$source]['file'];
+}
+if ($imports) echo '<script type="importmap">' . json_encode(['imports' => $imports], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) . '</script>';
 echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" integrity="sha512-6JR4bbn8rCKvrkdoTJd/VFyXAN4CE9XMtgykPWgKiHjou56YDJxWsi90hAeMTYxNwUnKSQu9JPc3SQUg+aGCHw==" crossorigin="anonymous" referrerpolicy="origin" defer></script>'
     . '</head><body><noscript>L\'editor di Kris ha bisogno di JavaScript.</noscript><div id="app"></div>'
     . '<script>window.KRIS=' . json_encode($boot, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>'

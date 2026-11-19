@@ -76,6 +76,12 @@ final class Operations
         if ($method === null) {
             throw new StagingException("Operazione sconosciuta: '{$type}'.");
         }
+        // I dati dei plugin si cambiano solo dal plugin (docs/2.0/plugin.md, 7)
+        foreach (['key', 'collection', 'name', 'to'] as $k) {
+            if (is_string($op[$k] ?? null) && str_starts_with($op[$k], 'plg_') && ($k !== 'name' || in_array($type, ['create_collection', 'rename_collection', 'remove_collection'], true))) {
+                throw new StagingException("La raccolta «{$op[$k]}» appartiene a un plugin e non si modifica.");
+            }
+        }
         if (!$replay && isset(self::KEYS[$type])) {
             $unknown = array_diff(array_map('strval', array_keys($op)), self::KEYS[$type]);
             if ($unknown) {
@@ -824,7 +830,7 @@ final class Operations
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "la raccolta «{$collection}» non esiste"));
         }
-        $order = array_values(array_filter(array_keys($types), fn($n) => !str_starts_with((string) $n, 'kris_') && $n !== $collection));
+        $order = array_values(array_filter(array_keys($types), fn($n) => !str_starts_with((string) $n, 'kris_') && !str_starts_with((string) $n, 'plg_') && $n !== $collection));
         array_splice($order, max(0, min((int) ($op['to'] ?? 0), count($order))), 0, [$collection]);
         $sorted = [];
         foreach ($order as $name) $sorted[$name] = $types[$name];
@@ -1120,6 +1126,9 @@ final class Operations
     {
         if (str_starts_with($collection, 'kris_')) {
             throw new StagingException("La raccolta «{$collection}» appartiene a Kris e non si modifica.");
+        }
+        if (str_starts_with($collection, 'plg_')) {
+            throw new StagingException("La raccolta «{$collection}» appartiene a un plugin e non si modifica.");
         }
     }
 

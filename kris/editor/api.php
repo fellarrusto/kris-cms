@@ -114,6 +114,66 @@ $stagingSummary = function (bool $full) use (&$stagingMode): array {
     ];
 };
 
+/** I plugin accesi per l'app: voci di navigazione, schermate, riquadri della dashboard, avvisi. */
+function editorPluginsSummary(): array
+{
+    if (!\Kris\Plugin\Plugins::enabled()) return ['enabled' => false, 'active' => [], 'alerts' => [], 'cookies' => [], 'domains' => []];
+    $base = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/assets/plugins/';
+    $active = [];
+    foreach (\Kris\Plugin\Plugins::active() as $name) {
+        $m = \Kris\Plugin\Plugins::installed()[$name]['manifest'];
+        $version = rawurlencode($m['version']);
+        $active[] = ['name' => $name, 'title' => $m['title'], 'version' => $m['version'], 'settings' => $m['editor']['settings_tab'],
+            'views' => $m['editor']['views'], 'dashboard' => $m['editor']['dashboard'],
+            'module' => $m['editor']['module'] === null ? null : $base . $name . '/' . $m['editor']['module'] . '?v=' . $version,
+            'style' => $m['editor']['style'] === null ? null : $base . $name . '/' . $m['editor']['style'] . '?v=' . $version];
+    }
+    return ['enabled' => true, 'active' => $active, 'alerts' => \Kris\Plugin\Plugins::alerts(),
+        'cookies' => \Kris\Plugin\Plugins::cookies(), 'domains' => \Kris\Plugin\Plugins::domains()];
+}
+
+/** I valori delle impostazioni di un plugin, ripuliti secondo i campi del manifest. */
+function editorPluginValues(array $fields, array $values): array
+{
+    $langs = editorLanguages();
+    $clean = [];
+    $one = function (array $f, mixed $v): mixed {
+        return match ($f['type']) {
+            'boolean' => $v === true,
+            'richtext' => \Kris\Template\Richtext::clean(is_string($v) ? $v : ''),
+            'select' => \Kris\Entity\Entity::normalizeChoice($f, $v),
+            default => is_scalar($v) ? mb_substr(trim((string) $v), 0, 5000) : '',
+        };
+    };
+    foreach ($fields as $f) {
+        if (!array_key_exists($f['name'], $values)) continue;
+        $v = $values[$f['name']];
+        if ($f['localized']) {
+            $clean[$f['name']] = [];
+            foreach ($langs as $lang) $clean[$f['name']][$lang] = $one($f, is_array($v) ? ($v[$lang] ?? null) : null);
+        } else {
+            $clean[$f['name']] = $one($f, $v);
+        }
+    }
+    return $clean;
+}
+
+/** Cosa riceve content_saved: per contenuto, i campi e le lingue cambiati. */
+function editorSavedPayload(array $ops): array
+{
+    $out = [];
+    foreach ($ops as $op) {
+        $type = (string) ($op['key'] ?? '');
+        if ($type === '' || !isset($op['id'])) continue;
+        $k = $type . '#' . (int) $op['id'];
+        $out[$k] ??= ['type' => $type, 'id' => (int) $op['id'], 'fields' => [], 'languages' => [], 'ops' => []];
+        if (is_string($op['field'] ?? null)) $out[$k]['fields'][] = $op['field'];
+        if (is_string($op['lang'] ?? null)) $out[$k]['languages'][] = (string) $op['lang'];
+        $out[$k]['ops'][] = (string) ($op['op'] ?? '');
+    }
+    return ['changes' => array_values(array_map(fn($c) => ['fields' => array_values(array_unique($c['fields'])), 'languages' => array_values(array_unique($c['languages'])), 'ops' => array_values(array_unique($c['ops']))] + $c, $out))];
+}
+
 /** I file della libreria, i più recenti prima; in attesa anche quelli non ancora pubblici. */
 $mediaList = function () use ($uploadDir, $uploadUrl, &$stagingMode): array {
     $staging = new Staging();
@@ -155,6 +215,7 @@ try {
                 'uploads' => ['accept' => MediaStore::allowedExtensions(), 'max_bytes' => MediaStore::maxBytes(), 'video_max_bytes' => MediaStore::videoMaxBytes(),
                     'can_process' => MediaStore::canProcessImages(), 'can_webp' => MediaStore::canWriteWebp()],
                 'field_types' => EDITOR_FIELD_TYPES,
+                'plugins' => editorPluginsSummary(),
             ]);
 
         case 'site':
@@ -179,6 +240,7 @@ try {
                 if ($stagingMode && $target === 'kris_legal') throw new ApiError('Privacy e cookie si modificano sul sito pubblico: passa a «Sito pubblico».', 409);
             }
             $done = editorApply($ops, $stagingMode);
+            if (!$stagingMode) \Kris\Plugin\Plugins::event('content_saved', editorSavedPayload($ops));
             kris_api_respond(['ok' => true, 'done' => $done, 'warnings' => editorWarnings(), 'staging' => $stagingSummary(false)]);
 
         case 'structure':
@@ -445,6 +507,91 @@ try {
                 'rollback' => $updater->enabled() && $maintenance === null ? $updater->availableRollback() : null,
             ]);
 
+        // --- plugin -----------------------------------------------------------
+        case 'plugins':
+            if (!\Kris\Plugin\Plugins::enabled()) throw new ApiError('I plugin sono spenti su questo sito (config/plugins.php).', 403);
+            $installed = [];
+            foreach (\Kris\Plugin\Plugins::installed() as $name => $p) {
+                $installed[] = ['name' => $name, 'title' => $p['manifest']['title'], 'description' => $p['manifest']['description'],
+                    'version' => $p['manifest']['version'], 'active' => ($p['state']['active'] ?? false) === true,
+                    'disabled_reason' => $p['state']['disabled_reason'] ?? null, 'last_error' => $p['state']['last_error'] ?? null,
+                    'installed_at' => $p['state']['installed_at'] ?? null, 'updated_at' => $p['state']['updated_at'] ?? null,
+                    'settings' => $p['manifest']['settings'] !== [], 'cookies' => $p['manifest']['cookies'], 'domains' => $p['manifest']['domains'],
+                    'database_recommended' => $p['manifest']['database_recommended'],
+                    'log' => array_slice(\Kris\Plugin\Plugins::logLines($name), -50)];
+            }
+            kris_api_respond(['ok' => true, 'installed' => $installed, 'safe_mode' => \Kris\Plugin\Plugins::safeMode(),
+                'staging' => (new Staging())->hasChanges(), 'store' => \Kris\Store\Stores::driver(KRIS_ROOT),
+                'cookies' => \Kris\Plugin\Plugins::cookies(), 'domains' => \Kris\Plugin\Plugins::domains()]);
+
+        case 'plugin-catalog':
+            if (!\Kris\Plugin\Plugins::enabled()) throw new ApiError('I plugin sono spenti su questo sito (config/plugins.php).', 403);
+            $installer = new \Kris\Plugin\Installer();
+            $name = is_string($_GET['name'] ?? null) ? $_GET['name'] : '';
+            if ($name === '') kris_api_respond(['ok' => true, 'plugins' => $installer->catalog()]);
+            $releases = $installer->releases($name);
+            kris_api_respond(['ok' => true, 'releases' => $releases, 'latest' => $installer->latestCompatible($releases)['version'] ?? null]);
+
+        case 'plugin-action':
+            if (!$apiPost) throw new ApiError('Serve un POST.', 405);
+            if (!\Kris\Plugin\Plugins::enabled()) throw new ApiError('I plugin sono spenti su questo sito (config/plugins.php).', 403);
+            $writeGuard();
+            $liveOnly('I plugin');
+            $name = $str('name');
+            $action = $str('action');
+            $installer = new \Kris\Plugin\Installer();
+            // Installare e togliere eseguono o cancellano codice e dati: serve la password
+            if (in_array($action, ['install', 'remove'], true) && kris_users()->check($me, $str('password')) !== 'ok') {
+                throw new ApiError('La password non è corretta: nulla è cambiato.');
+            }
+            match ($action) {
+                'install' => $installer->install($name, $str('version') ?: null, $me),
+                'activate' => $installer->setActive($name, true),
+                'deactivate' => $installer->setActive($name, false),
+                'remove' => $installer->remove($name, !empty($body['delete_data'])),
+                default => throw new ApiError('Azione sconosciuta.', 400),
+            };
+            kris_api_respond(['ok' => true, 'plugins' => editorPluginsSummary()]);
+
+        case 'plugin-settings':
+            $name = is_string($_GET['name'] ?? null) ? $_GET['name'] : $str('name');
+            $plugin = \Kris\Plugin\Plugins::installed()[$name] ?? null;
+            if ($plugin === null || !$plugin['manifest']['settings']) throw new ApiError('Questo plugin non ha impostazioni.', 404);
+            $type = "plg_{$name}_settings";
+            if (!$apiPost) {
+                kris_api_respond(['ok' => true, 'title' => $plugin['manifest']['title'], 'fields' => $plugin['manifest']['settings'],
+                    'values' => (object) (editorItem($type, 0)['values'] ?? [])]);
+            }
+            $writeGuard();
+            $values = is_array($body['values'] ?? null) ? $body['values'] : [];
+            \Kris\Store\Stores::site()->transaction(['content'], function (array $docs) use ($type, $plugin, $values): array {
+                $clean = editorPluginValues($plugin['manifest']['settings'], $values);
+                foreach ($docs['content'] as $i => $c) {
+                    if (($c['type'] ?? null) === $type && (int) ($c['id'] ?? -1) === 0) {
+                        $docs['content'][$i]['values'] = $clean + (is_array($c['values'] ?? null) ? $c['values'] : []);
+                        return $docs;
+                    }
+                }
+                $docs['content'][] = ['type' => $type, 'id' => 0, 'values' => $clean];
+                return $docs;
+            });
+            \Kris\Store\Site::forget();
+            kris_api_respond(['ok' => true, 'values' => (object) (editorItem($type, 0)['values'] ?? [])]);
+
+        case 'plugin-call':
+            // Le azioni delle schermate dei plugin: GET per leggere, POST (con CSRF) per scrivere
+            $name = is_string($_GET['name'] ?? null) ? $_GET['name'] : '';
+            $action = is_string($_GET['action'] ?? null) ? $_GET['action'] : '';
+            if ($apiPost) $writeGuard();
+            $query = array_diff_key($_GET, ['api' => 1, 'name' => 1, 'action' => 1]);
+            try {
+                $data = \Kris\Plugin\Plugins::editorAction($name, $action, ['method' => $apiPost ? 'POST' : 'GET', 'query' => $query, 'body' => $body,
+                    'user' => $me, 'mode' => $stagingMode ? 'staging' : 'live']);
+            } catch (\Kris\Plugin\PluginException $e) {
+                throw new ApiError($e->getMessage());
+            }
+            kris_api_respond(['ok' => true, 'data' => $data]);
+
         case 'migrate':
             if (!$apiPost) throw new ApiError('Serve un POST.', 405);
             if (!$migrationsPending) kris_api_respond(['ok' => true]);
@@ -459,7 +606,7 @@ try {
     kris_api_respond(['ok' => false, 'error' => $e->getMessage()] + ($e->details ? ['details' => $e->details] : []), $e->status);
 } catch (StagingException $e) {
     kris_api_respond(['ok' => false, 'error' => $e->getMessage()] + ($e->details() ? ['details' => $e->details()] : []), 422);
-} catch (UserException $e) {
+} catch (UserException | \Kris\Plugin\PluginException $e) {
     kris_api_respond(['ok' => false, 'error' => $e->getMessage()], 422);
 } catch (StorageException | StoreException $e) {
     kris_api_respond(['ok' => false, 'error' => 'Non siamo riusciti a salvare: i dati non sono cambiati. (' . $e->getMessage() . ')'], 500);

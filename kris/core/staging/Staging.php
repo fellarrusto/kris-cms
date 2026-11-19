@@ -940,9 +940,13 @@ final class Staging
             throw new StagingException('La pubblicazione non è riuscita e il sito è tornato com\'era: ' . $e->getMessage());
         }
 
+        $touched = $this->previewPages();
         $this->discard();
         $this->pruneBackups();
-        return ['backup' => $id, 'files' => array_merge(array_keys($files), array_map([\Kris\Store\FileStore::class, 'relativePath'], $docs))];
+        $published = array_merge(array_keys($files), array_map([\Kris\Store\FileStore::class, 'relativePath'], $docs));
+        // I plugin (IndexNow) sanno cosa è stato pubblicato, dopo la risposta all'admin
+        \Kris\Plugin\Plugins::event('published', \Kris\Plugin\Plugins::publishedPayload($published, $ops, $touched));
+        return ['backup' => $id, 'files' => $published];
     }
 
     /** L'ultima pubblicazione che si puo ancora annullare, o null. */

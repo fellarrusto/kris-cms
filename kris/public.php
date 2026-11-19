@@ -58,6 +58,8 @@ if (Preview::requested($_GET, $_COOKIE) && !$previewAdmin) {
     Preview::rememberMode(false);
 }
 if ($previewAdmin) {
+    // Nell'anteprima i plugin non girano: i loro script andrebbero approvati come quelli del tema
+    \Kris\Plugin\Plugins::suspend();
     $staging = new Staging();
     if (isset($_GET['kris_preview_asset'])) {
         Preview::serveAsset($staging, (string) $_GET['kris_preview_asset']);
@@ -71,6 +73,38 @@ if ($previewAdmin) {
         $staging->rebuild();
         Paths::useOverlay($staging->dir(), $staging->deletedFiles());
     }
+}
+
+// Endpoint dei plugin: index.php?kris_plugin=<plugin>&endpoint=<nome>, o /kris-plugin/<plugin>/<nome>
+$pluginPath = substr($requestPath, strlen(Router::basePath($_SERVER)));
+if (preg_match('#^/kris-plugin/([a-z0-9_]+)/([a-z0-9_-]+)/?$#', $pluginPath, $pm) === 1) {
+    $_GET['kris_plugin'] = $pm[1];
+    $_GET['endpoint'] = $pm[2];
+}
+if (is_string($_GET['kris_plugin'] ?? null) && is_string($_GET['endpoint'] ?? null) && $preview === null) {
+    $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    $size = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+    $raw = $method === 'POST' && $size <= \Kris\Plugin\Plugins::MAX_BODY ? (string) file_get_contents('php://input', false, null, 0, \Kris\Plugin\Plugins::MAX_BODY + 1) : '';
+    $size = max($size, strlen($raw));
+    $json = str_contains((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'application/json') ? json_decode($raw, true) : null;
+    $query = array_diff_key($_GET, ['kris_plugin' => 1, 'endpoint' => 1]);
+    $response = \Kris\Plugin\Plugins::endpoint($_GET['kris_plugin'], $_GET['endpoint'], [
+        'method' => $method, 'query' => $query, 'body' => is_array($json) ? $json : $_POST, 'lang' => $lang,
+        'ip' => (string) ($_SERVER['REMOTE_ADDR'] ?? ''), 'files' => $_FILES, 'size' => $size,
+    ]);
+    http_response_code($response['status']);
+    header('Cache-Control: no-store');
+    header('X-Content-Type-Options: nosniff');
+    if (isset($response['location'])) {
+        header('Location: ' . (str_starts_with($response['location'], Router::basePath($_SERVER) . '/') ? '' : Router::basePath($_SERVER)) . $response['location']);
+    } elseif (array_key_exists('text', $response)) {
+        header('Content-Type: text/plain; charset=utf-8');
+        echo $response['text'];
+    } else {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($response['json'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+    exit;
 }
 
 // Indirizzi leggibili: il percorso (/en/progetto/3) diventa i parametri della pagina;
