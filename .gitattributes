@@ -10,3 +10,8 @@ tests/snapshots/*.html -text
 # Il canale e firmato byte per byte: niente conversione dei fine riga.
 releases.json -text
 releases.json.sig -text
+
+# L'editor compilato si confronta in CI con quello rigenerato dai sorgenti, ed entra nei
+# pacchetti firmati: niente conversione dei fine riga, né nei sorgenti né nel risultato.
+admin-src/** text eol=lf
+kris/editor/dist/** -text

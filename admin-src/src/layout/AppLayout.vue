@@ -1,0 +1,55 @@
+<script setup>
+import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import AppSidebar from '@/layout/AppSidebar.vue'
+import AppTopbar from '@/layout/AppTopbar.vue'
+import SystemAlerts from '@/layout/SystemAlerts.vue'
+import KIcon from '@/components/KIcon.vue'
+import { useSessionStore } from '@/stores/session'
+import { useSiteStore } from '@/stores/site'
+import { useUiStore } from '@/stores/ui'
+
+const session = useSessionStore()
+const site = useSiteStore()
+const ui = useUiStore()
+const route = useRoute()
+const menuOpen = ref(false)
+
+async function loadSite() {
+  try {
+    await site.load()
+  } catch (e) {
+    ui.toast(e.message)
+  }
+}
+
+onMounted(loadSite)
+// Cambiando modalità cambiano i dati: il sito pubblico o le modifiche in attesa
+watch(() => session.mode, loadSite)
+watch(
+  () => route.fullPath,
+  () => (menuOpen.value = false)
+)
+</script>
+
+<template>
+  <a class="skip-link" href="#main">Vai al contenuto</a>
+  <div class="shell" :class="{ 'is-pending': session.isStaging }">
+    <div v-if="session.isStaging" class="pending-bar" role="status">
+      <KIcon name="clock" />
+      <p>
+        <strong>Stai lavorando in attesa.</strong> Il sito pubblico non cambia finché non pubblichi.
+        <template v-if="session.stagingCount">{{ session.stagingCount }} {{ session.stagingCount === 1 ? 'modifica pronta' : 'modifiche pronte' }}.</template>
+      </p>
+      <router-link class="btn btn-small" :to="{ name: 'publish' }">Rivedi e pubblica</router-link>
+    </div>
+    <AppSidebar :open="menuOpen" />
+    <div v-if="menuOpen" class="side-scrim" @click="menuOpen = false"></div>
+    <main id="main" class="main" tabindex="-1">
+      <AppTopbar :menu-open="menuOpen" @toggle-menu="menuOpen = !menuOpen" />
+      <SystemAlerts />
+      <div v-if="!site.loaded" class="loading">Carico i contenuti…</div>
+      <router-view v-else :key="session.mode" />
+    </main>
+  </div>
+</template>

@@ -1,0 +1,1 @@
+function r(t){return t>=1048576?(t/1048576).toLocaleString("it-IT",{maximumFractionDigits:1})+" MB":Math.max(1,Math.round(t/1024))+" KB"}function n(t){const i=typeof t=="number"?new Date(t*1e3):new Date(t);return Number.isNaN(i.getTime())?"":i.toLocaleString("it-IT",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}export{n as a,r as f};

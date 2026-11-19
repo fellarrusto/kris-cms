@@ -150,6 +150,7 @@ try {
                 'wip' => (editorItem('kris_wip', 0)['values']['enabled'] ?? false) === true,
                 'email_missing' => !\Kris\Auth\Users::validAddress((string) ($user['email'] ?? '')) && empty($_SESSION['kris_email_later']),
                 'staging' => $stagingSummary(false),
+                'staged_uploads' => array_keys(editorStagedUploads()),
                 'site_url' => rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/',
                 'uploads' => ['accept' => MediaStore::allowedExtensions(), 'max_bytes' => MediaStore::maxBytes(), 'video_max_bytes' => MediaStore::videoMaxBytes(),
                     'can_process' => MediaStore::canProcessImages(), 'can_webp' => MediaStore::canWriteWebp()],
@@ -220,6 +221,53 @@ try {
             \Kris\Store\Stores::site()->transaction(['settings'], fn(array $d): array => ['settings' => ['uploads' => $uploads] + $d['settings']]);
             editorReload($stagingMode);
             kris_api_respond(['ok' => true, 'uploads' => $uploads]);
+
+        // --- indirizzi -------------------------------------------------------------
+        case 'pages':
+            $templates = array_map(fn($f) => basename($f, '.html'), glob(KRIS_ROOT . '/template/*.html') ?: []);
+            kris_api_respond(['ok' => true, 'templates' => array_values($templates),
+                'seo' => is_array(editorSite()['settings']['seo'] ?? null) ? editorSite()['settings']['seo'] : (object) [],
+                'redirects' => is_array(editorSite()['schema']['redirects'] ?? null) ? editorSite()['schema']['redirects'] : (object) []]);
+
+        case 'seo':
+            if (!$apiPost) throw new ApiError('Serve un POST.', 405);
+            $writeGuard();
+            $liveOnly('Gli indirizzi');
+            $in = is_array($body['seo'] ?? null) ? $body['seo'] : [];
+            $base = trim((string) ($in['base_url'] ?? ''));
+            if ($base !== '' && preg_match('#^https?://[a-z0-9.-]+(:\d+)?(/[^\s?#]*)?$#i', $base) !== 1) throw new ApiError('L\'indirizzo del sito deve essere completo, per esempio https://www.esempio.it.');
+            $robots = array_values(array_filter(array_map('trim', preg_split('/\R/', (string) ($in['robots'] ?? '')) ?: []), fn($l) => $l !== '' && preg_match('/^[A-Za-z-]+\s*:/', $l) === 1));
+            \Kris\Store\Stores::site()->transaction(['settings'], function (array $d) use ($in, $base, $robots): array {
+                // Le altre opzioni SEO del sito restano; quelle del modulo si sostituiscono
+                $seo = ['pretty_urls' => !empty($in['pretty_urls']), 'auto_language' => !empty($in['auto_language']), 'head' => ($in['head'] ?? true) !== false]
+                    + array_diff_key(is_array($d['settings']['seo'] ?? null) ? $d['settings']['seo'] : [], array_flip(['base_url', 'robots']));
+                if ($base !== '') $seo['base_url'] = rtrim($base, '/');
+                if ($robots) $seo['robots'] = $robots;
+                return ['settings' => ['seo' => $seo] + $d['settings']];
+            });
+            editorReload($stagingMode);
+            kris_api_respond(['ok' => true]);
+
+        case 'redirects':
+            if (!$apiPost) throw new ApiError('Serve un POST.', 405);
+            $writeGuard();
+            $liveOnly('Gli indirizzi');
+            $redirects = [];
+            foreach ((array) ($body['redirects'] ?? []) as $from => $to) {
+                $from = '/' . ltrim(trim((string) $from), '/');
+                $to = trim((string) $to);
+                if ($from === '/' || preg_match('#^/[^\s?#]*$#', $from) !== 1) throw new ApiError("«{$from}» non è un indirizzo del sito: inizia con / ed è senza spazi.");
+                if (preg_match('#^(/[^\s]*|https://[^\s]+)$#', $to) !== 1) throw new ApiError("«{$to}» non va bene come destinazione: un indirizzo del sito (/…) o https://….");
+                $redirects[$from] = $to;
+            }
+            \Kris\Store\Stores::site()->transaction(['schema'], function (array $d) use ($redirects): array {
+                $schema = $d['schema'];
+                if ($redirects) $schema['redirects'] = $redirects;
+                else unset($schema['redirects']);
+                return ['schema' => $schema];
+            });
+            editorReload($stagingMode);
+            kris_api_respond(['ok' => true]);
 
         case 'store':
             kris_api_respond(['ok' => true, 'driver' => \Kris\Store\Stores::driver(KRIS_ROOT), 'contents' => count(editorSite()['content'])]);
