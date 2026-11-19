@@ -122,6 +122,8 @@ return function (Context $kris): void {
 | `settings(): array` | I valori del pannello di impostazioni, per nome (localizzati nella lingua della richiesta). |
 | `items(string $type)` | I contenuti di un proprio tipo (`Kris\Plugin\Items`): `get(id)`, `list(where, limit, offset)`, `save(['id'?, 'hidden'?, 'values'])`, `delete(id)`, `atomic(fn)` (tutto o niente sotto il lock dell'archivio, per prenotazioni e contatori). Un contenuto è `{id, hidden, values}` con i valori per nome. Un tipo fuori da `types` è rifiutato. |
 | `read(string $type, int $id = 0)` | Un contenuto del sito in sola lettura, con i valori nella lingua della richiesta (non `kris_`, non dei plugin), come `{{tipo.campo}}`; null se non c'è. |
+| `urls(string $type, int $id = 0)` | Gli indirizzi canonici assoluti di un contenuto, in ogni lingua: le pagine della sitemap che lo rendono (per IndexNow). |
+| `cookies()` | Il registro dei cookie dei plugin accesi (per la cookie policy automatica). |
 | `formToken(string $endpoint)` | Il gettone per un modulo verso un endpoint con `form_token`, da mettere nel campo `kris_form_token`. |
 | `script(string $src, string $category, array $attrs = [])`, `tag(string $html, string $category)` | HTML da restituire a `head` e `body_end`, già bloccato secondo il consenso (§4.3). |
 | `render(string $template, array $values)` | Rende un frammento di `templates/` con il motore di Kris: `{{campo}}` escapati, condizioni, nessun PHP. |
