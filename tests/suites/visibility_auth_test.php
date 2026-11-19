@@ -7,6 +7,8 @@ declare(strict_types=1);
 
 use Kris\Auth\Credentials;
 use Kris\Auth\PasswordReset;
+use Kris\Auth\UserException;
+use Kris\Auth\Users;
 use Kris\Template\Seo;
 
 /** Copia del sito di test con la feature features/1 sospesa. */
@@ -104,36 +106,135 @@ test('un file di credenziali della 1.1.0, senza email, si legge ancora', functio
     assertSame('', $c->load()['email']);
 });
 
-test('il link di reset vale una volta sola e per 30 minuti', function () {
+test('il link di reset vale una volta sola, per 30 minuti, e dice di quale utente è', function () {
     $r = new PasswordReset(tempFile('reset.json'));
     $now = 1_000_000;
-    $token = $r->create($now);
-    assertSame(true, $r->isValid($token, $now + 60));
-    assertSame(false, $r->isValid($token, $now + PasswordReset::TTL + 1), 'scaduto');
-    assertSame(false, $r->isValid(str_repeat('a', 64), $now), 'token inventato');
-    assertSame(true, $r->consume($token, $now + 60));
-    assertSame(false, $r->consume($token, $now + 61), 'gia usato');
+    $token = $r->create('mario', $now);
+    assertSame('mario', $r->userOf($token, $now + 60));
+    assertSame(null, $r->userOf($token, $now + PasswordReset::TTL + 1), 'scaduto');
+    assertSame(null, $r->userOf(str_repeat('a', 64), $now), 'token inventato');
+    assertSame('mario', $r->consume($token, $now + 60));
+    assertSame(null, $r->consume($token, $now + 61), 'gia usato');
 });
 
-test('un nuovo link annulla il precedente', function () {
+test('un nuovo link annulla il precedente dello stesso utente, non quelli degli altri', function () {
     $r = new PasswordReset(tempFile('reset.json'));
-    $first = $r->create(1000);
-    $second = $r->create(1010);
-    assertSame(false, $r->isValid($first, 1020));
-    assertSame(true, $r->isValid($second, 1020));
+    $first = $r->create('mario', 1000);
+    $other = $r->create('anna', 1005);
+    $second = $r->create('mario', 1010);
+    assertSame(null, $r->userOf($first, 1020));
+    assertSame('mario', $r->userOf($second, 1020));
+    assertSame('anna', $r->userOf($other, 1020));
 });
 
-test('al massimo tre richieste l ora', function () {
+test('al massimo tre richieste l ora per utente', function () {
     $r = new PasswordReset(tempFile('reset.json'));
-    foreach ([0, 10, 20] as $t) $r->create(5000 + $t);
-    assertSame(false, $r->canRequest(5030));
-    assertSame(true, $r->canRequest(5000 + 3601));
+    foreach ([0, 10, 20] as $t) $r->create('mario', 5000 + $t);
+    assertSame(false, $r->canRequest('mario', 5030));
+    assertSame(true, $r->canRequest('anna', 5030));
+    assertSame(true, $r->canRequest('mario', 5000 + 3601));
 });
 
 test('sul disco resta solo l hash del token', function () {
     $file = tempFile('reset.json');
-    $token = (new PasswordReset($file))->create();
+    $token = (new PasswordReset($file))->create('mario');
     assertNotContains($token, (string) file_get_contents($file));
+});
+
+// --- utenti ------------------------------------------------------------------
+
+function usersFile(): string
+{
+    return tempFile('users.php');
+}
+
+test('utenti: l admin crea utenti con password ed email, nomi ed email unici', function () {
+    $file = usersFile();
+    $u = new Users($file);
+    assertSame(false, $u->exists());
+    $u->create('Mario', 'password-lunga', 'mario@esempio.it', 'admin');
+    $u->create('anna', 'password-lunga', 'anna@esempio.it');
+    assertSame(['anna', 'mario'], array_keys($u->all()), 'i nomi sono in minuscolo, in ordine');
+    assertSame('base', $u->get('anna')['role']);
+    assertTrue(!isset($u->get('anna')['hash']), 'l hash non esce mai');
+    assertSame('ok', $u->check('anna', 'password-lunga'));
+    assertSame('invalid', $u->check('anna', 'sbagliata'));
+    assertSame('invalid', $u->check('nessuno', 'password-lunga'));
+    assertSame('anna', $u->byEmail(' ANNA@esempio.it '));
+    foreach ([
+        fn() => $u->create('anna', 'password-lunga', ''),
+        fn() => $u->create('a', 'password-lunga', ''),
+        fn() => $u->create('nome con spazi', 'password-lunga', ''),
+        fn() => $u->create('luca', 'corta', ''),
+        fn() => $u->create('luca', 'password-lunga', 'non-una-email'),
+        fn() => $u->create('luca', 'password-lunga', 'anna@esempio.it'),
+        fn() => $u->create('luca', 'password-lunga', '', 'superadmin'),
+        fn() => $u->setEmail('mario', 'anna@esempio.it'),
+    ] as $i => $bad) {
+        try {
+            $bad();
+            assertTrue(false, "richiesta {$i} accettata");
+        } catch (UserException) {
+        }
+    }
+    // Rilette dal file
+    assertSame(['anna', 'mario'], array_keys((new Users($file))->all()));
+});
+
+test('utenti: bloccare, cambiare password o eliminare chiude le sessioni aperte', function () {
+    $u = new Users(usersFile());
+    $u->create('mario', 'password-lunga', '', 'admin');
+    $u->create('anna', 'password-lunga', '');
+    $session = $u->session('anna');
+    $u->setBlocked('anna', true);
+    assertSame(null, $u->session('anna'));
+    assertSame('blocked', $u->check('anna', 'password-lunga'), 'bloccato: lo si dice solo con la password giusta');
+    assertSame('invalid', $u->check('anna', 'sbagliata'));
+    $u->setBlocked('anna', false);
+    assertTrue($u->session('anna') !== $session, 'la sessione di prima non vale più');
+    $before = $u->session('anna');
+    $u->setPassword('anna', 'nuova-password-lunga');
+    assertTrue($u->session('anna') !== $before);
+    assertSame('ok', $u->check('anna', 'nuova-password-lunga'));
+    $u->delete('anna');
+    assertSame(null, $u->session('anna'));
+    assertSame(null, $u->get('anna'));
+});
+
+test('utenti: resta sempre un admin attivo', function () {
+    $u = new Users(usersFile());
+    $u->create('mario', 'password-lunga', '', 'admin');
+    $u->create('anna', 'password-lunga', '');
+    foreach ([fn() => $u->delete('mario'), fn() => $u->setBlocked('mario', true), fn() => $u->setRole('mario', 'base')] as $bad) {
+        try {
+            $bad();
+            assertTrue(false, 'l unico admin attivo non si toglie');
+        } catch (UserException) {
+        }
+    }
+    $u->setRole('anna', 'admin');
+    $u->setBlocked('mario', true);
+    assertSame(null, $u->session('mario'));
+    try {
+        $u->delete('anna');
+        assertTrue(false, 'anna ora è l unico admin attivo');
+    } catch (UserException) {
+    }
+    $u->delete('mario');
+    assertSame(['anna'], array_keys($u->all()));
+});
+
+test('utenti: l account della 1.x diventa il primo admin e il file vecchio sparisce', function () {
+    $legacy = tempFile('auth.php');
+    (new Credentials($legacy))->save(['user' => 'Admin', 'password' => 'vecchia-password', 'email' => 'a@b.it', 'editor_url' => 'https://x.it/kris-admin/index.php']);
+    $file = usersFile();
+    $u = new Users($file, $legacy);
+    assertSame('ok', $u->check('admin', 'vecchia-password'));
+    assertSame('admin', $u->get('admin')['role']);
+    assertSame('a@b.it', $u->get('admin')['email']);
+    assertSame('https://x.it/kris-admin/index.php', $u->editorUrl());
+    assertTrue(is_file($file) && !is_file($legacy), 'convertito una volta sola');
+    assertNotContains('vecchia-password', (string) file_get_contents($file));
 });
 
 test('dopo cinque accessi sbagliati lo stesso indirizzo aspetta, gli altri no', function () {

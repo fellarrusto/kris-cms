@@ -227,66 +227,6 @@ function editorTitle(?array $node, array $fields = []): string
     return 'Contenuto #' . (int) ($node['id'] ?? 0);
 }
 
-/** Una riga in più sotto il titolo, nella lista: il secondo testo compilato. */
-function editorSubtitle(array $node, array $fields, string $title): string
-{
-    foreach ($fields as $def) {
-        if (!in_array($def['type'] ?? '', ['text', 'select'], true)) continue;
-        $value = $node['values'][$def['name']] ?? null;
-        $text = is_array($value) && array_is_list($value) ? implode(', ', array_map('strval', $value)) : editorText($value);
-        if ($text !== '' && mb_substr($text, 0, 85) !== $title) return mb_strimwidth($text, 0, 90, '…');
-    }
-    return '';
-}
-
-/** La prima immagine di un contenuto, per la miniatura. */
-function editorThumb(array $node, array $fields): string
-{
-    foreach ($fields as $def) {
-        if (($def['type'] ?? '') !== 'media') continue;
-        $value = $node['values'][$def['name']] ?? null;
-        $url = is_array($value) ? (string) (array_values(array_filter($value, fn($v) => is_string($v) && $v !== ''))[0] ?? '') : (string) $value;
-        if ($url !== '' && editorMediaKind($url) === 'image') return $url;
-    }
-    return '';
-}
-
-/**
- * I valori inviati dal modulo di modifica (f[campo][lingua], o f[campo][val]
- * per un campo condiviso) applicati a quelli salvati. Un campo che il modulo
- * non manda resta com'era, come le lingue disattivate e gli elenchi.
- */
-function editorPostedValues(array $fields, array $post, array $languages, array $before): array
-{
-    $posted = is_array($post['f'] ?? null) ? $post['f'] : [];
-    $out = $before;
-    foreach ($fields as $def) {
-        $name = $def['name'];
-        if (($def['type'] ?? '') === 'list' || !is_array($posted[$name] ?? null)) continue;
-        if (empty($def['localized'])) {
-            if (array_key_exists('val', $posted[$name])) $out[$name] = editorPostedOne($def, $posted[$name]['val']);
-            continue;
-        }
-        $values = is_array($before[$name] ?? null) && !array_is_list($before[$name]) ? $before[$name] : [];
-        foreach ($languages as $lang) {
-            if (array_key_exists($lang, $posted[$name])) $values[$lang] = editorPostedOne($def, $posted[$name][$lang]);
-        }
-        $out[$name] = $values;
-    }
-    return $out;
-}
-
-function editorPostedOne(array $def, mixed $value): mixed
-{
-    if ($def['type'] === 'boolean') return in_array($value, ['1', 'on', 'true'], true);
-    if ($def['type'] === 'select') {
-        $picked = is_array($value) ? $value : ($value === null || $value === '' ? [] : [$value]);
-        $picked = array_values(array_intersect(array_map('strval', (array) ($def['options'] ?? [])), array_map(fn($v) => trim((string) $v), $picked)));
-        return !empty($def['multiple']) ? $picked : ($picked[0] ?? '');
-    }
-    return is_string($value) ? str_replace("\r\n", "\n", $value) : '';
-}
-
 // --- Struttura ---------------------------------------------------------------
 
 /** Tipi di campo, con il nome che vede chi modifica la struttura. */

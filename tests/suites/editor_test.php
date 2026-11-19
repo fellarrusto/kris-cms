@@ -81,28 +81,6 @@ test('editor: tipi del sito senza quelli riservati, contenuti per tipo e per per
     assertSame('Contenuto #4', editorTitle(['id' => 4, 'values' => ['allergeni' => ['glutine']]], editorFields('menu')));
 });
 
-test('editor: il modulo diventa valori del formato 2, senza toccare quello che non manda', function () {
-    $fields = editorFixture()['schema']['types']['menu']['fields'];
-    $before = editorFixture()['content'][0]['values'] + ['extra' => 'resta'];
-    $before['nome']['de'] = 'Spritz DE';
-    $post = ['f' => [
-        'nome' => ['it' => "Spritz\r\ndella casa"],
-        'prezzo' => ['val' => '7'],
-        'novita' => ['val' => '1'],
-        'allergeni' => ['val' => ['', 'lattosio', 'inventato', 'glutine']],
-        'varianti' => ['val' => 'ignorato'],
-    ]];
-    $after = editorPostedValues($fields, $post, ['it', 'en'], $before);
-    assertSame(['it' => "Spritz\ndella casa", 'en' => 'Spritz', 'de' => 'Spritz DE'], $after['nome'], 'la lingua non inviata e quella disattivata restano');
-    assertSame('7', $after['prezzo']);
-    assertSame(true, $after['novita']);
-    assertSame(['glutine', 'lattosio'], $after['allergeni'], 'solo opzioni ammesse, nel loro ordine');
-    assertSame($before['varianti'], $after['varianti'], 'gli elenchi si cambiano con le loro azioni');
-    assertSame('resta', $after['extra']);
-    // Interruttore spento: arriva solo il campo nascosto vuoto
-    assertSame(false, editorPostedValues($fields, ['f' => ['novita' => ['val' => '']]], ['it'], $before)['novita']);
-});
-
 test('struttura: campi tolti, aggiunti, cambiati, descritti, opzioni e ordine diventano operazioni', function () {
     $old = editorFixture()['schema']['types']['menu']['fields'];
     $new = editorCleanSchema([
@@ -221,17 +199,6 @@ test('Live: le operazioni si applicano subito al sito, tutte o nessuna', functio
     Live::apply($root, [['op' => 'add_field', 'collection' => 'menu', 'field' => ['name' => 'foto', 'type' => 'media', 'localized' => false]],
         ['op' => 'set_field', 'key' => 'menu', 'id' => 0, 'field' => 'foto', 'value' => 'assets/uploads/spritz.jpg']]);
     assertSame('assets/uploads/spritz.jpg', \Kris\Store\Site::current($root)['content'][0]['values']['foto']);
-});
-
-test('dopo un eliminazione si torna all elemento indicato dal modulo, solo se e un id valido', function () {
-    $_POST['return_to'] = 'item-archive-12';
-    assertSame('#item-archive-12', returnAnchor());
-    foreach (['', 'item"><script>', "list-x\r\nLocation: https://example.com", str_repeat('a', 200)] as $bad) {
-        $_POST['return_to'] = $bad;
-        assertSame('', returnAnchor(), 'rifiutato: ' . substr($bad, 0, 20));
-    }
-    unset($_POST['return_to']);
-    assertSame('', returnAnchor());
 });
 
 test('i campi si raggruppano per sezione: quelli senza in testa, poi nell ordine di comparsa', function () {

@@ -1,0 +1,77 @@
+<script setup>
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import KIcon from '@/components/KIcon.vue'
+import { devItems, siteItems } from '@/router/menu'
+import { useSessionStore } from '@/stores/session'
+import { useSiteStore } from '@/stores/site'
+import { isNewestFirst } from '@/lib/model'
+
+defineProps({ open: Boolean })
+
+const session = useSessionStore()
+const site = useSiteStore()
+const route = useRoute()
+
+const newest = computed(() => site.userTypes.filter((t) => isNewestFirst(site.schema, t.name)))
+const reserved = computed(() => siteItems.filter((i) => site.type(i.type)))
+const wipOn = computed(() => site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true)
+const siteName = computed(() => session.data?.site_name || 'Il tuo sito')
+const typeParam = computed(() => String(route.params.type || ''))
+const contentsActive = computed(
+  () => ['dashboard', 'collection', 'edit'].includes(route.name) && !typeParam.value.startsWith('kris_') && !newest.value.some((t) => t.name === typeParam.value)
+)
+
+// Tema: automatico (segue il sistema), scuro o chiaro; la scelta resta in questo browser
+const THEMES = { '': 'automatico', dark: 'scuro', light: 'chiaro' }
+const theme = ref('')
+onMounted(() => (theme.value = document.documentElement.dataset.theme || ''))
+function toggleTheme() {
+  const next = { '': 'dark', dark: 'light', light: '' }[theme.value]
+  theme.value = next
+  if (next) document.documentElement.dataset.theme = next
+  else delete document.documentElement.dataset.theme
+  try {
+    if (next) localStorage.setItem('kris-theme', next)
+    else localStorage.removeItem('kris-theme')
+  } catch {
+    // Senza localStorage la scelta vale finché la pagina resta aperta
+  }
+}
+</script>
+
+<template>
+  <nav id="sidebar" class="side" :class="{ 'is-open': open }" aria-label="Navigazione principale">
+    <router-link class="brand" :to="{ name: 'dashboard' }"><span class="brand-mark" aria-hidden="true">K</span><span class="brand-name">{{ siteName }}</span></router-link>
+    <div class="nav-group">
+      <router-link class="nav-item" :class="{ 'is-active': contentsActive }" :to="{ name: 'dashboard' }"><KIcon name="grid" /><span class="nav-text">Contenuti</span></router-link>
+      <router-link class="nav-item" active-class="is-active" :to="{ name: 'media' }"><KIcon name="media" /><span class="nav-text">Libreria media</span></router-link>
+    </div>
+    <div v-if="session.data?.staging?.visible" class="nav-group">
+      <router-link class="nav-item nav-publish" :class="{ 'has-changes': session.stagingCount }" active-class="is-active" :to="{ name: 'publish' }">
+        <KIcon name="publish" /><span class="nav-text">Da pubblicare</span><span v-if="session.stagingCount" class="nav-count">{{ session.stagingCount }}</span>
+      </router-link>
+    </div>
+    <div v-if="newest.length" class="nav-group">
+      <p class="nav-label">Raccolte</p>
+      <router-link v-for="t in newest" :key="t.name" class="nav-item" :class="{ 'is-active': typeParam === t.name }" :to="{ name: 'collection', params: { type: t.name } }">
+        <KIcon name="posts" /><span class="nav-text">{{ site.label(t.name) }}</span><span class="nav-count">{{ site.counts[t.name] || 0 }}</span>
+      </router-link>
+    </div>
+    <div class="nav-group">
+      <p class="nav-label">Sito</p>
+      <router-link v-for="i in reserved" :key="i.type" class="nav-item" :class="{ 'is-active': typeParam === i.type }" :to="i.to">
+        <KIcon :name="i.icon" /><span class="nav-text">{{ i.label }}</span><span v-if="i.type === 'kris_wip' && wipOn" class="nav-count">Attivi</span>
+      </router-link>
+    </div>
+    <div class="nav-group">
+      <p class="nav-label">Sviluppo</p>
+      <router-link v-for="i in devItems" :key="i.label" class="nav-item" active-class="is-active" :to="i.to"><KIcon :name="i.icon" /><span class="nav-text">{{ i.label }}</span></router-link>
+    </div>
+    <div class="nav-foot">
+      <router-link class="nav-item" active-class="is-active" :to="{ name: 'settings' }"><KIcon name="settings" /><span class="nav-text">Impostazioni</span></router-link>
+      <button type="button" class="nav-item" @click="toggleTheme"><KIcon name="theme" /><span class="nav-text">Tema: {{ THEMES[theme] }}</span></button>
+      <a class="nav-item" href="?logout=1"><KIcon name="logout" /><span class="nav-text">Esci</span><span class="nav-count">{{ session.user?.name }}</span></a>
+    </div>
+  </nav>
+</template>

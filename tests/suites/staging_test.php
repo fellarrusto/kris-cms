@@ -450,7 +450,7 @@ test('/kris-admin/preview/ apre la pagina in anteprima, solo con l editor aperto
         assertSame(200, $admin['status']);
         assertContains('SOLO-IN-STAGING', $admin['output']);
         assertContains('id="kris-preview-bar"', $admin['output']);
-        assertContains('kris-admin/index.php?action=staging', $admin['output'], 'la barra porta al nuovo editor');
+        assertContains('kris-admin/index.php#/da-pubblicare', $admin['output'], 'la barra porta al nuovo editor');
         assertSame(404, renderPage([], null, 'index.php', false)['status'], 'senza sessione non esiste');
     } finally {
         unset($GLOBALS['KRIS_TEST_REQUEST_URI']);

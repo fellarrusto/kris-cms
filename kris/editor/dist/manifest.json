@@ -1,0 +1,150 @@
+{
+  "_KSwitch-CHKt8pnc.js": {
+    "file": "assets/KSwitch-CHKt8pnc.js",
+    "name": "KSwitch",
+    "imports": [
+      "src/main.js"
+    ]
+  },
+  "_MediaService-CNMAFyyb.js": {
+    "file": "assets/MediaService-CNMAFyyb.js",
+    "name": "MediaService",
+    "imports": [
+      "src/main.js"
+    ]
+  },
+  "_SortableList-CILYt1WB.js": {
+    "file": "assets/SortableList-CILYt1WB.js",
+    "name": "SortableList",
+    "imports": [
+      "src/main.js"
+    ]
+  },
+  "_format-DfYk6USW.js": {
+    "file": "assets/format-DfYk6USW.js",
+    "name": "format"
+  },
+  "src/main.js": {
+    "file": "assets/main-2q1qCmcK.js",
+    "name": "main",
+    "src": "src/main.js",
+    "isEntry": true,
+    "dynamicImports": [
+      "src/views/pages/dashboard/Dashboard.vue",
+      "src/views/pages/collection/Collection.vue",
+      "src/views/pages/edit/Edit.vue",
+      "src/views/pages/media/Media.vue",
+      "src/views/pages/media/MediaFile.vue",
+      "src/views/pages/publish/Publish.vue",
+      "src/views/pages/structure/Structure.vue",
+      "src/views/pages/structure/StructureType.vue",
+      "src/views/pages/addresses/Addresses.vue",
+      "src/views/pages/settings/Settings.vue"
+    ],
+    "css": [
+      "assets/main-DTeG1L8_.css"
+    ]
+  },
+  "src/views/pages/addresses/Addresses.vue": {
+    "file": "assets/Addresses-Cp3S8Fmd.js",
+    "name": "Addresses",
+    "src": "src/views/pages/addresses/Addresses.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js",
+      "_KSwitch-CHKt8pnc.js"
+    ]
+  },
+  "src/views/pages/collection/Collection.vue": {
+    "file": "assets/Collection-BktxgQgi.js",
+    "name": "Collection",
+    "src": "src/views/pages/collection/Collection.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js",
+      "_KSwitch-CHKt8pnc.js",
+      "_SortableList-CILYt1WB.js"
+    ]
+  },
+  "src/views/pages/dashboard/Dashboard.vue": {
+    "file": "assets/Dashboard-hf0w3wOy.js",
+    "name": "Dashboard",
+    "src": "src/views/pages/dashboard/Dashboard.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js"
+    ]
+  },
+  "src/views/pages/edit/Edit.vue": {
+    "file": "assets/Edit-C6CXSVD0.js",
+    "name": "Edit",
+    "src": "src/views/pages/edit/Edit.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js",
+      "_KSwitch-CHKt8pnc.js",
+      "_SortableList-CILYt1WB.js",
+      "_MediaService-CNMAFyyb.js"
+    ]
+  },
+  "src/views/pages/media/Media.vue": {
+    "file": "assets/Media-CDollbUF.js",
+    "name": "Media",
+    "src": "src/views/pages/media/Media.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js",
+      "_MediaService-CNMAFyyb.js",
+      "_format-DfYk6USW.js"
+    ]
+  },
+  "src/views/pages/media/MediaFile.vue": {
+    "file": "assets/MediaFile-D-SYkui2.js",
+    "name": "MediaFile",
+    "src": "src/views/pages/media/MediaFile.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js",
+      "_MediaService-CNMAFyyb.js",
+      "_format-DfYk6USW.js"
+    ]
+  },
+  "src/views/pages/publish/Publish.vue": {
+    "file": "assets/Publish-D-x2Q477.js",
+    "name": "Publish",
+    "src": "src/views/pages/publish/Publish.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js",
+      "_format-DfYk6USW.js"
+    ]
+  },
+  "src/views/pages/settings/Settings.vue": {
+    "file": "assets/Settings-CDa0nyFq.js",
+    "name": "Settings",
+    "src": "src/views/pages/settings/Settings.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js",
+      "_format-DfYk6USW.js"
+    ]
+  },
+  "src/views/pages/structure/Structure.vue": {
+    "file": "assets/Structure-BjAHITyt.js",
+    "name": "Structure",
+    "src": "src/views/pages/structure/Structure.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js"
+    ]
+  },
+  "src/views/pages/structure/StructureType.vue": {
+    "file": "assets/StructureType-DC8fVArd.js",
+    "name": "StructureType",
+    "src": "src/views/pages/structure/StructureType.vue",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.js"
+    ]
+  }
+}

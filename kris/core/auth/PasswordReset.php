@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace Kris\Auth;
 
 /**
- * Link di reset della password: un token alla volta, monouso, valido 30
- * minuti. Sul disco resta solo il suo hash, in config/auth_reset.json, e al
- * massimo 3 richieste l'ora per non trasformare il modulo in un generatore
- * di email.
+ * Link di reset della password, uno per utente: monouso, valido 30 minuti.
+ * Sul disco resta solo il suo hash, in config/auth_reset.json, e al massimo
+ * 3 richieste l'ora per utente, per non trasformare il modulo in un
+ * generatore di email.
  */
 final class PasswordReset
 {
@@ -18,60 +18,60 @@ final class PasswordReset
     {
     }
 
-    /** Vero se si puo inviare un altro link adesso. */
-    public function canRequest(?int $now = null): bool
+    /** Vero se si può inviare un altro link a questo utente adesso. */
+    public function canRequest(string $user, ?int $now = null): bool
     {
         $now ??= time();
-        return count($this->recentRequests($now)) < self::MAX_PER_HOUR;
+        return count($this->recentRequests($this->read(), $user, $now)) < self::MAX_PER_HOUR;
     }
 
-    /** Nuovo token (da mettere nel link); sostituisce quello precedente. */
-    public function create(?int $now = null): string
+    /** Nuovo token per l'utente (da mettere nel link); sostituisce il suo precedente. */
+    public function create(string $user, ?int $now = null): string
     {
         $now ??= time();
         $token = bin2hex(random_bytes(32));
-        $requests = $this->recentRequests($now);
-        $requests[] = $now;
-        $this->write([
-            'hash' => hash('sha256', $token),
-            'expires' => $now + self::TTL,
-            'requests' => $requests,
-        ]);
+        $state = $this->read();
+        $state['requests'][$user] = [...$this->recentRequests($state, $user, $now), $now];
+        $state['tokens'][$user] = ['hash' => hash('sha256', $token), 'expires' => $now + self::TTL];
+        $this->write($state);
         return $token;
     }
 
-    public function isValid(string $token, ?int $now = null): bool
+    /** L'utente del token, se il token è valido; altrimenti null. */
+    public function userOf(string $token, ?int $now = null): ?string
     {
         $now ??= time();
-        $state = $this->read();
-        return preg_match('/^[0-9a-f]{64}$/', $token) === 1
-            && is_string($state['hash'] ?? null)
-            && (int) ($state['expires'] ?? 0) >= $now
-            && hash_equals($state['hash'], hash('sha256', $token));
-    }
-
-    /** Usa il token: vero solo la prima volta e solo se valido. */
-    public function consume(string $token, ?int $now = null): bool
-    {
-        if (!$this->isValid($token, $now)) {
-            return false;
+        if (preg_match('/^[0-9a-f]{64}$/', $token) !== 1) return null;
+        $hash = hash('sha256', $token);
+        foreach ($this->read()['tokens'] as $user => $t) {
+            if (is_array($t) && is_string($t['hash'] ?? null) && (int) ($t['expires'] ?? 0) >= $now && hash_equals($t['hash'], $hash)) return (string) $user;
         }
-        $state = $this->read();
-        unset($state['hash'], $state['expires']);
-        $this->write($state);
-        return true;
+        return null;
     }
 
-    private function recentRequests(int $now): array
+    /** Usa il token: restituisce l'utente solo la prima volta e solo se valido. */
+    public function consume(string $token, ?int $now = null): ?string
     {
-        $requests = $this->read()['requests'] ?? [];
+        $user = $this->userOf($token, $now);
+        if ($user === null) return null;
+        $state = $this->read();
+        unset($state['tokens'][$user]);
+        $this->write($state);
+        return $user;
+    }
+
+    private function recentRequests(array $state, string $user, int $now): array
+    {
+        $requests = $state['requests'][$user] ?? [];
         return array_values(array_filter(is_array($requests) ? $requests : [], fn($t) => is_int($t) && $t > $now - 3600));
     }
 
     private function read(): array
     {
         $state = is_file($this->file) ? json_decode((string) @file_get_contents($this->file), true) : null;
-        return is_array($state) ? $state : [];
+        $state = is_array($state) ? $state : [];
+        // Il formato della 1.x (un solo token) non vale più: i suoi link scadono comunque in 30 minuti
+        return ['tokens' => is_array($state['tokens'] ?? null) ? $state['tokens'] : [], 'requests' => is_array($state['requests'] ?? null) && !array_is_list($state['requests']) ? $state['requests'] : []];
     }
 
     private function write(array $state): void

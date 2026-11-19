@@ -154,6 +154,6 @@ if (\Kris\Template\Seo::config(KRIS_ROOT)['auto_language'] && $preview === null)
 $page = PageRenderer::render($query, $_SERVER);
 http_response_code($page['status']);
 $html = $preview !== null
-    ? Preview::decorate($page['html'], $preview, 'kris-admin/index.php?action=staging', Preview::exitUrl($_GET))
+    ? Preview::decorate($page['html'], $preview, 'kris-admin/index.php#/da-pubblicare', Preview::exitUrl($_GET))
     : $page['html'];
 echo $routes !== null ? Router::rewriteLinks($html, $routes, $basePath, PageRenderer::language([])[1][0]) : $html;
