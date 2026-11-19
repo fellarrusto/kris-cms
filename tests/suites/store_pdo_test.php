@@ -2,9 +2,11 @@
 declare(strict_types=1);
 
 /**
- * Archivio nel database (Kris\Store\PdoStore) su SQLite: lo stesso contratto
+ * Archivio nel database (Kris\Store\PdoStore): lo stesso contratto
  * dell'adapter JSON, il passaggio fra adapter, le migrazioni e le copie di
- * sicurezza degli aggiornamenti.
+ * sicurezza degli aggiornamenti. Su SQLite; con KRIS_TEST_PDO_DSN (più
+ * KRIS_TEST_PDO_USER e KRIS_TEST_PDO_PASSWORD) sul database indicato, per
+ * esempio MySQL nel job «mysql» della CI: ogni sito usa un prefisso proprio.
  */
 
 use Kris\Store\ConflictException;
@@ -13,8 +15,10 @@ use Kris\Store\PdoStore;
 use Kris\Store\Stores;
 use Kris\Store\StoreException;
 
-if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
-    skipSuite('manca l\'estensione pdo_sqlite (php -d extension=pdo_sqlite tests/run.php)');
+const PDO_TEST_DSN = 'KRIS_TEST_PDO_DSN';
+$pdoDriver = getenv(PDO_TEST_DSN) ? strstr((string) getenv(PDO_TEST_DSN), ':', true) : 'sqlite';
+if (!in_array($pdoDriver, PDO::getAvailableDrivers(), true)) {
+    skipSuite("manca l'estensione pdo_{$pdoDriver} (php -d extension=pdo_{$pdoDriver} tests/run.php)");
     return;
 }
 
@@ -29,7 +33,9 @@ function pdoSite(): array
         'model' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/k_model.json'), true),
         'pages' => ['allowed_pages' => ['homepage']],
     ];
-    $config = ['driver' => 'pdo', 'dsn' => 'sqlite:data/kris.sqlite'];
+    $config = getenv(PDO_TEST_DSN)
+        ? ['driver' => 'pdo', 'dsn' => (string) getenv(PDO_TEST_DSN), 'user' => (string) getenv('KRIS_TEST_PDO_USER'), 'password' => (string) getenv('KRIS_TEST_PDO_PASSWORD'), 'prefix' => 't' . bin2hex(random_bytes(4)) . '_']
+        : ['driver' => 'pdo', 'dsn' => 'sqlite:data/kris.sqlite'];
     (new PdoStore($root, $config))->import($docs);
     file_put_contents("{$root}/config/store.php", '<?php return ' . var_export($config, true) . ';');
     register_shutdown_function(function () use ($root) {
@@ -47,7 +53,7 @@ test('database: lettura con revisione, documento assente vuoto, percorso relativ
     assertSame('1', $s->read('data')->rev);
     assertSame('', $s->read('settings')->rev);
     assertSame([], $s->read('settings')->value);
-    assertTrue(is_file("{$root}/data/kris.sqlite"), 'il file SQLite sta nella root del sito');
+    if (!getenv(PDO_TEST_DSN)) assertTrue(is_file("{$root}/data/kris.sqlite"), 'il file SQLite sta nella root del sito');
 });
 
 test('database: scrittura con revisione superata rifiutata, senza revisione riesce', function () {
