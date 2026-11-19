@@ -473,6 +473,8 @@ final class Plugins
             $mine = array_values(array_filter($data[$key] ?? [], fn($t) => $t > $now - $window));
             if (count($mine) >= $max) return false;
             $data[$key] = [...($data[$key] ?? []), $now];
+            // Al massimo 5000 indirizzi ricordati: i più vecchi escono per primi
+            if (count($data) > 5000) $data = array_slice($data, -5000, null, true);
             ftruncate($handle, 0);
             rewind($handle);
             fwrite($handle, (string) json_encode($data));

@@ -437,3 +437,25 @@ test('indirizzi pubblici di un contenuto e registro dei cookie dal Context', fun
         pluginDone();
     }
 });
+
+test('nessun template rende i dati di un plugin: ?key=, k-array e {{tipo.campo}}', function () {
+    $site = pluginSite();
+    try {
+        $docs = json_decode(file_get_contents("{$site}/data/content.json"), true);
+        $docs[] = ['type' => 'plg_prova_prenotazioni', 'id' => 0, 'values' => ['nome' => 'Mario Rossi']];
+        file_put_contents("{$site}/data/content.json", json_encode($docs));
+        file_put_contents("{$site}/template/spia.html", '<html><body><div k-array="plg_prova_prenotazioni" k-template="riga"></div><p>{{plg_prova_prenotazioni.nome}}</p></body></html>');
+        file_put_contents("{$site}/template/riga.html", '<i>{{nome}}</i>');
+        $schema = json_decode(file_get_contents("{$site}/data/schema.json"), true);
+        $schema['pages']['spia'] = ['template' => 'spia', 'type' => 'homepage', 'item' => 0];
+        file_put_contents("{$site}/data/schema.json", json_encode($schema));
+        $page = renderPage(['page' => 'spia'], $site);
+        assertSame(200, $page['status']);
+        assertNotContains('Mario Rossi', $page['output']);
+        $direct = renderPage(['page' => 'homepage', 'key' => 'plg_prova_prenotazioni', 'id' => '0'], $site);
+        assertSame(404, $direct['status']);
+        assertNotContains('Mario Rossi', $direct['output']);
+    } finally {
+        pluginDone();
+    }
+});

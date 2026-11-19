@@ -22,9 +22,24 @@ class Entity
     {
     }
 
+    /**
+     * I tipi dei plugin (plg_) sono dati privati dei plugin (prenotazioni, ordini):
+     * nessun template li rende, nemmeno con ?key= o nell'anteprima dell'agente.
+     */
+    public static function isPrivate(string $type): bool
+    {
+        return str_starts_with($type, 'plg_');
+    }
+
+    private static function assertRenderable(string $type): void
+    {
+        if (self::isPrivate($type)) throw new Exception("Entity type {$type} is private");
+    }
+
     /** Il contenuto $id del tipo; non controlla la visibilità (componenti, sezioni riservate). */
     public static function load(string $type, int $id = 0): self
     {
+        self::assertRenderable($type);
         $site = Site::load(null, true);
         foreach ($site['content'] as $item) {
             if (is_array($item) && ($item['type'] ?? null) === $type && (int) ($item['id'] ?? -1) === $id) {
@@ -37,6 +52,7 @@ class Entity
     /** Il primo contenuto del tipo, o null: per {{tipo.campo}}. */
     public static function first(string $type): ?self
     {
+        if (self::isPrivate($type)) return null;
         $site = Site::load(null, true);
         foreach ($site['content'] as $item) {
             if (is_array($item) && ($item['type'] ?? null) === $type) return self::of($item, $type, Site::fields($site['schema'], $type));
@@ -47,6 +63,7 @@ class Entity
     /** @return list<self> i contenuti visibili del tipo, nell'ordine */
     public static function all(string $type): array
     {
+        if (self::isPrivate($type)) return [];
         $site = Site::load(null, true);
         $fields = Site::fields($site['schema'], $type);
         $out = [];

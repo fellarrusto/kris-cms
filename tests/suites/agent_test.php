@@ -397,3 +397,18 @@ test('con Kris Agent spento l indirizzo di caricamento non accetta file', functi
     $token = substr($slot['upload_url'], strpos($slot['upload_url'], '=') + 1);
     assertSame(403, (new Server($config, new Staging($root), $root))->receiveUpload($token, __FILE__, 'x.png')['status']);
 });
+
+test('i dati dei plugin non arrivano all agente: né in overview né con get_entity', function () {
+    [$root, $worker] = agentSite();
+    $docs = format2Fixture();
+    $docs['schema']['types']['plg_prenota_richieste'] = ['reserved' => true, 'fields' => [['name' => 'nome', 'type' => 'text', 'localized' => false]]];
+    $docs['content'][] = ['type' => 'plg_prenota_richieste', 'id' => 0, 'values' => ['nome' => 'Mario Rossi']];
+    writeFormat2($root, $docs);
+    \Kris\Store\Stores::reset();
+    $overview = agentCall($root, $worker, ['action' => 'overview'])['body'];
+    assertTrue(!isset($overview['types']['plg_prenota_richieste']) && !isset($overview['entities']['plg_prenota_richieste']));
+    assertNotContains('Mario Rossi', json_encode($overview));
+    $get = agentCall($root, $worker, ['action' => 'get_entity', 'key' => 'plg_prenota_richieste', 'id' => 0]);
+    assertSame(403, $get['status']);
+    \Kris\Store\Stores::reset();
+});

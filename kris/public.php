@@ -122,6 +122,8 @@ $basePath = Router::basePath($_SERVER);
 $requested = '/' . ltrim(substr((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), strlen($basePath)), '/');
 $redirects = \Kris\Template\Seo::config(KRIS_ROOT)['redirects'];
 $to = $redirects[$requested] ?? $redirects[rtrim($requested, '/')] ?? null;
+// Una destinazione /… è del sito: //… o /\… porterebbero altrove e non valgono
+if (is_string($to) && str_starts_with($to, '/') && preg_match('#^/[/\\\\]#', $to) === 1) $to = null;
 if ($to !== null && $preview === null) {
     header('Location: ' . (str_starts_with($to, '/') ? $basePath . $to : $to), true, 301);
     exit;
