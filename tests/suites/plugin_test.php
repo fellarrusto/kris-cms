@@ -417,3 +417,23 @@ test('catalogo e versioni: solo firmati, solo dalle repository ufficiali', funct
         pluginDone();
     }
 });
+
+test('indirizzi pubblici di un contenuto e registro dei cookie dal Context', function () {
+    $site = pluginSite();
+    $server = $_SERVER;
+    try {
+        $_SERVER['HTTP_HOST'] = 'www.esempio.it';
+        $_SERVER['HTTPS'] = 'on';
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
+        $i = pluginInstaller();
+        $i->installZip(pluginPackage(), 'prova', 'a');
+        $i->setActive('prova', true);
+        $ctx = Plugins::context('prova');
+        assertSame(['https://www.esempio.it/', 'https://www.esempio.it/?ln=en'], $ctx->urls('homepage', 0));
+        assertSame([], $ctx->urls('homepage', 5), 'un contenuto che nessuna pagina rende non ha indirizzi');
+        assertSame('_prova', $ctx->cookies()[0]['name']);
+    } finally {
+        $_SERVER = $server;
+        pluginDone();
+    }
+});

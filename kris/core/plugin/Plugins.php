@@ -334,23 +334,40 @@ final class Plugins
      */
     public static function publishedPayload(array $files, array $ops, array $pages): array
     {
-        $langs = Site::languages(self::root());
-        $base = \Kris\Template\Seo::baseUrl(\Kris\Template\Seo::config(self::root()), $_SERVER);
-        // Le rotte leggibili si calcolano sul sito della richiesta (negli strumenti può essere un altro)
-        $routes = self::root() === rtrim(str_replace('\\', '/', KRIS_ROOT), '/') ? \Kris\Site\PageRenderer::routes() : null;
         $out = [];
         foreach ($pages as $p) {
             parse_str((string) parse_url((string) $p['url'], PHP_URL_QUERY), $q);
             unset($q['kris_preview']);
-            $urls = [];
-            foreach ($langs as $lang) {
-                $path = isset($q['path']) && $q['path'] !== '' ? explode('/', (string) $q['path']) : [];
-                $pretty = $routes === null ? null : \Kris\Site\Router::path($routes, (string) ($q['page'] ?? 'homepage'), (string) ($q['key'] ?? 'homepage'), (int) ($q['id'] ?? 0), $path, $lang, $langs[0]);
-                $urls[] = $base . ($pretty ?? '/index.php?' . http_build_query($q + ($lang === $langs[0] ? [] : ['ln' => $lang])));
-            }
-            $out[] = ['label' => (string) $p['label'], 'query' => $q, 'urls' => array_values(array_unique($urls))];
+            $out[] = ['label' => (string) $p['label'], 'query' => $q, 'urls' => self::publicUrls($q)];
         }
         return ['files' => $files, 'operations' => array_map(fn($o) => array_intersect_key($o, array_flip(['op', 'key', 'id', 'path', 'name'])), $ops), 'pages' => $out];
+    }
+
+    /** Gli indirizzi canonici assoluti di una pagina (page, key, id, path), uno per lingua. */
+    public static function publicUrls(array $q): array
+    {
+        $langs = Site::languages(self::root());
+        $base = \Kris\Template\Seo::baseUrl(\Kris\Template\Seo::config(self::root()), $_SERVER);
+        // Le rotte leggibili si calcolano sul sito della richiesta (negli strumenti può essere un altro)
+        $routes = self::root() === rtrim(str_replace('\\', '/', KRIS_ROOT), '/') ? \Kris\Site\PageRenderer::routes() : null;
+        $path = isset($q['path']) && $q['path'] !== '' ? explode('/', (string) $q['path']) : [];
+        $urls = [];
+        foreach ($langs as $lang) {
+            $urls[] = \Kris\Template\Seo::url($base, (string) ($q['page'] ?? 'homepage'), (string) ($q['key'] ?? 'homepage'), (int) ($q['id'] ?? 0), $path, $lang, $langs[0], $routes);
+        }
+        return array_values(array_unique($urls));
+    }
+
+    /** Gli indirizzi pubblici di un contenuto: le pagine della sitemap che lo rendono, in ogni lingua. */
+    public static function contentUrls(string $type, int $id): array
+    {
+        $urls = [];
+        foreach (Site::load(self::root())['schema']['pages'] ?? [] as $page => $p) {
+            if (!is_array($p) || ($p['type'] ?? null) !== $type || isset($p['list']) || ($p['sitemap'] ?? false) !== true) continue;
+            if (isset($p['item']) && (int) $p['item'] !== $id) continue;
+            array_push($urls, ...self::publicUrls(['page' => (string) $page, 'key' => $type, 'id' => $id]));
+        }
+        return array_values(array_unique($urls));
     }
 
     // --- privacy e avvisi -------------------------------------------------

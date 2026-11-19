@@ -118,6 +118,18 @@ final class Context
         return $this->asset($path);
     }
 
+    /** Gli indirizzi pubblici assoluti di un contenuto (le pagine della sitemap che lo rendono), in ogni lingua. */
+    public function urls(string $type, int $id = 0): array
+    {
+        return Plugins::contentUrls($type, $id);
+    }
+
+    /** Il registro dei cookie dei plugin accesi (nome, durata, fornitore, categoria, finalità, plugin). */
+    public function cookies(): array
+    {
+        return Plugins::cookies();
+    }
+
     /** Gettone per un modulo verso un endpoint con form_token: va nel campo kris_form_token. */
     public function formToken(string $endpoint): string
     {
