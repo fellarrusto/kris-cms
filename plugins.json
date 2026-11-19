@@ -1,0 +1,17 @@
+{
+    "format": 1,
+    "plugins": [
+        {
+            "name": "indexnow",
+            "repository": "fellarrusto/kris-plugin-indexnow",
+            "title": "IndexNow",
+            "description": "Avvisa Bing, Yandex e gli altri motori di IndexNow delle pagine cambiate, appena le salvi o le pubblichi."
+        },
+        {
+            "name": "misurazione",
+            "repository": "fellarrusto/kris-plugin-misurazione",
+            "title": "Misurazione",
+            "description": "Google Analytics 4 e Pixel di Meta con Consent Mode v2, e i clic su telefono, WhatsApp, email e mappe come eventi."
+        }
+    ]
+}
