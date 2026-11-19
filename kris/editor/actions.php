@@ -208,17 +208,18 @@ if ($isPost && !kris_csrf_valid($_POST['csrf'] ?? null)) {
 
     // --- Account -----------------------------------------------------------
     if (isset($_POST['save_account_email'])) {
-        $email = trim((string) ($_POST['account_email'] ?? ''));
-        $config = kris_auth_config() ?? [];
-        if (!Kris\Auth\Credentials::validEmail($email)) {
-            $error = 'Indirizzo email non valido: nulla è stato modificato.';
-        } elseif (!kris_credentials()->verify((string) ($config['user'] ?? ''), (string) ($_POST['current_password'] ?? ''))) {
-            // L'email riceve i link di reset: cambiarla vale quanto cambiare la password
+        // L'email riceve i link di reset: cambiarla vale quanto cambiare la password, serve quella attuale
+        $me = (string) $_SESSION['kris_user'];
+        if (kris_users()->check($me, (string) ($_POST['current_password'] ?? '')) !== 'ok') {
             $error = 'Password non corretta: l\'email non è stata modificata.';
-        } elseif (!kris_credentials()->save(['email' => $email, 'editor_url' => kris_current_editor_url()])) {
-            $error = 'Non riesco a scrivere config/auth.php: controlla i permessi con l\'hosting.';
         } else {
-            $msg = 'Email salvata: la userai per recuperare la password. Prova a inviarti un\'email di prova.';
+            try {
+                kris_users()->setEmail($me, (string) ($_POST['account_email'] ?? ''));
+                kris_users()->setEditorUrl(kris_current_editor_url());
+                $msg = 'Email salvata: la userai per recuperare la password. Prova a inviarti un\'email di prova.';
+            } catch (\Kris\Auth\UserException $e) {
+                $error = $e->getMessage();
+            }
         }
     }
     if (isset($_POST['account_email_later'])) {
@@ -226,29 +227,30 @@ if ($isPost && !kris_csrf_valid($_POST['csrf'] ?? null)) {
         $goTo('?' . (string) ($_SERVER['QUERY_STRING'] ?? ''));
     }
     if (isset($_POST['send_test_email'])) {
-        $config = kris_auth_config() ?? [];
-        $sent = kris_send_mail((string) ($config['email'] ?? ''), 'Email di prova dall\'editor',
-            "Ciao,\n\nse leggi questo messaggio l'hosting invia correttamente le email del sito:\npotrai recuperare la password dell'editor se la dimentichi.\n");
-        if ($sent) {
-            $msg = 'Email di prova inviata a ' . ($config['email'] ?? '') . '. Se non arriva entro qualche minuto (controlla lo spam), il recupero via email non funzionerà su questo hosting.';
+        $email = (string) (kris_current_user()['email'] ?? '');
+        if (kris_send_mail($email, 'Email di prova dall\'editor',
+            "Ciao,\n\nse leggi questo messaggio l'hosting invia correttamente le email del sito:\npotrai recuperare la password dell'editor se la dimentichi.\n")) {
+            $msg = 'Email di prova inviata a ' . $email . '. Se non arriva entro qualche minuto (controlla lo spam), il recupero via email non funzionerà su questo hosting.';
         } else {
             $error = 'L\'hosting non ha accettato l\'invio: il recupero della password via email non funzionerà. ' . KRIS_HOSTING_HELP;
         }
     }
     if (isset($_POST['change_password'])) {
-        $config = kris_auth_config() ?? [];
+        $me = (string) $_SESSION['kris_user'];
         $new = (string) ($_POST['new_password'] ?? '');
-        if (!kris_credentials()->verify((string) ($config['user'] ?? ''), (string) ($_POST['current_password'] ?? ''))) {
+        if (kris_users()->check($me, (string) ($_POST['current_password'] ?? '')) !== 'ok') {
             $error = 'La password attuale non è corretta: nulla è stato modificato.';
-        } elseif (strlen($new) < Kris\Auth\Credentials::MIN_PASSWORD) {
-            $error = 'La nuova password deve avere almeno 10 caratteri.';
         } elseif ($new !== (string) ($_POST['new_password2'] ?? '')) {
             $error = 'Le due nuove password non coincidono.';
-        } elseif (!kris_credentials()->save(['password' => $new])) {
-            $error = 'Non riesco a scrivere config/auth.php: controlla i permessi con l\'hosting.';
         } else {
-            session_regenerate_id(true);
-            $msg = 'Password aggiornata.';
+            try {
+                kris_users()->setPassword($me, $new);
+                // La password nuova chiude le altre sessioni; questa resta aperta
+                kris_start_session($me);
+                $msg = 'Password aggiornata. Le altre sessioni aperte con questo utente sono state chiuse.';
+            } catch (\Kris\Auth\UserException $e) {
+                $error = $e->getMessage();
+            }
         }
     }
 

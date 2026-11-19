@@ -41,15 +41,15 @@ $tab = is_string($_GET['tab'] ?? null) && isset($settingsTabs[$_GET['tab']]) ? $
     <button class="btn btn-white">Salva</button>
 </form></div></section>
 <?php elseif ($tab === 'account'): ?>
-<?php $account = kris_auth_config() ?? []; $accountEmail = (string) ($account['email'] ?? ''); ?>
-<section class="card" id="account"><header class="card-header"><span class="collection-icon"><?= uiIcon('settings') ?></span><div><h2>Account</h2><p>Accedi come <strong><?= h($account['user'] ?? '') ?></strong>.</p></div></header><div class="card-body account-body">
+<?php $account = kris_current_user() ?? []; $accountEmail = (string) ($account['email'] ?? ''); ?>
+<section class="card" id="account"><header class="card-header"><span class="collection-icon"><?= uiIcon('settings') ?></span><div><h2>Account</h2><p>Accedi come <strong><?= h($account['name'] ?? '') ?></strong><?= ($account['role'] ?? '') === 'admin' ? ', amministratore' : '' ?>.</p></div></header><div class="card-body account-body">
 <form method="POST" action="?action=settings&amp;tab=account" class="account-form" data-account-form><input type="hidden" name="save_account_email" value="1">
     <label for="account-email">Email per recuperare la password</label>
     <div class="account-row"><input id="account-email" type="email" name="account_email" value="<?= h($accountEmail) ?>" autocomplete="email" placeholder="nome@esempio.it" required></div>
     <label for="account-email-password">Password attuale, per confermare</label>
     <div class="account-row"><input id="account-email-password" type="password" name="current_password" autocomplete="current-password" required><button class="btn btn-white">Salva email</button></div>
 </form>
-<?php if (Kris\Auth\Credentials::validEmail($accountEmail)): ?>
+<?php if (Kris\Auth\Users::validAddress($accountEmail)): ?>
 <form method="POST" action="?action=settings&amp;tab=account" class="account-form" data-account-form><input type="hidden" name="send_test_email" value="1"><p class="hint">Inviati un'email di prova: se non arriva, su questo hosting il recupero della password via email non funziona.</p><button class="btn btn-white">Invia email di prova</button></form>
 <?php endif; ?>
 <form method="POST" action="?action=settings&amp;tab=account" class="account-form" data-account-form><input type="hidden" name="change_password" value="1">

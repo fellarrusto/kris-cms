@@ -63,8 +63,8 @@ if (isset($_GET['logout'])) {
 $login_error = '';
 $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
 
-// Primo avvio: nessuna credenziale configurata, la si crea adesso.
-if (kris_auth_config() === null) {
+// Primo avvio: nessun utente, si crea l'amministratore.
+if (!kris_users()->exists()) {
     // Chi crea l'accesso deve dimostrare di avere i file del sito: il codice sta in config/setup_code.php
     if (kris_setup_code()->ensure() === null) {
         kris_render_setup('Non riesco a scrivere config/setup_code.php: controlla i permessi della cartella config/.');
@@ -81,15 +81,16 @@ if (kris_auth_config() === null) {
         } elseif (!kris_setup_code()->verify((string) ($_POST['setup_code'] ?? ''))) {
             kris_login_throttle()->fail((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
             kris_render_setup('Il codice non corrisponde a quello in config/setup_code.php.');
-        } elseif ($user === '' || strlen($pass) < Kris\Auth\Credentials::MIN_PASSWORD) {
-            kris_render_setup('Serve uno username e una password di almeno 10 caratteri.');
-        } elseif (!Kris\Auth\Credentials::validEmail($email)) {
+        } elseif (!Kris\Auth\Users::validAddress($email)) {
             kris_render_setup('Serve un indirizzo email valido: lo userai per recuperare la password.');
         } elseif ($pass !== (string) ($_POST['pass2'] ?? '')) {
             kris_render_setup('Le due password non coincidono.');
-        } elseif (!kris_save_credentials($user, $pass, $email)) {
-            kris_render_setup('Non riesco a scrivere config/auth.php: controlla i permessi della cartella.');
         } else {
+            try {
+                kris_create_first_admin($user, $pass, $email);
+            } catch (Kris\Auth\UserException $e) {
+                kris_render_setup($e->getMessage());
+            }
             kris_setup_code()->remove();
             header("Location: $BASE");
             exit;
@@ -105,16 +106,18 @@ if (!kris_is_logged_in()) {
             kris_render_forgot('Sessione scaduta: riprova.');
         }
         try {
-            if (!kris_password_reset()->canRequest()) {
-                kris_render_forgot('Hai già chiesto diversi link nell\'ultima ora. Controlla la posta (anche lo spam) o riprova più tardi.');
-            }
-            if (!kris_send_reset_link()) {
-                kris_render_forgot('L\'hosting non è riuscito a inviare l\'email. ' . KRIS_HOSTING_HELP);
-            }
+            $sent = kris_send_reset_link((string) ($_POST['email'] ?? ''));
         } catch (RuntimeException $e) {
             kris_render_forgot($e->getMessage());
         }
-        kris_render_forgot('', 'Email inviata all\'amministratore del sito: contiene un link valido 30 minuti. Controlla anche lo spam.');
+        if ($sent === 'limit') {
+            kris_render_forgot('Hai già chiesto diversi link nell\'ultima ora. Controlla la posta (anche lo spam) o riprova più tardi.');
+        }
+        if ($sent === 'failed') {
+            kris_render_forgot('L\'hosting non è riuscito a inviare l\'email. ' . KRIS_HOSTING_HELP);
+        }
+        // Stessa risposta se l'email non è di nessuno: non si scopre quali esistono
+        kris_render_forgot('', 'Se l\'email è di un utente del sito, riceverà un link valido 30 minuti. Controlla anche lo spam.');
     }
     if (isset($_GET['forgot'])) {
         kris_render_forgot();
@@ -124,14 +127,18 @@ if (!kris_is_logged_in()) {
         $pass = (string) ($_POST['pass'] ?? '');
         if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
             kris_render_reset($token, 'Sessione scaduta: riprova.');
-        } elseif (strlen($pass) < Kris\Auth\Credentials::MIN_PASSWORD) {
-            kris_render_reset($token, 'La password deve avere almeno 10 caratteri.');
+        } elseif (strlen($pass) < Kris\Auth\Users::MIN_PASSWORD) {
+            kris_render_reset($token, 'La password deve avere almeno ' . Kris\Auth\Users::MIN_PASSWORD . ' caratteri.');
         } elseif ($pass !== (string) ($_POST['pass2'] ?? '')) {
             kris_render_reset($token, 'Le due password non coincidono.');
-        } elseif (!kris_password_reset()->consume($token)) {
+        } elseif (($resetUser = kris_password_reset()->consume($token)) === null) {
             kris_render_reset($token);
-        } elseif (!kris_credentials()->save(['password' => $pass])) {
-            kris_render_reset($token, 'Non è stato possibile salvare la nuova password. ' . KRIS_HOSTING_HELP);
+        } else {
+            try {
+                kris_users()->setPassword($resetUser, $pass);
+            } catch (Kris\Auth\UserException $e) {
+                kris_render_login($e->getMessage() . ' ' . KRIS_HOSTING_HELP);
+            }
         }
         kris_render_login('', 'Password aggiornata: accedi con quella nuova.');
     }
@@ -148,11 +155,15 @@ if ($isPost && isset($_POST['do_login'])) {
     } elseif ($wait > 0) {
         // La password non viene nemmeno verificata: niente tentativi in più
         $login_error = 'Troppi tentativi sbagliati. Riprova tra ' . max(1, (int) ceil($wait / 60)) . ' minuti.';
-    } elseif (kris_login((string) ($_POST['user'] ?? ''), (string) ($_POST['pass'] ?? ''))) {
-        header("Location: $BASE");
-        exit;
     } else {
-        $login_error = "Credenziali non valide.";
+        $result = kris_login((string) ($_POST['user'] ?? ''), (string) ($_POST['pass'] ?? ''));
+        if ($result === 'ok') {
+            header("Location: $BASE");
+            exit;
+        }
+        $login_error = $result === 'blocked'
+            ? 'Il tuo accesso è sospeso: chiedi a un amministratore del sito.'
+            : 'Nome utente o password non validi.';
     }
 }
 
@@ -413,8 +424,7 @@ $newestTypes = array_filter($userTypes, fn($t, $name) => isNewestFirst((string) 
             <div class="alert alert-warning" role="status"><p><strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor aperto.</p><a class="btn btn-white btn-small" href="?action=edit&amp;group=kris_wip&amp;id=0">Lavori in corso</a></div>
         <?php endif; ?>
         <?php // Siti installati prima della 1.2.0: l'email di recupero si aggiunge da qui, in un passo
-        $authConfig = kris_auth_config() ?? [];
-        if (!Kris\Auth\Credentials::validEmail((string) ($authConfig['email'] ?? '')) && empty($_SESSION['kris_email_later']) && $editorLock === ''): ?>
+        if (!Kris\Auth\Users::validAddress((string) (kris_current_user()['email'] ?? '')) && empty($_SESSION['kris_email_later']) && $editorLock === ''): ?>
             <div class="alert account-alert" role="status">
                 <p><strong>Aggiungi la tua email.</strong> Se dimentichi la password, ti manderemo lì un link per sceglierne una nuova.</p>
                 <form method="POST" class="inline-form" data-account-form><input type="hidden" name="save_account_email" value="1"><label class="sr-only" for="account-email-quick">Email</label><input class="input" id="account-email-quick" type="email" name="account_email" autocomplete="email" placeholder="nome@esempio.it" required><label class="sr-only" for="account-email-quick-password">Password attuale</label><input class="input" id="account-email-quick-password" type="password" name="current_password" autocomplete="current-password" placeholder="Password attuale" required><button class="btn btn-primary btn-small">Salva email</button></form>

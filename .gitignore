@@ -1,4 +1,5 @@
 /config/auth.php
+/config/users.php
 /data/backups/
 /data/updates/
 /data/snapshots/
