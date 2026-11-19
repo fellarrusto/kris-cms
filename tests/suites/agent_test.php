@@ -354,3 +354,46 @@ test('render_page restituisce l HTML finito di una pagina con le modifiche in at
         $s->discard();
     }
 });
+
+test('indirizzo di caricamento sul dominio del sito: monouso, nello staging, stato per il Worker', function () {
+    [$root, $worker] = agentSite();
+    $_SERVER['HTTP_HOST'] = 'www.sito.it';
+    $slot = agentCall($root, $worker, ['action' => 'upload_slot', 'name' => 'squadra.png', 'by' => 'mario'])['body'];
+    assertTrue(str_starts_with($slot['upload_url'], 'http://www.sito.it/kris-agent.php?upload=kss_'), $slot['upload_url']);
+    $token = substr($slot['upload_url'], strpos($slot['upload_url'], '=') + 1);
+    assertSame('waiting', agentCall($root, $worker, ['action' => 'upload_slot_status', 'slot_id' => $slot['slot_id']])['body']['status']);
+
+    $server = new Server(new AgentConfig($root), new Staging($root), $root);
+    $bad = tempnam(sys_get_temp_dir(), 'k');
+    file_put_contents($bad, 'non un\'immagine');
+    assertSame(422, $server->receiveUpload($token, $bad, null)['status'], 'un file rifiutato');
+    assertSame('waiting', agentCall($root, $worker, ['action' => 'upload_slot_status', 'slot_id' => $slot['slot_id']])['body']['status'], 'resta libero dopo un rifiuto');
+
+    $png = tempnam(sys_get_temp_dir(), 'k');
+    file_put_contents($png, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+    $ok = $server->receiveUpload($token, $png, null);
+    assertSame(200, $ok['status']);
+    assertTrue(str_starts_with($ok['body']['url'], 'assets/uploads/') && str_ends_with($ok['body']['url'], '.png'));
+    $done = agentCall($root, $worker, ['action' => 'upload_slot_status', 'slot_id' => $slot['slot_id']])['body'];
+    assertSame(['done', $ok['body']['url']], [$done['status'], $done['url']]);
+    assertSame(404, $server->receiveUpload($token, $png, null)['status'], 'monouso');
+    assertSame(404, $server->receiveUpload('kss_' . str_repeat('0', 48), $png, null)['status']);
+    assertSame([$ok['body']['url']], agentCall($root, $worker, ['action' => 'status'])['body']['uploads']);
+
+    // Nessun contenuto lo usa ancora: è fra i file non usati, finché un campo non lo prende
+    assertSame([$ok['body']['url']], array_column(agentCall($root, $worker, ['action' => 'unused_uploads'])['body']['files'], 'url'));
+    agentCall($root, $worker, ['action' => 'operate', 'operation' => ['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'logo', 'value' => $ok['body']['url']]]);
+    assertSame([], agentCall($root, $worker, ['action' => 'unused_uploads'])['body']['files']);
+    @unlink($bad);
+    @unlink($png);
+    unset($_SERVER['HTTP_HOST']);
+});
+
+test('con Kris Agent spento l indirizzo di caricamento non accetta file', function () {
+    [$root, $worker] = agentSite();
+    $slot = agentCall($root, $worker, ['action' => 'upload_slot', 'name' => 'x.png'])['body'];
+    $config = new AgentConfig($root);
+    $config->save(['enabled' => false] + $config->load());
+    $token = substr($slot['upload_url'], strpos($slot['upload_url'], '=') + 1);
+    assertSame(403, (new Server($config, new Staging($root), $root))->receiveUpload($token, __FILE__, 'x.png')['status']);
+});

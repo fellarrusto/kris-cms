@@ -71,7 +71,7 @@
     ]
   },
   "src/main.js": {
-    "file": "assets/main-CHqoEut1.js",
+    "file": "assets/main-CzgrOOQM.js",
     "name": "main",
     "src": "src/main.js",
     "isEntry": true,
@@ -109,7 +109,7 @@
     ]
   },
   "src/views/pages/collection/Collection.vue": {
-    "file": "assets/Collection-D51UBBT9.js",
+    "file": "assets/Collection-ibJ5tO1H.js",
     "name": "Collection",
     "src": "src/views/pages/collection/Collection.vue",
     "isDynamicEntry": true,
@@ -133,7 +133,7 @@
     ]
   },
   "src/views/pages/edit/Edit.vue": {
-    "file": "assets/Edit-BVPPG4Ok.js",
+    "file": "assets/Edit-xHTt-5o_.js",
     "name": "Edit",
     "src": "src/views/pages/edit/Edit.vue",
     "isDynamicEntry": true,
@@ -148,7 +148,7 @@
     ]
   },
   "src/views/pages/media/Media.vue": {
-    "file": "assets/Media-CmnX4Evh.js",
+    "file": "assets/Media-CBLt6ZSN.js",
     "name": "Media",
     "src": "src/views/pages/media/Media.vue",
     "isDynamicEntry": true,
@@ -160,7 +160,7 @@
     ]
   },
   "src/views/pages/media/MediaFile.vue": {
-    "file": "assets/MediaFile-UnLHt5T3.js",
+    "file": "assets/MediaFile-BM5GUFFm.js",
     "name": "MediaFile",
     "src": "src/views/pages/media/MediaFile.vue",
     "isDynamicEntry": true,
@@ -173,7 +173,7 @@
     ]
   },
   "src/views/pages/plugins/PluginSettings.vue": {
-    "file": "assets/PluginSettings-kh4C1_X4.js",
+    "file": "assets/PluginSettings-1EYR55zP.js",
     "name": "PluginSettings",
     "src": "src/views/pages/plugins/PluginSettings.vue",
     "isDynamicEntry": true,
@@ -188,7 +188,7 @@
     ]
   },
   "src/views/pages/plugins/PluginView.vue": {
-    "file": "assets/PluginView-Da3HK1IQ.js",
+    "file": "assets/PluginView-Bf-1fiNc.js",
     "name": "PluginView",
     "src": "src/views/pages/plugins/PluginView.vue",
     "isDynamicEntry": true,
@@ -211,7 +211,7 @@
     ]
   },
   "src/views/pages/settings/Settings.vue": {
-    "file": "assets/Settings-DlYqfpg6.js",
+    "file": "assets/Settings-DFWrPlAi.js",
     "name": "Settings",
     "src": "src/views/pages/settings/Settings.vue",
     "isDynamicEntry": true,
@@ -225,7 +225,7 @@
     ]
   },
   "src/views/pages/structure/Structure.vue": {
-    "file": "assets/Structure-sRNPY7E4.js",
+    "file": "assets/Structure-B2O6Z2mK.js",
     "name": "Structure",
     "src": "src/views/pages/structure/Structure.vue",
     "isDynamicEntry": true,
@@ -236,7 +236,7 @@
     ]
   },
   "src/views/pages/structure/StructureType.vue": {
-    "file": "assets/StructureType-hNqQcYQ6.js",
+    "file": "assets/StructureType-3mSucL4X.js",
     "name": "StructureType",
     "src": "src/views/pages/structure/StructureType.vue",
     "isDynamicEntry": true,
