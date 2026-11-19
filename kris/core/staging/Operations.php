@@ -68,7 +68,7 @@ final class Operations
             'describe_field' => 'describeField', 'create_collection' => 'createCollection',
             'register_page' => 'registerPage',
             'remove_collection' => 'removeCollection', 'rename_collection' => 'renameCollection',
-            'change_type' => 'changeType', 'move_field' => 'moveField', 'set_posts' => 'setPosts',
+            'change_type' => 'changeType', 'move_field' => 'moveField', 'set_options' => 'setOptions', 'set_posts' => 'setPosts',
             'set_post_collection' => 'setPostCollection', 'unregister_page' => 'unregisterPage',
             'set_collection_info' => 'setCollectionInfo', 'move_collection' => 'moveCollection',
             'set_sitemap' => 'setSitemap',
@@ -109,6 +109,7 @@ final class Operations
             'describe_field' => (array_key_exists('description', $op) ? 'Nuova descrizione' : 'Nuova sezione') . " del campo «{$op['name']}» in " . self::schemaWhere($op),
             'create_collection' => "Nuova raccolta «{$op['name']}»",
             'register_page' => "Nuova pagina pubblica «{$op['page']}»" . (!array_key_exists('sitemap', $op) ? '' : ($op['sitemap'] === false || $op['sitemap'] === null ? ', fuori dalla sitemap' : ', aggiunta alla sitemap')),
+            'set_options' => "Nuove opzioni del campo «{$op['name']}» in " . self::schemaWhere($op),
             'set_sitemap' => ($op['sitemap'] ?? null) === false || ($op['sitemap'] ?? null) === null
                 ? "Toglie la pagina «{$op['page']}» dalla sitemap" : "Mette la pagina «{$op['page']}» nella sitemap",
             'remove_collection' => "Elimina la raccolta «{$op['name']}», con tutti i suoi contenuti e le sue pagine",
@@ -328,7 +329,14 @@ final class Operations
             }
             $newId = (int) $op['assigned_id'];
         }
-        $state['content'][] = ['type' => $key, 'id' => $newId, 'values' => self::fill($type['fields'] ?? [], (array) ($op['fields'] ?? []), $ctx)];
+        // Dopo l'ultimo contenuto dello stesso tipo: i contenuti di un tipo restano vicini nell'archivio
+        $last = null;
+        foreach ($state['content'] as $i => $e) {
+            if (($e['type'] ?? null) === $key) $last = $i;
+        }
+        $new = ['type' => $key, 'id' => $newId, 'values' => self::fill($type['fields'] ?? [], (array) ($op['fields'] ?? []), $ctx)];
+        array_splice($state['content'], $last === null ? count($state['content']) : $last + 1, 0, [$new]);
+        $state['content'] = array_values($state['content']);
         if (!$ctx['replay']) $op['assigned_id'] = $newId;
         return [$state, $op];
     }
@@ -697,6 +705,46 @@ final class Operations
         array_splice($list, $pos, 1);
         array_splice($list, max(0, min((int) ($op['to'] ?? 0), count($list))), 0, [$field]);
         $fields = $list;
+        return [$state, $op];
+    }
+
+    /**
+     * Opzioni e scelta multipla di un campo a scelta. Dai contenuti si tolgono
+     * le opzioni non più ammesse; passando da multipla a singola resta la prima.
+     */
+    private static function setOptions(array $state, array $op, array $ctx): array
+    {
+        $collection = (string) ($op['collection'] ?? '');
+        $names = array_map('strval', (array) ($op['path'] ?? []));
+        $name = (string) ($op['name'] ?? '');
+        self::assertUserCollection($collection);
+        $fields = &self::schemaRef($state['schema'], $collection, $names);
+        $pos = self::defPosition($fields, $name);
+        if ($pos === null) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "il campo «{$name}» non esiste"));
+        }
+        $old = $fields[$pos];
+        if (($old['type'] ?? '') !== 'select') {
+            throw new StagingException("«{$name}» non è un campo a scelta: le opzioni valgono solo per select.");
+        }
+        $def = self::validDef(['name' => $name, 'type' => 'select', 'localized' => !empty($old['localized']),
+            'options' => $op['options'] ?? ($old['options'] ?? []),
+            'multiple' => array_key_exists('multiple', $op) ? (bool) $op['multiple'] : !empty($old['multiple'])]
+            + array_intersect_key($old, array_flip(['description', 'section'])), $collection);
+        $fields[$pos] = $def;
+        unset($fields);
+        $keep = function (mixed $value) use ($def): mixed {
+            $picked = is_array($value) ? $value : ($value === null || $value === '' ? [] : [(string) $value]);
+            $picked = array_values(array_intersect($def['options'], array_map('strval', $picked)));
+            return $def['multiple'] ? $picked : ($picked[0] ?? '');
+        };
+        self::eachItem($state['content'], $collection, $names, function (array &$item) use ($name, $def, $keep): void {
+            if (!array_key_exists($name, $item['values'] ?? [])) return;
+            $value = $item['values'][$name];
+            $item['values'][$name] = $def['localized'] && is_array($value) && !array_is_list($value)
+                ? array_map($keep, $value) : $keep($value);
+        });
         return [$state, $op];
     }
 

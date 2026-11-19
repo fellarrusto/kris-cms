@@ -1,5 +1,6 @@
 <?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } ?>
-<div class="savebar" data-savebar>
-    <div class="save-status"><span class="save-indicator"><?= uiIcon('check') ?></span><div><strong data-save-status><?= $msg ? h($msg) : 'Tutto pronto per lavorare' ?></strong><small data-save-hint><?= $action === 'edit' ? ($stagingMode ? 'Le modifiche salvate restano in attesa finché non le pubblichi.' : 'I contenuti salvati sono subito visibili sul sito.') : 'Salva per applicare le modifiche.' ?></small></div></div>
-    <div class="save-actions"><button type="button" class="btn btn-quiet" data-discard hidden>Annulla modifiche</button><button type="submit" class="btn btn-primary" data-save-button><?= uiIcon('check') ?><?= $action === 'settings' ? 'Salva impostazioni' : ($action === 'structure' ? 'Controlla e salva' : 'Salva modifiche') ?></button></div>
+<div class="savebar" data-savebar role="status">
+    <div class="savebar-text"><strong data-save-status>Tutte le modifiche sono salvate</strong><small><?= $action === 'edit' ? ($stagingMode ? 'Salvando, diventano modifiche in attesa. Il sito non cambia.' : 'Salvando, le modifiche sono subito visibili sul sito.') : 'Salva per applicare le modifiche.' ?></small></div>
+    <button type="button" class="btn" data-discard hidden>Annulla modifiche</button>
+    <button type="submit" class="btn" data-save-button><?= $action === 'settings' ? 'Salva impostazioni' : ($action === 'structure' ? 'Salva struttura' : ($stagingMode ? 'Salva in attesa' : 'Salva')) ?></button>
 </div>

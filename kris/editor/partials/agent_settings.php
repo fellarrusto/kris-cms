@@ -3,7 +3,7 @@
 $agent = (new \Kris\Agent\AgentConfig())->load();
 $agentSiteUrl = preg_replace('#/(?:kris-admin|editor)(/index\.php)?$#', '', kris_current_editor_url());
 ?>
-<section class="card" id="kris-agent"><header class="card-header"><span class="collection-icon"><?= uiIcon('structure') ?></span><div><h2>Kris Agent</h2><p>Permette a un assistente AI di preparare modifiche al sito. Le modifiche restano in attesa finché non le pubblichi tu da «Da pubblicare».</p></div></header><div class="card-body">
+<section class="card" id="kris-agent"><header class="card-header"><span class="collection-icon"><?= uiIcon('agent') ?></span><div><h2>Kris Agent</h2><p>Permette a un assistente AI di preparare modifiche al sito. Le modifiche restano in attesa finché non le pubblichi tu da «Da pubblicare».</p></div></header><div class="card-body">
 <?php if ($agent === null): ?>
     <form method="POST" action="?action=settings&amp;tab=agent" class="agent-pair-form">
         <input type="hidden" name="agent_pair" value="1">

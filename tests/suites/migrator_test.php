@@ -253,3 +253,25 @@ test('0009 nel Migrator: scrive schema, content e settings dai documenti del for
     assertTrue(!is_file("{$root}/data/k_data.json") && !is_file("{$root}/data/k_model.json"), 'i file del formato 1 non restano accanto a quelli nuovi');
     assertSame([['id' => 0, 'name' => 'homepage', 'data' => []]], json_decode((string) file_get_contents("{$root}/data/format1/k_data.json"), true), 'ne resta una copia');
 });
+
+test('un sito nuovo già nel formato 2 registra le migrazioni della 1.x senza eseguirle', function () {
+    [$root] = migrationSite([]);
+    @unlink("{$root}/data/k_data.json");
+    @unlink("{$root}/data/k_model.json");
+    $site = ['schema' => ['format' => 2, 'types' => ['homepage' => ['fields' => []]], 'pages' => []], 'content' => [['type' => 'homepage', 'id' => 0, 'values' => []]], 'settings' => ['languages' => ['it']]];
+    writeFormat2($root, $site);
+    foreach (glob(KRIS_ROOT . '/kris/migrations/*.php') as $file) copy($file, $root . '/migrations/' . basename($file));
+    $m = new Migrator($root, $root . '/migrations');
+    $warnings = [];
+    set_error_handler(function (int $no, string $text) use (&$warnings): bool { $warnings[] = $text; return true; });
+    try {
+        assertSame(true, $m->pendingAreAutomatic([]), 'niente da chiedere');
+        $state = $m->run([]);
+    } finally {
+        restore_error_handler();
+    }
+    assertSame([], $warnings, 'le migrazioni della 1.x non cercano k_data');
+    assertSame(9, count(array_filter($state['migrations'], fn($n) => (int) substr($n, 0, 4) <= 9)));
+    assertSame($m->latestDataVersion(), $state['data_version']);
+    assertSame($site['content'], \Kris\Store\Site::current($root)['content']);
+});

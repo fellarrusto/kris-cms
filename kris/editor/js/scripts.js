@@ -40,7 +40,7 @@ function updateSaveState(label) {
     if (!bar) return;
     bar.classList.toggle('is-dirty', hasUnsavedChanges);
     bar.classList.toggle('is-saving', saving);
-    q('[data-save-status]').textContent = label || (saving ? 'Salvataggio in corso...' : hasUnsavedChanges ? 'Hai modifiche da salvare' : 'Tutte le modifiche sono salvate');
+    q('[data-save-status]').textContent = label || (saving ? 'Salvataggio in corso…' : hasUnsavedChanges ? 'Modifiche non salvate' : 'Tutte le modifiche sono salvate');
     q('[data-discard]').hidden = !hasUnsavedChanges;
     qa('button', bar).forEach(b => b.disabled = saving);
     q('[data-save-button]').disabled = saving || !hasUnsavedChanges;
@@ -166,9 +166,8 @@ function filterList(input) {
     let count = 0;
     qa('[data-search]',list).forEach(item => { item.hidden = !item.dataset.search.toLocaleLowerCase().includes(input.value.toLocaleLowerCase()); if (!item.hidden) count++; });
     const empty = q(`[data-filter-empty="${input.dataset.filter}"]`); if (empty) empty.hidden = count !== 0;
-    // Reordering a filtered list is ambiguous; keep it available only in the full list.
-    qa('[data-move]',list).forEach(button => button.disabled = !!input.value || (button.dataset.move === '-1' ? !button.closest('tr').previousElementSibling : !button.closest('tr').nextElementSibling));
-    qa('tr[draggable]',list).forEach(row=>row.draggable=!input.value);
+    // Riordinare un elenco filtrato sarebbe ambiguo: la maniglia vale solo sull'elenco intero
+    qa('[data-handle]',list).forEach(handle => handle.disabled = !!input.value);
 }
 function appendMedia(url, file) {
     const choice = document.createElement('button'); choice.type = 'button'; choice.className = 'media-choice'; choice.dataset.mediaUrl = url; choice.dataset.search = file.name; choice.setAttribute('aria-pressed','false');
@@ -179,15 +178,16 @@ function appendMedia(url, file) {
     const caption=document.createElement('span');caption.className='media-caption';caption.textContent=file.name;choice.append(art,caption);q('#mediaGrid').prepend(choice);
     const grid=q('#libraryGrid');
     if(grid){
-        const card=document.createElement('article');card.className='media-card';card.dataset.search=file.name;
-        const link=document.createElement('a');link.className='media-art';link.href=safeMediaSource(url);link.target='_blank';link.rel='noopener';link.setAttribute('aria-label','Apri '+file.name);link.append(...[...art.childNodes].map(n=>n.cloneNode(true)));
-        const text=document.createElement('div');text.className='media-caption';const title=document.createElement('strong');title.textContent=file.name;
-        const size=document.createElement('small');size.textContent=Math.ceil(file.size/1024)+' KB';
-        const actions=document.createElement('div');actions.className='media-actions';const copy=document.createElement('button');copy.type='button';copy.className='text-link';copy.dataset.copyUrl=url;copy.textContent='Copia URL';actions.append(copy);
-        const del=document.createElement('form');del.method='POST';del.dataset.confirmTitle='Eliminare questo file?';del.dataset.confirm='Il file verrà eliminato definitivamente. Verifica che non sia già utilizzato nel sito.';del.dataset.confirmLabel='Elimina file';
-        for(const [name,value] of Object.entries({csrf:csrf(),delete_media:'1',file_name:decodeURIComponent(url.split('/').pop())})){const hidden=document.createElement('input');hidden.type='hidden';hidden.name=name;hidden.value=value;del.append(hidden);}
-        const remove=document.createElement('button');remove.className='text-link danger';remove.textContent='Elimina';del.append(remove);actions.append(del);text.append(title,size,actions);card.append(link,text);grid.prepend(card);
-        q('[data-media-count]').textContent=grid.children.length+' file';
+        // Il file appena caricato: anteprima, nome e indirizzo da copiare (l'eliminazione dopo un ricaricamento)
+        const name=decodeURIComponent(url.split('/').pop());
+        const card=document.createElement('article');card.className='media-card';card.dataset.search=name;
+        const link=document.createElement('a');link.className='media-art';link.href=safeMediaSource(url);link.target='_blank';link.rel='noopener';link.setAttribute('aria-label','Apri '+name);link.append(...[...art.childNodes].map(n=>n.cloneNode(true)));
+        const title=document.createElement('div');title.className='media-name';title.title=name;title.textContent=name;
+        const meta=document.createElement('div');meta.className='media-meta';const info=document.createElement('span');info.textContent=(name.split('.').pop()||'').toUpperCase()+' · '+Math.max(1,Math.round(file.size/1024))+' KB';
+        const tools=document.createElement('span');const copy=document.createElement('button');copy.type='button';copy.className='icon-button';copy.dataset.copyUrl=url;copy.setAttribute('aria-label','Copia l’indirizzo di '+name);copy.innerHTML=q('[data-copy-url]')?.innerHTML||'⧉';tools.append(copy);
+        meta.append(info,tools);card.append(link,title,meta);grid.prepend(card);
+        const count=q('[data-media-count]');if(count)count.textContent=String(grid.children.length);
+        q('[data-filter-empty="library"]')?.setAttribute('hidden','');
     }
     qa('[data-filter]').forEach(filterList);
 }
@@ -214,26 +214,18 @@ async function uploadFile(file, input) {
         const retry=document.createElement('button');retry.type='button';retry.className='btn btn-white';retry.textContent='Riprova';retry.onclick=()=>{row.remove();uploadFile(file,input);};row.append(retry);
     } finally { uploadBusy=false;input.value='';qa('[data-upload-trigger], [data-upload-form] button').forEach(b=>b.disabled=false); }
 }
-async function reorder(table, row, before) {
-    const form = document.getElementById(table.dataset.reorderForm);
-    if (!form || saving || uploadBusy) return;
-    const tbody = table.tBodies[0];
-    const previousOrder = [...tbody.children];
+// Riordino di un elenco [data-dnd-list]: si salva subito; se il server non conferma l'elenco torna com'era
+async function reorder(list, row, before) {
+    const form = document.getElementById(list.dataset.reorderForm);
+    if (!form || saving || uploadBusy || row === before) return;
+    const previousOrder = [...list.children];
     const focused = document.activeElement;
     const scrollPosition = {left:window.scrollX, top:window.scrollY};
-    const scrollContainer = table.closest('.table-scroll');
-    const scrollLeft = scrollContainer?.scrollLeft;
-    let notice = table.parentElement.querySelector('[data-order-feedback]');
-    if (!notice) {
-        notice = document.createElement('p'); notice.dataset.orderFeedback = '';
-        notice.className = 'hint'; notice.setAttribute('role', 'status');
-        table.after(notice);
-    }
-    notice.textContent = 'Salvataggio ordine in corso...';
-    saving = true; updateSaveState(); table.setAttribute('aria-busy', 'true');
-    tbody.insertBefore(row, before);
-    qa('[data-move]', table).forEach(button => button.disabled = true);
-    q('[name="order"]', form).value = qa('tr[data-id]', tbody).map(r => r.dataset.id).join(',');
+    const note = q('[data-order-note]') || list;
+    const live = q('#toast');
+    saving = true; updateSaveState(); list.setAttribute('aria-busy', 'true');
+    list.insertBefore(row, before);
+    q('[name="order"]', form).value = qa(':scope > [data-id]', list).map(r => r.dataset.id).join(',');
     const body = new FormData(form);
     try {
         const tokenResponse = await fetch('index.php?editor_session=1', {credentials:'same-origin', cache:'no-store', headers:{'X-Kris-Editor':'session'}});
@@ -244,34 +236,49 @@ async function reorder(table, row, before) {
         body.set('csrf', session.csrf);
         const response = await fetch(form.action, {method:'POST', body, credentials:'same-origin', headers:{'X-Kris-Editor':'reorder'}});
         const result = await response.json().catch(() => null);
-        if (!response.ok || !result?.ok) throw new Error(result?.message || 'Impossibile confermare il nuovo ordine. Riprova o ricarica dopo aver salvato i testi.');
-        notice.textContent = 'Ordine salvato.';
+        if (!response.ok || !result?.ok) throw new Error(result?.message || 'Non possiamo confermare il nuovo ordine. Riprova, o ricarica dopo aver salvato i testi.');
+        toast(result.message || 'Ordine salvato.');
     } catch (error) {
-        previousOrder.forEach(element => tbody.append(element));
-        notice.textContent = error.message;
-        notice.setAttribute('role', 'alert');
+        previousOrder.forEach(element => list.append(element));
+        toast(error.message);
+        if (note !== list) note.textContent = error.message;
     } finally {
-        saving = false; updateSaveState(); table.removeAttribute('aria-busy');
-        qa('[data-move]', table).forEach(button => {
-            const tr = button.closest('tr');
-            button.disabled = button.dataset.move === '-1' ? !tr.previousElementSibling : !tr.nextElementSibling;
-        });
+        saving = false; updateSaveState(); list.removeAttribute('aria-busy');
         if (focused instanceof HTMLElement && !focused.disabled) focused.focus({preventScroll:true});
-        if (scrollContainer) scrollContainer.scrollLeft = scrollLeft;
         window.scrollTo({...scrollPosition, behavior:'instant'});
+        if (live && live.hidden) live.hidden = true;
     }
 }
 function initDnd() {
-    qa('.dnd-table').forEach(table=>{
-        let moving=null;
-        table.addEventListener('dragstart',event=>{
-            const row=event.target.closest('tr[data-id]');
-            if(!row||event.target.closest('a,button,input')){event.preventDefault();return;}
-            moving=row;row.classList.add('dnd-dragging');event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',row.dataset.id);
+    qa('[data-dnd-list]').forEach(list => {
+        let moving = null;
+        // Si trascina solo dalla maniglia: il resto della riga resta cliccabile e selezionabile
+        list.addEventListener('pointerdown', event => { const handle = event.target.closest('[data-handle]'); if (handle && !handle.disabled) handle.closest('[data-id]').draggable = true; });
+        list.addEventListener('dragstart', event => {
+            const row = event.target.closest?.('[data-id]');
+            if (!row || !row.draggable) { event.preventDefault(); return; }
+            moving = row; row.classList.add('is-dragging'); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', row.dataset.id);
         });
-        table.addEventListener('dragover',event=>{if(moving){event.preventDefault();event.dataTransfer.dropEffect='move';}});
-        table.addEventListener('drop',event=>{const row=event.target.closest('tr[data-id]');if(!row||!moving||row===moving)return;event.preventDefault();const before=event.clientY<row.getBoundingClientRect().top+row.offsetHeight/2?row:row.nextElementSibling;reorder(table,moving,before);});
-        table.addEventListener('dragend',()=>{moving?.classList.remove('dnd-dragging');moving=null;});
+        list.addEventListener('dragover', event => { if (moving) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } });
+        list.addEventListener('drop', event => {
+            const row = event.target.closest('[data-id]');
+            if (!row || !moving || row === moving || row.parentElement !== list) return;
+            event.preventDefault();
+            const before = event.clientY < row.getBoundingClientRect().top + row.offsetHeight / 2 ? row : row.nextElementSibling;
+            reorder(list, moving, before);
+        });
+        list.addEventListener('dragend', () => { if (moving) { moving.classList.remove('is-dragging'); moving.draggable = false; } moving = null; });
+        // Da tastiera: frecce su e giù sulla maniglia
+        list.addEventListener('keydown', event => {
+            const handle = event.target.closest('[data-handle]');
+            if (!handle || handle.disabled || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+            event.preventDefault();
+            const row = handle.closest('[data-id]');
+            const before = event.key === 'ArrowUp' ? row.previousElementSibling : row.nextElementSibling?.nextElementSibling ?? null;
+            if (event.key === 'ArrowUp' && !row.previousElementSibling) return;
+            if (event.key === 'ArrowDown' && !row.nextElementSibling) return;
+            reorder(list, row, before);
+        });
     });
 }
 
@@ -301,8 +308,9 @@ document.addEventListener('click',async event=>{
         window.tinymce?.triggerSave();markAsDirty();q('#mediaOverlay').close();return;
     }
     if(target.dataset.uploadTrigger){event.preventDefault();document.getElementById(target.dataset.uploadTrigger).click();return;}
-    if(target.dataset.copyUrl){event.preventDefault();try{await navigator.clipboard.writeText(target.dataset.copyUrl);toast('URL copiato.');}catch{const input=document.createElement('input');input.value=target.dataset.copyUrl;input.readOnly=true;target.closest('.media-caption').append(input);input.select();toast('Copia l’URL selezionato con Ctrl/Cmd+C.');}return;}
-    if(target.dataset.move){event.preventDefault();const row=target.closest('tr');const before=target.dataset.move==='-1'?row.previousElementSibling:row.nextElementSibling?.nextElementSibling;await reorder(target.closest('table'),row,before);return;}
+    if(target.dataset.copyUrl){event.preventDefault();try{await navigator.clipboard.writeText(target.dataset.copyUrl);toast('URL copiato.');}catch{const input=document.createElement('input');input.value=target.dataset.copyUrl;input.readOnly=true;(target.closest('.media-card')||target.parentElement).append(input);input.select();toast('Copia l’URL selezionato con Ctrl/Cmd+C.');}return;}
+    if(target.dataset.clearMedia){event.preventDefault();const input=document.getElementById(target.dataset.clearMedia);if(input){input.value='';refreshPreview(input);markAsDirty();}return;}
+    if(target.matches('[data-menu-toggle]')){event.preventDefault();toggleMenu();return;}
     if(target.tagName==='A'&&target.target!=='_blank'&&!event.ctrlKey&&!event.metaKey&&!event.shiftKey&&!event.altKey&&event.button===0){
         const url=new URL(target.href,location.href);
         if(url.pathname===location.pathname&&url.search===location.search&&url.hash)return;
@@ -328,15 +336,15 @@ document.addEventListener('input',event=>{
 });
 document.addEventListener('change',event=>{
     if(currentForm?.contains(event.target))markAsDirty();
-    if(event.target.matches('[data-upload-input]')&&event.target.files[0])uploadFile(event.target.files[0],event.target);
+    if(event.target.matches('[data-upload-input]')&&event.target.files.length)uploadFiles([...event.target.files],event.target);
 });
 // Visibile / sospeso: si salva subito, come il riordino. In caso di errore
 // l'interruttore torna com'era, cosi mostra sempre lo stato salvato.
 async function saveVisibility(input) {
     const form = input.form;
     if (!form) return;
-    const label = input.closest('.visibility-toggle')?.querySelector('.visibility-label');
-    const row = input.closest('tr');
+    const label = input.closest('.switch')?.querySelector('[data-visibility-label]');
+    const row = input.closest('.row');
     const body = new FormData(form);
     body.set('csrf', csrf());
     input.disabled = true;
@@ -392,6 +400,32 @@ document.addEventListener('submit', async event => {
 qa('dialog').forEach(dialog=>dialog.addEventListener('cancel',event=>{if(uploadBusy){event.preventDefault();toast('Attendi il caricamento prima di chiudere.');}}));
 window.addEventListener('beforeunload',event=>{if(hasUnsavedChanges||saving||uploadBusy){event.preventDefault();event.returnValue='';}});
 document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='s'&&currentForm&&!q('dialog[open]')){event.preventDefault();currentForm.requestSubmit(q('[data-save-button]'));}});
+// Più file insieme, uno dopo l'altro
+async function uploadFiles(files,input){for(const file of files)await uploadFile(file,input);}
+// Libreria: si trascinano i file sul riquadro
+qa('[data-dropzone]').forEach(zone=>{
+    const input=q('[data-upload-input]',zone);
+    ['dragenter','dragover'].forEach(type=>zone.addEventListener(type,event=>{if([...event.dataTransfer.types].includes('Files')){event.preventDefault();zone.classList.add('is-over');}}));
+    ['dragleave','drop'].forEach(type=>zone.addEventListener(type,()=>zone.classList.remove('is-over')));
+    zone.addEventListener('drop',event=>{if(!event.dataTransfer.files.length)return;event.preventDefault();uploadFiles([...event.dataTransfer.files],input);});
+});
+// Menu laterale sul telefono
+function toggleMenu(open){
+    const side=q('#sidebar'),scrim=q('[data-menu-close]'),button=q('[data-menu-toggle]');if(!side)return;
+    const show=open??!side.classList.contains('is-open');
+    side.classList.toggle('is-open',show);if(scrim)scrim.hidden=!show;button?.setAttribute('aria-expanded',String(show));
+    if(show)q('a,button',side)?.focus();else button?.focus();
+}
+q('[data-menu-close]')?.addEventListener('click',()=>toggleMenu(false));
+document.addEventListener('keydown',event=>{if(event.key==='Escape'&&q('#sidebar.is-open'))toggleMenu(false);});
+// I campi di testo crescono con quello che contengono
+function autogrow(el){el.style.height='auto';el.style.height=Math.min(el.scrollHeight+2,560)+'px';}
+qa('textarea.autogrow').forEach(el=>{autogrow(el);el.addEventListener('input',()=>autogrow(el));});
+document.addEventListener('click',event=>{if(event.target.closest('[data-editor-language]'))requestAnimationFrame(()=>qa('textarea.autogrow').forEach(autogrow));});
+// Nuova raccolta: il nome tecnico segue quello visibile finché non lo si cambia a mano
+{const source=q('[data-slug-source]'),target=q('[data-slug-target]');
+if(source&&target){let touched=false;target.addEventListener('input',()=>touched=true);
+source.addEventListener('input',()=>{if(!touched)target.value=source.value.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^[^a-z]+|_+$/g,'').slice(0,40);});}}
 baseline=snapshot();initDnd();
 if(currentForm)updateSaveState();
 try { const lang=sessionStorage.getItem('kris-editor-language');qa('[data-editor-language]').find(b=>b.dataset.editorLanguage===lang)?.click(); } catch {}
@@ -404,7 +438,7 @@ if(location.hash.startsWith('#field-'))openFieldSection(document.getElementById(
 const THEME_LABELS={'':'automatico',dark:'scuro',light:'chiaro'};
 function currentTheme(){return document.documentElement.dataset.theme||'';}
 function isDarkTheme(){return currentTheme()==='dark'||(currentTheme()===''&&matchMedia('(prefers-color-scheme: dark)').matches);}
-function showTheme(){const b=q('[data-theme-toggle]');if(b)b.textContent='Tema: '+THEME_LABELS[currentTheme()];}
+function showTheme(){const l=q('[data-theme-label]');if(l)l.textContent='Tema: '+THEME_LABELS[currentTheme()];}
 q('[data-theme-toggle]')?.addEventListener('click',()=>{
     const next={'':'dark',dark:'light',light:''}[currentTheme()];
     if(next)document.documentElement.dataset.theme=next;else delete document.documentElement.dataset.theme;
