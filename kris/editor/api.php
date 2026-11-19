@@ -322,7 +322,7 @@ try {
                 $from = '/' . ltrim(trim((string) $from), '/');
                 $to = trim((string) $to);
                 if ($from === '/' || preg_match('#^/[^\s?#]*$#', $from) !== 1) throw new ApiError("«{$from}» non è un indirizzo del sito: inizia con / ed è senza spazi.");
-                if (preg_match('#^(/[^\s]*|https://[^\s]+)$#', $to) !== 1) throw new ApiError("«{$to}» non va bene come destinazione: un indirizzo del sito (/…) o https://….");
+                if (preg_match('#^(/(?![/\\\\])[^\s]*|https://[^\s]+)$#', $to) !== 1) throw new ApiError("«{$to}» non va bene come destinazione: un indirizzo del sito (/…) o https://….");
                 $redirects[$from] = $to;
             }
             \Kris\Store\Stores::site()->transaction(['schema'], function (array $d) use ($redirects): array {

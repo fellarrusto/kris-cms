@@ -140,6 +140,7 @@ final class Server
                 return ['deleted' => true];
 
             case 'get_entity':
+                if (str_starts_with($this->string($r, 'key'), 'plg_')) throw new AgentException('I dati dei plugin non sono accessibili all\'agente.', 403);
                 return ['entity' => $this->entity($s->state()['content'], $this->string($r, 'key'), (int) ($r['id'] ?? 0), (array) ($r['path'] ?? []))];
 
             case 'operate':
@@ -317,6 +318,9 @@ final class Server
         [$state, $report] = $this->staging->stateAndReport();
         $languages = \Kris\Store\Site::languages($this->root);
 
+        // I tipi dei plugin non si mostrano: sono dati privati dei plugin
+        $state['schema']['types'] = array_filter($state['schema']['types'] ?? [], fn($t) => !str_starts_with((string) $t, 'plg_'), ARRAY_FILTER_USE_KEY);
+        $state['content'] = array_values(array_filter($state['content'], fn($c) => !str_starts_with((string) ($c['type'] ?? ''), 'plg_')));
         $entities = [];
         foreach ($state['content'] as $item) {
             $fields = $state['schema']['types'][$item['type']]['fields'] ?? [];
