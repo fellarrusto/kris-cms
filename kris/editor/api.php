@@ -108,7 +108,8 @@ $stagingSummary = function (bool $full) use (&$stagingMode): array {
         'preview_pages' => array_map(fn($p) => ['label' => $p['label'], 'url' => $siteRoot . '/' . $p['url']], $s->previewPages()),
         'last_promotion' => $last === null ? null : [
             'at' => (string) $last['promoted_at'], 'by' => (string) $last['promoted_by'],
-            'files' => array_merge(array_keys($last['files']), array_map([\Kris\Store\FileStore::class, 'relativePath'], array_keys(is_array($last['documents'] ?? null) ? $last['documents'] : []))),
+            // Con il database i documenti non sono file: si nominano come documenti dell'archivio
+            'files' => array_merge(array_keys($last['files']), array_map(fn($doc) => \Kris\Store\Stores::driver(KRIS_ROOT) === 'pdo' ? "archivio: {$doc}" : \Kris\Store\FileStore::relativePath($doc), array_keys(is_array($last['documents'] ?? null) ? $last['documents'] : []))),
         ],
         'backup_days' => Staging::BACKUP_DAYS,
     ];
