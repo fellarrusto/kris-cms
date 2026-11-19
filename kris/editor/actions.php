@@ -3,228 +3,210 @@ declare(strict_types=1);
 
 use Kris\Entity\MediaStore;
 use Kris\Entity\StorageException;
+use Kris\Staging\EditorChanges;
+use Kris\Staging\StagingException;
+use Kris\Store\StoreException;
 if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno
 
 /**
- * Azioni POST del pannello.
+ * Azioni POST del pannello. Contenuti e struttura diventano operazioni
+ * (editorApply): sul sito pubblico si applicano subito, in «In attesa» si
+ * registrano nello staging. Le altre azioni (account, impostazioni, Kris
+ * Agent, pubblicazione, libreria) valgono uguali nelle due modalità.
  *
- * Richiede che $data, $models, $activeLangs, i percorsi dei file e
- * $msg / $error siano gia definiti da index.php.
+ * Richiede $stagingMode, $editorLock, $BASE, $uploadDir, $uploadUrl,
+ * $DEFAULT_LANGS, $msg ed $error da index.php.
  */
 
-// Difesa in profondita: se questo file venisse eseguito fuori dal flusso
-// normale, senza una sessione valida non deve succedere nulla.
 if (!kris_is_logged_in()) { http_response_code(403); exit; }
 
-// Nessuna azione senza token valido: impedisce che un'altra pagina faccia
-// eseguire modifiche al browser di chi e autenticato.
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? null)) {
-    $error = "Sessione scaduta o richiesta non valida: ricarica la pagina e riprova. Nulla e stato modificato.";
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $editorLock !== '') {
-    // Aggiornamento in corso o dati di una versione piu recente: niente scritture.
+$isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
+$ajax = (string) ($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '');
+$g = is_string($_POST['group'] ?? null) ? $_POST['group'] : (is_string($_POST['group_name'] ?? null) ? $_POST['group_name'] : '');
+$goTo = function (string $query) use ($BASE): never {
+    header("Location: {$BASE}{$query}");
+    exit;
+};
+$languages = editorLanguages();
+
+if ($isPost && !kris_csrf_valid($_POST['csrf'] ?? null)) {
+    $error = 'Sessione scaduta o richiesta non valida: ricarica la pagina e riprova. Nulla è stato modificato.';
+} elseif ($isPost && $editorLock !== '') {
     $error = $editorLock . ' Nulla è stato modificato.';
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isReservedStructuralPost($_POST)) {
-    $error = 'I nomi che iniziano con kris_ sono riservati a Kris: queste raccolte hanno una struttura fissa. Nulla è stato modificato.';
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($singleError = singleCollectionViolation($_POST, $data)) !== null) {
-    $error = $singleError;
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && $stagingMode && !isStagingNeutralPost($_POST)) {
-    // Modifiche in attesa: i contenuti diventano operazioni dello staging, il sito non cambia
-    require __DIR__ . '/staging_actions.php';
-} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+} elseif ($isPost && isReservedStructuralPost($_POST)) {
+    $error = 'I nomi che iniziano con kris_ o plg_ sono riservati: queste raccolte hanno una struttura fissa. Nulla è stato modificato.';
+} elseif ($isPost && $stagingMode && !isStagingNeutralPost($_POST) && $g !== '' && isReservedCollection($g) && !in_array($g, ['kris_site', 'kris_notfound', 'kris_wip'], true)) {
+    $error = 'Privacy e cookie si modificano sul sito pubblico: passa a «Sito pubblico» per cambiarli.';
+} elseif ($isPost && $stagingMode && array_intersect(['create_collection', 'save_structure', 'delete_collection', 'save_collection_info', 'toggle_post_collection', 'save_settings', 'delete_media', 'optimize_media'], array_keys($_POST))) {
+    $error = 'Struttura, lingue e file della libreria si cambiano sul sito pubblico: passa a «Sito pubblico».';
+} elseif ($isPost) {
   try {
-    // 1. Crea Collezione
-    if (isset($_POST['create_collection'])) {
-        $name = preg_replace('/[^a-z0-9_]/', '', strtolower($_POST['collection_name']));
-        if ($name && !isset($models[$name])) {
-            $models[$name] = [];
-            saveJson($modelFile, $models);
-            header("Location: $BASE?action=structure&group=$name");
-            exit;
-        }
-    }
-    // 2. Salva Struttura
-    if (isset($_POST['save_structure'])) {
-        $g = $_POST['group_name'];
-        $decoded = json_decode($_POST['schema_json'] ?? '', true);
+    $pending = $stagingMode;
+    $saved = $stagingMode
+        ? 'Modifiche messe in attesa: il sito pubblico non cambia finché non le pubblichi.'
+        : 'Contenuto salvato: è già visibile sul sito.';
 
-        if (!is_array($decoded)) {
-            // Uno schema illeggibile non deve diventare uno schema vuoto:
-            // al primo salvataggio successivo cancellerebbe tutti i campi.
-            $error = "Struttura non salvata: i dati inviati non sono validi. Nulla e stato modificato.";
-        } else {
-            $problems = validateSchema($decoded, $models[$g] ?? []);
-            if ($problems) {
-                $error = "Struttura non salvata: " . implode(' ', $problems);
-            } else {
-                $merged = normalizeSections(normalizePostsFlag(mergeSchemaMetadata($decoded, $models[$g] ?? [])));
-
-                // Prima di applicare: quali contenuti gia scritti sparirebbero?
-                $impact = isset($_POST['confirm_impact'])
-                    ? []
-                    : schemaImpact($models[$g] ?? [], $merged, $data, $g);
-
-                if ($impact !== []) {
-                    // Non si salva nulla: si mostra l'impatto e si chiede conferma.
-                    $pendingImpact = $impact;
-                    $pendingSchema = json_encode($merged, JSON_UNESCAPED_UNICODE);
-                    $group = $g;
-                    $action = 'structure_impact';
-                } else {
-                    $models[$g] = $merged;
-                    saveJson($modelFile, $models);
-                    $msg = "Struttura aggiornata con successo.";
-                }
-            }
-        }
-    }
-    // 3. Elimina Collezione
-    if (isset($_POST['delete_collection'])) {
-        $g = (string) $_POST['group_name'];
-        // Prima veniva rimosso solo il modello: i contenuti restavano
-        // nell'archivio e il sito continuava a servirli, pur essendo
-        // spariti dal pannello. Si eliminano entrambi (il backup automatico
-        // di JsonStore resta come rete di sicurezza).
-        $data = array_values(array_filter($data, fn($d) => ($d['name'] ?? null) !== $g));
-        saveJson($dataFile, $data);
-
-        unset($models[$g]);
-        saveJson($modelFile, $models);
-        header("Location: $BASE");
-        exit;
-    }
-    // 4. Salva Entità (root o nested via path)
+    // --- Contenuti ---------------------------------------------------------
     if (isset($_POST['save_entity'])) {
-        $id = (int) $_POST['id'];
-        $g = $_POST['group'];
-        $path = parsePath($_POST['path'] ?? '');
-        $rootIdx = findRootIndex($data, $g, $id);
-
-        $schema = resolveSchemaAtPath($models, $g, $path);
-
-        if ($rootIdx < 0) {
-            // Only root can be created via this path (nested entities are created via create_nested)
-            $itemData = applyPostToData([], $schema, $_POST, $activeLangs);
-            $data[] = ['id' => $id, 'name' => $g, 'data' => $itemData];
-        } else {
-            $target = &walkEntityPath($data[$rootIdx], $path);
-            // Un percorso dispari indica un CAMPO array, non un contenuto:
-            // scriverci dentro 'data' corromperebbe la struttura.
-            $valid = $target !== null && count($path) % 2 === 0;
-            unset($target);
-
-            if (!$valid) {
-                $error = "Percorso non valido: non ho modificato nulla.";
-            } else {
-                $target = &walkEntityPath($data[$rootIdx], $path);
-                $target['data'] = applyPostToData($target['data'] ?? [], $schema, $_POST, $activeLangs);
-                unset($target);
-            }
-        }
-        // Si salva e si conferma solo se c'era davvero qualcosa da scrivere.
-        if ($error === '') {
-            saveJson($dataFile, $data);
-            $msg = "Contenuto salvato.";
-        }
+        $id = (int) ($_POST['id'] ?? -1);
+        $path = parsePath((string) ($_POST['path'] ?? ''));
+        $node = count($path) % 2 === 0 ? editorNode($g, $id, $path) : null;
+        if ($node === null) throw new StagingException('Questo contenuto non esiste più: ricarica la pagina.');
+        $fields = editorFields($g, editorListNames($path));
+        $before = is_array($node['values'] ?? null) ? $node['values'] : [];
+        $after = editorPostedValues($fields, $_POST, $languages, $before);
+        $ops = EditorChanges::fieldOps($g, $id, $path, $fields, $before, $after, $languages);
+        editorApply($ops, $pending);
+        $msg = $ops ? $saved : 'Nessuna modifica da salvare.';
     }
-    // 5. Crea Istanza (root)
     if (isset($_POST['create_instance'])) {
-        $g = $_POST['group'];
-        $maxId = -1;
-        foreach ($data as $d)
-            if ($d['name'] === $g)
-                $maxId = max($maxId, $d['id']);
-        $skeleton = buildSkeleton($models[$g] ?? [], $activeLangs);
-        $newId = $maxId + 1;
-        $entity = ['id' => $newId, 'name' => $g, 'data' => $skeleton];
-        // In una raccolta mostrata in Posts il contenuto piu recente va in cima.
-        $data = array_values($data);
-        $first = null;
-        if (in_array($g, editorPostCollections($settings, $models), true)) {
-            foreach ($data as $i => $d) {
-                if (($d['name'] ?? null) === $g) { $first = $i; break; }
-            }
-        }
-        if ($first === null) {
-            $data[] = $entity;
-        } else {
-            array_splice($data, $first, 0, [$entity]);
-        }
-        saveJson($dataFile, $data);
-        header("Location: $BASE?action=edit&group=$g&id=$newId");
-        exit;
+        $done = editorApply([['op' => 'create_entity', 'key' => $g]], $pending);
+        $newId = (int) $done[0]['assigned_id'];
+        // In una raccolta di articoli il più recente va in cima
+        if (isNewestFirst($g)) editorApply([['op' => 'move_entity', 'key' => $g, 'id' => $newId, 'to' => 0]], $pending);
+        $goTo('?action=edit&group=' . urlencode($g) . '&id=' . $newId);
     }
-    // 5b. Crea sub-istanza nested (path deve terminare su un field array)
     if (isset($_POST['create_nested'])) {
-        $g = $_POST['group'];
-        $id = (int) $_POST['id'];
-        $path = parsePath($_POST['path'] ?? '');
-        $rootIdx = findRootIndex($data, $g, $id);
-        if ($rootIdx >= 0 && count($path) % 2 === 1) {
-            $schema = resolveSchemaAtPath($models, $g, $path);
-            $field = &walkEntityPath($data[$rootIdx], $path);
-            if ($field !== null && ($field['type'] ?? null) === 'array') {
-                $maxSubId = -1;
-                foreach ($field['value'] as $s)
-                    $maxSubId = max($maxSubId, (int) ($s['id'] ?? -1));
-                $newSubId = $maxSubId + 1;
-                $child = ['id' => $newSubId, 'data' => buildSkeleton($schema, $activeLangs)];
-                // Negli elenchi posts il contenuto piu recente va in cima.
-                if (count($path) === 1 && postsFieldDef($models, $g, $path[0]) !== null) {
-                    array_unshift($field['value'], $child);
-                } else {
-                    $field['value'][] = $child;
-                }
-                saveJson($dataFile, $data);
-                $childPath = pathToString([...$path, (string) $newSubId]);
-                header("Location: $BASE?action=edit&group=$g&id=$id&path=" . urlencode($childPath));
-                exit;
-            }
-            unset($field);
-        }
+        $id = (int) ($_POST['id'] ?? -1);
+        $path = parsePath((string) ($_POST['path'] ?? ''));
+        if (count($path) % 2 !== 1) throw new StagingException('Elenco non valido: ricarica la pagina.');
+        $done = editorApply([['op' => 'add_item', 'key' => $g, 'id' => $id, 'path' => array_slice($path, 0, -1), 'array' => (string) end($path)]], $pending);
+        $goTo('?action=edit&group=' . urlencode($g) . "&id={$id}&path=" . urlencode(pathToString([...$path, (string) $done[0]['assigned_id']])));
     }
-    // 6. Elimina Istanza (root)
     if (isset($_POST['delete_instance'])) {
-        $data = array_filter($data, fn($d) => !($d['name'] == $_POST['group'] && $d['id'] == $_POST['id']));
-        saveJson($dataFile, array_values($data));
-        header("Location: $BASE?action=" . (isset($_POST['return_posts']) ? 'posts' : 'list') . '&group=' . urlencode((string) $_POST['group']));
-        exit;
+        editorApply([['op' => 'remove_entity', 'key' => $g, 'id' => (int) ($_POST['id'] ?? -1)]], $pending);
+        $goTo('?action=list&group=' . urlencode($g));
     }
-    // 6b. Elimina sub-istanza nested (path deve terminare su un sub-id)
     if (isset($_POST['delete_nested'])) {
-        $g = $_POST['group'];
-        $id = (int) $_POST['id'];
-        $path = parsePath($_POST['path'] ?? '');
-        $rootIdx = findRootIndex($data, $g, $id);
-        if ($rootIdx >= 0 && count($path) >= 2 && count($path) % 2 === 0) {
-            $parentPath = array_slice($path, 0, -2);
-            $fieldName = $path[count($path) - 2];
-            $subId = (int) $path[count($path) - 1];
-            $parent = &walkEntityPath($data[$rootIdx], $parentPath);
-            if ($parent !== null) {
-                foreach ($parent['data'] as &$item) {
-                    if ($item['name'] === $fieldName && ($item['type'] ?? null) === 'array') {
-                        $item['value'] = array_values(array_filter(
-                            $item['value'],
-                            fn($s) => (int) ($s['id'] ?? -1) !== $subId
-                        ));
-                        break;
-                    }
-                }
-                unset($item);
-            }
-            unset($parent);
-            saveJson($dataFile, $data);
-            $back = pathToString($parentPath);
-            if (isset($_POST['return_posts'])) {
-                header("Location: $BASE?action=posts&group=" . urlencode($g) . "&id=$id&field=" . urlencode($fieldName));
-                exit;
-            }
-            header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : '') . returnAnchor());
-            exit;
+        $id = (int) ($_POST['id'] ?? -1);
+        $path = parsePath((string) ($_POST['path'] ?? ''));
+        if (count($path) < 2 || count($path) % 2 !== 0) throw new StagingException('Elemento non valido: ricarica la pagina.');
+        $parent = array_slice($path, 0, -2);
+        editorApply([['op' => 'remove_item', 'key' => $g, 'id' => $id, 'path' => $parent,
+            'array' => (string) $path[count($path) - 2], 'item_id' => (int) $path[count($path) - 1]]], $pending);
+        $goTo('?action=edit&group=' . urlencode($g) . "&id={$id}" . ($parent ? '&path=' . urlencode(pathToString($parent)) : '') . returnAnchor());
+    }
+    if (isset($_POST['toggle_visibility'])) {
+        $visible = ($_POST['visible'] ?? '') === '1';
+        $path = parsePath((string) ($_POST['path'] ?? ''));
+        if (count($path) % 2 !== 0 || isReservedCollection($g)) throw new StagingException('Elemento non trovato: ricarica la pagina.');
+        editorApply([['op' => 'set_hidden', 'key' => $g, 'id' => (int) ($_POST['id'] ?? -1), 'path' => $path, 'hidden' => !$visible]], $pending);
+        $msg = $stagingMode
+            ? ($visible ? 'In attesa: tornerà visibile quando pubblichi.' : 'In attesa: verrà sospeso quando pubblichi.')
+            : ($visible ? 'Visibile sul sito.' : 'Sospeso: il sito non lo mostra.');
+        if ($ajax !== 'visibility') {
+            $back = is_string($_POST['return_to'] ?? null) && preg_match('/^\?action=[a-z_]+(&[A-Za-z0-9_=%.\/-]*)*$/', $_POST['return_to'])
+                ? $_POST['return_to'] : '?action=list&group=' . urlencode($g);
+            $goTo($back);
         }
     }
-    // 6c. Riordina entità root (drag-and-drop)
-    // --- Account: email di recupero, email di prova, cambio password ---
+    if (isset($_POST['reorder_root'])) {
+        $before = array_map(fn($item) => (int) $item['id'], editorItems($g));
+        $after = array_map('intval', explode(',', (string) ($_POST['order'] ?? '')));
+        editorApply(array_map(fn($move) => ['op' => 'move_entity', 'key' => $g, 'id' => $move[0], 'to' => $move[1]], EditorChanges::moves($before, $after)), $pending);
+        $msg = $stagingMode ? 'Ordine messo in attesa.' : 'Ordine salvato.';
+        if ($ajax !== 'reorder') $goTo('?action=list&group=' . urlencode($g));
+    }
+    if (isset($_POST['reorder_nested'])) {
+        $id = (int) ($_POST['id'] ?? -1);
+        $path = parsePath((string) ($_POST['path'] ?? ''));
+        if (count($path) % 2 !== 1) throw new StagingException('Elenco non disponibile: ricarica il contenuto prima di riprovare.');
+        $parent = array_slice($path, 0, -1);
+        $list = (string) end($path);
+        $owner = editorNode($g, $id, $parent);
+        if ($owner === null || !is_array($owner['values'][$list] ?? null)) throw new StagingException('Elenco non disponibile: ricarica il contenuto prima di riprovare.');
+        $before = array_map(fn($child) => (int) ($child['id'] ?? -1), $owner['values'][$list]);
+        $after = array_map('intval', explode(',', (string) ($_POST['order'] ?? '')));
+        editorApply(array_map(fn($move) => ['op' => 'move_item', 'key' => $g, 'id' => $id, 'path' => $parent, 'array' => $list,
+            'item_id' => $move[0], 'to' => $move[1]], EditorChanges::moves($before, $after)), $pending);
+        $msg = $stagingMode ? 'Ordine messo in attesa.' : 'Ordine salvato.';
+        if ($ajax !== 'reorder') $goTo('?action=edit&group=' . urlencode($g) . "&id={$id}" . ($parent ? '&path=' . urlencode(pathToString($parent)) : ''));
+    }
+
+    // --- Struttura (solo sul sito pubblico) ------------------------------------
+    if (isset($_POST['create_collection'])) {
+        $name = (string) preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($_POST['collection_name'] ?? '')));
+        $label = mb_substr(trim((string) ($_POST['collection_label'] ?? '')), 0, 60);
+        if ($name === '' || !preg_match('/^[a-z]/', $name)) throw new StagingException('Il nome tecnico deve iniziare con una lettera: lettere minuscole, numeri e _.');
+        $ops = [['op' => 'create_collection', 'name' => $name, 'fields' => []]];
+        if ($label !== '' || isset($_POST['collection_single'])) {
+            $ops[] = ['op' => 'set_collection_info', 'collection' => $name] + ($label !== '' ? ['label' => $label] : []) + (isset($_POST['collection_single']) ? ['single' => true] : []);
+        }
+        editorApply($ops, false);
+        $goTo('?action=structure&group=' . urlencode($name));
+    }
+    if (isset($_POST['save_structure'])) {
+        $decoded = json_decode((string) ($_POST['schema_json'] ?? ''), true);
+        if (!is_array($decoded) || !array_is_list($decoded) || editorType($g) === null) {
+            // Uno schema illeggibile non deve diventare uno schema vuoto
+            throw new StagingException('Struttura non salvata: i dati inviati non sono validi. Nulla è stato modificato.');
+        }
+        $new = editorCleanSchema($decoded);
+        $problems = validateSchema($new);
+        if ($problems) throw new StagingException('Struttura non salvata: ' . implode(' ', $problems));
+        $old = editorFields($g);
+        $impact = isset($_POST['confirm_impact']) ? [] : editorSchemaImpact($g, $old, $new);
+        if ($impact) {
+            // Non si salva nulla: si mostra cosa si perderebbe e si chiede conferma
+            $pendingImpact = $impact;
+            $pendingSchema = json_encode($new, JSON_UNESCAPED_UNICODE);
+            $group = $g;
+            $action = 'structure_impact';
+        } else {
+            $ops = editorSchemaOps($g, $old, $new);
+            editorApply($ops, false);
+            $msg = $ops ? 'Struttura salvata.' : 'La struttura era già così.';
+        }
+    }
+    if (isset($_POST['delete_collection'])) {
+        editorApply([['op' => 'remove_collection', 'name' => $g]], false);
+        $goTo('');
+    }
+    if (isset($_POST['save_collection_info'])) {
+        $single = isset($_POST['collection_single']);
+        if ($single && count(editorItems($g)) > 1) throw new StagingException('Un contenuto unico vale solo con un contenuto: questa raccolta ne ha di più.');
+        $types = array_keys(editorUserTypes());
+        $position = max(0, min((int) ($_POST['collection_position'] ?? 0), count($types) - 1));
+        $ops = [['op' => 'set_collection_info', 'collection' => $g,
+            'label' => mb_substr(trim((string) ($_POST['collection_label'] ?? '')), 0, 60),
+            'description' => mb_substr(trim((string) ($_POST['collection_description'] ?? '')), 0, 200),
+            'single' => $single]];
+        // La posizione è fra le raccolte del sito
+        if (array_search($g, $types, true) !== $position) $ops[] = ['op' => 'move_collection', 'collection' => $g, 'to' => $position];
+        editorApply($ops, false);
+        $msg = 'Nome e posizione salvati.';
+    }
+    if (isset($_POST['toggle_post_collection'])) {
+        $enabled = ($_POST['enabled'] ?? '') === '1';
+        editorApply([['op' => 'set_post_collection', 'collection' => $g, 'enabled' => $enabled]], false);
+        $msg = $enabled ? 'Raccolta di articoli: i nuovi contenuti vanno in cima.' : 'I nuovi contenuti vanno in fondo.';
+    }
+
+    // --- Impostazioni del sito ----------------------------------------------
+    if (isset($_POST['save_settings'])) {
+        $chosen = is_array($_POST['langs'] ?? null) ? array_values(array_intersect(array_keys($DEFAULT_LANGS), $_POST['langs'])) : [];
+        $main = (string) ($_POST['main_lang'] ?? '');
+        if ($chosen === []) throw new StagingException('Scegli almeno una lingua. Le impostazioni non sono state modificate.');
+        // La principale va per prima: è quella degli indirizzi senza prefisso
+        if (in_array($main, $chosen, true)) $chosen = [$main, ...array_values(array_diff($chosen, [$main]))];
+        \Kris\Store\Stores::site()->transaction(['settings'], function (array $docs) use ($chosen): array {
+            return ['settings' => ['languages' => $chosen] + $docs['settings']];
+        });
+        editorReload($stagingMode);
+        $msg = 'Lingue salvate. Le traduzioni delle lingue disattivate restano conservate.';
+    }
+    if (isset($_POST['save_upload_settings'])) {
+        $uploads = [
+            'prefix' => MediaStore::slug(mb_substr((string) ($_POST['upload_prefix'] ?? ''), 0, 60)),
+            'max_width' => max(0, min(10000, (int) ($_POST['upload_max_width'] ?? MediaStore::DEFAULT_MAX_WIDTH))),
+            'webp' => isset($_POST['upload_webp']) && MediaStore::canWriteWebp(),
+        ];
+        \Kris\Store\Stores::site()->transaction(['settings'], fn(array $docs): array => ['settings' => ['uploads' => $uploads] + $docs['settings']]);
+        editorReload($stagingMode);
+        $msg = 'Impostazioni dei caricamenti salvate.';
+    }
+
+    // --- Account -----------------------------------------------------------
     if (isset($_POST['save_account_email'])) {
         $email = trim((string) ($_POST['account_email'] ?? ''));
         $config = kris_auth_config() ?? [];
@@ -236,13 +218,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         } elseif (!kris_credentials()->save(['email' => $email, 'editor_url' => kris_current_editor_url()])) {
             $error = 'Non riesco a scrivere config/auth.php: controlla i permessi con l\'hosting.';
         } else {
-            $msg = 'Email salvata: la userai per recuperare la password. Prova a inviarti un\'email di prova da Impostazioni.';
+            $msg = 'Email salvata: la userai per recuperare la password. Prova a inviarti un\'email di prova.';
         }
     }
     if (isset($_POST['account_email_later'])) {
         $_SESSION['kris_email_later'] = true;
-        header("Location: $BASE?" . (string) ($_SERVER['QUERY_STRING'] ?? ''));
-        exit;
+        $goTo('?' . (string) ($_SERVER['QUERY_STRING'] ?? ''));
     }
     if (isset($_POST['send_test_email'])) {
         $config = kris_auth_config() ?? [];
@@ -271,127 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         }
     }
 
-    // Mostra o sospende un elemento (entita root se path e vuoto, altrimenti figlio).
-    if (isset($_POST['toggle_visibility'])) {
-        $g = (string) ($_POST['group'] ?? '');
-        $rootIdx = findRootIndex($data, $g, (int) ($_POST['id'] ?? -1));
-        $path = parsePath((string) ($_POST['path'] ?? ''));
-        $visible = ($_POST['visible'] ?? '') === '1';
-        if ($rootIdx < 0 || count($path) % 2 !== 0 || isReservedCollection($g)) {
-            throw new StorageException('elemento non trovato');
-        }
-        if ($path) {
-            $target = &walkEntityPath($data[$rootIdx], $path);
-            if ($target === null) {
-                throw new StorageException('elemento non trovato');
-            }
-        } else {
-            $target = &$data[$rootIdx];
-        }
-        if ($visible) {
-            unset($target['hidden']);
-        } else {
-            $target['hidden'] = true;
-        }
-        unset($target);
-        saveJson($dataFile, $data);
-        $msg = $visible ? 'Elemento visibile sul sito.' : 'Elemento sospeso: il sito non lo mostra.';
-        if (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') !== 'visibility') {
-            $back = is_string($_POST['return_to'] ?? null) && preg_match('/^\?action=[a-z_]+(&[A-Za-z0-9_=%.\/-]*)*$/', $_POST['return_to'])
-                ? $_POST['return_to'] : '?action=list&group=' . urlencode($g);
-            header("Location: $BASE$back");
-            exit;
-        }
-    }
-
-    if (isset($_POST['reorder_root'])) {
-        $g = $_POST['group'];
-        $order = array_map('intval', explode(',', $_POST['order'] ?? ''));
-        if (!empty($order)) {
-            // Estrae le entità del group nell'ordine richiesto, mantiene le altre nella loro posizione relativa
-            $byId = [];
-            foreach ($data as $d) {
-                if ($d['name'] === $g) $byId[(int)$d['id']] = $d;
-            }
-            $reordered = [];
-            $usedIds = [];
-            foreach ($order as $oid) {
-                // Il controllo su $usedIds scarta i duplicati: un ordine come
-                // "0,0" non deve poter duplicare un elemento nell'archivio.
-                if (isset($byId[$oid]) && !isset($usedIds[$oid])) {
-                    $reordered[] = $byId[$oid];
-                    $usedIds[$oid] = true;
-                }
-            }
-            // Aggiunge in coda eventuali entità del group non incluse nell'ordine (safety)
-            foreach ($byId as $oid => $d) {
-                if (!isset($usedIds[$oid])) $reordered[] = $d;
-            }
-            // Ricostruisce $data: per ogni entità non-group mantiene posizione, sostituisce le entità del group in ordine
-            $newData = [];
-            $reIdx = 0;
-            foreach ($data as $d) {
-                if ($d['name'] === $g) {
-                    if (isset($reordered[$reIdx])) $newData[] = $reordered[$reIdx++];
-                } else {
-                    $newData[] = $d;
-                }
-            }
-            // Aggiunge in coda eventuali rimanenti
-            while ($reIdx < count($reordered)) $newData[] = $reordered[$reIdx++];
-            $data = $newData;
-            saveJson($dataFile, $data);
-        }
-        $msg = 'Ordine salvato.';
-        if (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') !== 'reorder') {
-            header("Location: $BASE?action=list&group=$g");
-            exit;
-        }
-    }
-    // 6d. Riordina sub-entità nested (drag-and-drop)
-    if (isset($_POST['reorder_nested'])) {
-        $error = 'Elenco non disponibile. Ricarica il contenuto prima di riprovare.';
-        $g = $_POST['group'];
-        $id = (int) $_POST['id'];
-        $path = parsePath($_POST['path'] ?? '');
-        $order = array_map('intval', explode(',', $_POST['order'] ?? ''));
-        $rootIdx = findRootIndex($data, $g, $id);
-        if ($rootIdx >= 0 && !empty($order) && count($path) % 2 === 1) {
-            $field = &walkEntityPath($data[$rootIdx], $path);
-            if ($field !== null && ($field['type'] ?? null) === 'array') {
-                $bySubId = [];
-                foreach ($field['value'] as $s) $bySubId[(int)($s['id'] ?? -1)] = $s;
-                $reordered = [];
-                $usedIds = [];
-                foreach ($order as $oid) {
-                    // Come per le entita radice: nessun figlio puo comparire due volte.
-                    if (isset($bySubId[$oid]) && !isset($usedIds[$oid])) {
-                        $reordered[] = $bySubId[$oid];
-                        $usedIds[$oid] = true;
-                    }
-                }
-                foreach ($bySubId as $oid => $s) {
-                    if (!isset($usedIds[$oid])) $reordered[] = $s;
-                }
-                $field['value'] = $reordered;
-                saveJson($dataFile, $data);
-                $error = '';
-                $msg = 'Ordine salvato.';
-            }
-            unset($field);
-        }
-        $parentPath = array_slice($path, 0, -1);
-        $back = pathToString($parentPath);
-        if (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') !== 'reorder') {
-            if (isset($_POST['return_posts']) && count($path) === 1) {
-                header("Location: $BASE?action=posts&group=" . urlencode($g) . "&id=$id&field=" . urlencode($path[0]));
-                exit;
-            }
-            header("Location: $BASE?action=edit&group=$g&id=$id" . ($back ? '&path=' . urlencode($back) : ''));
-            exit;
-        }
-    }
-    // Kris Agent: abbina, spegni o riaccendi, scollega
+    // --- Kris Agent --------------------------------------------------------
     if (isset($_POST['agent_grant']) || isset($_POST['agent_reset'])) {
         try {
             $workerClient = new \Kris\Agent\WorkerClient(new \Kris\Agent\AgentConfig());
@@ -411,7 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
         $agentConfig = new \Kris\Agent\AgentConfig();
         try {
             if (isset($_POST['agent_pair'])) {
-                $siteUrl = (string) preg_replace('#/editor(/index\.php)?$#', '', kris_current_editor_url());
+                $siteUrl = (string) preg_replace('#/(kris-admin|editor)(/index\.php)?$#', '', kris_current_editor_url());
                 \Kris\Agent\Pairing::pair($agentConfig, (string) ($_POST['agent_code'] ?? ''), $siteUrl, $siteUrl . '/kris-agent.php',
                     $krisVersion, (string) ($_SESSION['kris_user'] ?? ''));
                 \Kris\Update\Stubs::ensure(KRIS_ROOT);
@@ -427,179 +288,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !kris_csrf_valid($_POST['csrf'] ?? 
             $error = $e->getMessage();
         }
     }
-    // Staging: l'admin si assume la responsabilita del codice in attesa (dal popup dell'anteprima o da qui)
+
+    // --- Da pubblicare -----------------------------------------------------
     if (isset($_POST['approve_code'])) {
-        try {
-            (new \Kris\Staging\Staging())->approveCode((string) $_POST['approve_code'], (string) ($_SESSION['kris_user'] ?? ''));
-            $msg = 'Script approvati: l\'anteprima ora li esegue.';
-            // Dal popup si torna alla stessa pagina dell'anteprima
-            $return = (string) ($_POST['return'] ?? '');
-            if (preg_match('/^[A-Za-z0-9_=&%.\/-]*kris_preview=1[A-Za-z0-9_=&%.\/-]*$/', $return) === 1) {
-                header('Location: ' . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/index.php?' . $return);
-                exit;
-            }
-        } catch (\Kris\Staging\StagingException $e) {
-            $error = $e->getMessage();
+        (new \Kris\Staging\Staging())->approveCode((string) $_POST['approve_code'], (string) ($_SESSION['kris_user'] ?? ''));
+        $msg = 'Script approvati: l\'anteprima ora li esegue.';
+        // Dal popup si torna alla stessa pagina dell'anteprima
+        $return = (string) ($_POST['return'] ?? '');
+        if (preg_match('/^[A-Za-z0-9_=&%.\/-]*kris_preview=1[A-Za-z0-9_=&%.\/-]*$/', $return) === 1) {
+            header('Location: ' . rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/index.php?' . $return);
+            exit;
         }
     }
-    // Staging: pubblica, scarta, annulla l'ultima pubblicazione
     if (isset($_POST['staging_promote']) || isset($_POST['staging_discard']) || isset($_POST['staging_undo'])) {
         $staging = new \Kris\Staging\Staging();
         $user = (string) ($_SESSION['kris_user'] ?? '');
-        try {
+        if (isset($_POST['staging_undo'])) {
+            $restored = $staging->undoLastPromotion();
+            $msg = 'Pubblicazione annullata: ' . count($restored) . ' file sono tornati com\'erano.';
+        } else {
             if (isset($_POST['staging_promote'])) {
                 $done = $staging->promote($user, isset($_POST['force']));
                 $msg = 'Modifiche pubblicate: ' . count($done['files']) . ' file. Puoi annullare la pubblicazione per ' . \Kris\Staging\Staging::BACKUP_DAYS . ' giorni.';
-            } elseif (isset($_POST['staging_discard'])) {
+            } else {
                 $staging->discard();
                 $msg = 'Modifiche scartate. Il sito non è cambiato.';
             }
-            if (!isset($_POST['staging_undo'])) {
-                // Non c'e piu niente in attesa: l'editor torna al sito pubblico,
-                // altrimenti resterebbe l'avviso «Stai preparando modifiche in attesa»
-                $_SESSION['kris_editing'] = 'live';
-                $stagingMode = false;
-            } else {
-                $restored = $staging->undoLastPromotion();
-                $msg = 'Pubblicazione annullata: ' . count($restored) . ' file sono tornati com\'erano.';
-            }
-        } catch (\Kris\Staging\StagingException $e) {
-            $error = $e->getMessage() . ($e->details() ? ' File: ' . implode(', ', $e->details()) . '.' : '');
+            // Non c'è più niente in attesa: l'editor torna al sito pubblico
+            $_SESSION['kris_editing'] = 'live';
+            $stagingMode = false;
         }
+        editorReload($stagingMode);
     }
-    // 7. Upload & Settings
+
+    // --- Libreria media ----------------------------------------------------
     if (isset($_FILES['file'])) {
-        // Stesso servizio usato da upload.php: una sola politica su estensioni,
-        // dimensioni e nomi, invece dei due comportamenti diversi di prima.
-        try {
-            (new MediaStore($uploadDir, $uploadUrl))->store($_FILES['file']);
-            $msg = "File caricato.";
-        } catch (StorageException $e) {
-            $error = $e->getMessage();
-        }
-    }
-    if (isset($_POST['save_settings'])) {
-        $languages = is_array($_POST['langs'] ?? null)
-            ? array_values(array_intersect(array_keys($DEFAULT_LANGS), $_POST['langs'])) : [];
-        if ($languages === []) {
-            $error = 'Seleziona almeno una lingua. Le impostazioni non sono state modificate.';
-        } else {
-            // Le altre impostazioni (per esempio le raccolte in Posts) restano
-            $settings = ['languages' => $languages] + $settings;
-            saveJson($settingsFile, $settings);
-            $activeLangs = $languages;
-            $msg = 'Impostazioni salvate. Le traduzioni delle lingue disattivate sono conservate.';
-        }
-    }
-    // Una raccolta intera nella sezione Posts: ogni contenuto e un post.
-    // Impostazioni dei caricamenti: prefisso dei nomi, larghezza massima, WebP
-    if (isset($_POST['save_upload_settings'])) {
-        $settings['uploads'] = [
-            'prefix' => \Kris\Entity\MediaStore::slug(mb_substr((string) ($_POST['upload_prefix'] ?? ''), 0, 60)),
-            'max_width' => max(0, min(10000, (int) ($_POST['upload_max_width'] ?? \Kris\Entity\MediaStore::DEFAULT_MAX_WIDTH))),
-            'webp' => isset($_POST['upload_webp']) && \Kris\Entity\MediaStore::canWriteWebp(),
-        ];
-        saveJson($settingsFile, $settings);
-        $msg = 'Impostazioni dei caricamenti salvate.';
-    }
-    // Nome visibile, descrizione, posizione e contenuto unico di una raccolta
-    if (isset($_POST['save_collection_info'])) {
-        $g = (string) ($_POST['group_name'] ?? '');
-        $count = count(array_filter($data, fn($e) => ($e['name'] ?? null) === $g));
-        if (!isset($models[$g]) || isReservedCollection($g)) {
-            $error = 'La raccolta non è disponibile.';
-        } else {
-            $info = is_array($settings['collections'] ?? null) ? $settings['collections'] : [];
-            $entry = [
-                'label' => mb_substr(trim((string) ($_POST['collection_label'] ?? '')), 0, 60),
-                'description' => mb_substr(trim((string) ($_POST['collection_description'] ?? '')), 0, 200),
-                'single' => isset($_POST['collection_single']) && $count <= 1,
-            ];
-            $entry = array_filter($entry, fn($v) => $v !== '' && $v !== false);
-            if ($entry) {
-                $info[$g] = $entry;
-            } else {
-                unset($info[$g]);
+        if ($stagingMode) {
+            $file = $_FILES['file'];
+            if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string) ($file['tmp_name'] ?? ''))) {
+                throw new StagingException('Caricamento non riuscito: riprova.');
             }
-            $settings['collections'] = $info;
-            // L'ordine si salva intero: tutte le raccolte del sito, con questa nella posizione scelta
-            $order = array_values(array_filter(array_keys(orderCollections($models)), fn($n) => !isReservedCollection($n) && $n !== $g));
-            array_splice($order, max(0, min((int) ($_POST['collection_position'] ?? 0), count($order))), 0, [$g]);
-            $settings['collection_order'] = $order;
-            saveJson($settingsFile, $settings);
-            editorCollectionInfo($settings);
-            $msg = 'Nome e posizione della raccolta salvati.';
-        }
-    }
-    if (isset($_POST['toggle_post_collection'])) {
-        $g = (string) ($_POST['group_name'] ?? '');
-        if (!isset($models[$g]) || isReservedCollection($g)) {
-            $error = 'La raccolta non è disponibile.';
+            (new \Kris\Staging\Staging())->upload((string) $file['tmp_name'], (string) ($file['name'] ?? ''), 'editor: ' . (string) ($_SESSION['kris_user'] ?? ''));
+            $msg = 'File caricato fra le modifiche in attesa: sarà pubblico quando pubblichi.';
         } else {
-            $names = array_values(array_diff(editorPostCollections($settings, $models), [$g]));
-            if (($_POST['enabled'] ?? '') === '1') $names[] = $g;
-            $settings['post_collections'] = $names;
-            saveJson($settingsFile, $settings);
-            $msg = ($_POST['enabled'] ?? '') === '1' ? 'La raccolta ora compare in Posts.' : 'La raccolta non compare più in Posts.';
+            (new MediaStore($uploadDir, $uploadUrl))->store($_FILES['file']);
+            $msg = 'File caricato.';
         }
     }
-    // 8. Elimina Media
-    // Varianti per gli schermi diversi delle immagini già caricate, a blocchi per non superare il tempo dell'hosting
     if (isset($_POST['optimize_media'])) {
+        // A blocchi, per non superare il tempo massimo dell'hosting
         $start = microtime(true);
         $made = 0;
         $left = 0;
         foreach (editorMediaFiles($uploadDir) as $file) {
             if (microtime(true) - $start > 20) { $left++; continue; }
-            $made += \Kris\Entity\MediaStore::makeVariants($uploadDir, basename($file));
+            $made += MediaStore::makeVariants($uploadDir, basename($file));
         }
         $msg = $left > 0
-            ? "Create {$made} versioni ottimizzate. Restano {$left} immagini: premi di nuovo «Ottimizza le immagini»."
-            : ($made > 0 ? "Create {$made} versioni ottimizzate: le pagine ora caricano la misura adatta allo schermo." : 'Le immagini sono già tutte ottimizzate.');
+            ? "Create {$made} misure ottimizzate. Restano {$left} immagini: premi di nuovo «Ottimizza le immagini»."
+            : ($made > 0 ? "Create {$made} misure ottimizzate: le pagine ora caricano quella adatta allo schermo." : 'Le immagini sono già tutte ottimizzate.');
     }
     if (isset($_POST['delete_media'])) {
-        // basename() è fondamentale per la sicurezza (impedisce di cancellare file di sistema con ../)
-        $filename = basename($_POST['file_name']); 
-        $targetFile = $uploadDir . $filename;
-        
-        if (file_exists($targetFile)) {
-            if (\Kris\Entity\MediaStore::deleteWithVariants($uploadDir, $filename)) $msg = "File eliminato con successo.";
+        // basename() impedisce di uscire dalla cartella dei caricamenti
+        $filename = basename((string) ($_POST['file_name'] ?? ''));
+        if ($filename !== '' && is_file($uploadDir . $filename)) {
+            if (MediaStore::deleteWithVariants($uploadDir, $filename)) $msg = 'File eliminato.';
             else $error = 'Non è stato possibile eliminare il file. Riprova.';
         } else {
-            $error = "Il file non è più disponibile. La libreria potrebbe essere stata aggiornata.";
+            $error = 'Il file non è più disponibile: la libreria potrebbe essere stata aggiornata.';
         }
     }
-  } catch (StorageException $e) {
-    // Nessuna conferma positiva se la scrittura non e riuscita: i contenuti
-    // sul disco sono rimasti quelli di prima.
+  } catch (StagingException $e) {
+    // Nessuna conferma se la scrittura non è riuscita: i dati sono quelli di prima
     $msg = '';
-    $error = 'Non siamo riusciti a salvare. I contenuti non sono stati modificati. '
-           . '(' . $e->getMessage() . ')';
+    $error = $e->getMessage();
+  } catch (StorageException | StoreException $e) {
+    $msg = '';
+    $error = 'Non siamo riusciti a salvare. I contenuti non sono stati modificati. (' . $e->getMessage() . ')';
   }
 }
 
-// Il browser conserva il modulo fino alla conferma. Le normali POST
-// continuano a funzionare senza JavaScript.
-if ((($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'save'
-        && (isset($_POST['save_entity']) || isset($_POST['save_settings'])))
-    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'reorder'
-        && (isset($_POST['reorder_root']) || isset($_POST['reorder_nested'])))
-    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'visibility' && isset($_POST['toggle_visibility']))
-    || (($_SERVER['HTTP_X_KRIS_EDITOR'] ?? '') === 'account'
-        && (isset($_POST['save_account_email']) || isset($_POST['send_test_email']) || isset($_POST['change_password'])))) {
+// Le richieste asincrone ricevono l'esito in JSON: il browser conserva il modulo fino alla conferma
+if ($isPost && (($ajax === 'save' && (isset($_POST['save_entity']) || isset($_POST['save_settings'])))
+    || ($ajax === 'reorder' && (isset($_POST['reorder_root']) || isset($_POST['reorder_nested'])))
+    || ($ajax === 'visibility' && isset($_POST['toggle_visibility']))
+    || ($ajax === 'account' && (isset($_POST['save_account_email']) || isset($_POST['send_test_email']) || isset($_POST['change_password']))))) {
     http_response_code($error !== '' ? 422 : 200);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['ok' => $error === '' && $msg !== '', 'message' => $error ?: $msg,
+    $warnings = $error === '' ? editorWarnings() : [];
+    echo json_encode(['ok' => $error === '' && $msg !== '', 'message' => $error ?: $msg . ($warnings ? ' ' . implode(' ', $warnings) : ''),
         'csrf' => kris_csrf_token()], JSON_UNESCAPED_UNICODE);
     exit;
 }
-
-// View Data
-$counts = [];
-foreach ($models as $k => $v)
-    $counts[$k] = 0;
-foreach ($data as $d) {
-    if (isset($counts[$d['name']]))
-        $counts[$d['name']]++;
-}
-$images = editorMediaFiles($uploadDir);

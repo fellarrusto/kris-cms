@@ -1,28 +1,30 @@
 <?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; }
 // Una sotto-pagina per volta, scelta dalla barra interna: ?action=settings&tab=...
 $settingsTabs = [
-    'lingue' => ['Lingue', 'Lingue dei moduli', 'content'],
+    'lingue' => ['Lingue', 'Lingue del sito', 'language'],
     'caricamenti' => ['Caricamenti', 'Nomi e foto', 'media'],
-    'account' => ['Account', 'Email e password', 'settings'],
-    'agent' => ['Kris Agent', 'Assistente AI', 'structure'],
-    'versione' => ['Versione di Kris', 'Aggiornamenti', 'check'],
+    'account' => ['Account', 'Email e password', 'user'],
+    'agent' => ['Assistente AI', 'Kris Agent', 'agent'],
+    'archivio' => ['Archivio dei dati', 'File o database', 'code'],
+    'versione' => ['Versione di Kris', 'Aggiornamenti', 'version'],
 ];
 $tab = is_string($_GET['tab'] ?? null) && isset($settingsTabs[$_GET['tab']]) ? $_GET['tab'] : 'lingue';
 ?>
-<div class="container"><header class="page-heading"><div><h1>Impostazioni</h1></div></header>
+<div class="container"><div class="page-head"><div><h1>Impostazioni</h1></div></div>
 <div class="settings-layout">
 <nav class="settings-nav" aria-label="Sezioni delle impostazioni"><?php foreach ($settingsTabs as $key => [$label, $hint, $icon]): ?><a href="?action=settings&amp;tab=<?= $key ?>" class="<?= $key === $tab ? 'active' : '' ?>" <?= $key === $tab ? 'aria-current="page"' : '' ?>><?= uiIcon($icon) ?><span><strong><?= h($label) ?></strong><small><?= h($hint) ?></small></span></a><?php endforeach; ?></nav>
 <div class="settings-content">
 <?php if ($tab === 'lingue'): ?>
 <form method="POST" id="settingsForm" data-dirty-form data-async-save>
 <input type="hidden" name="save_settings" value="1">
-<section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('settings') ?></span><div><h2>Lingue di modifica</h2><p>Scegli le lingue disponibili nei moduli dell’editor.</p></div></header><div class="card-body">
-<?php foreach ($DEFAULT_LANGS as $code => $label): ?><label class="setting-row"><input type="checkbox" name="langs[]" value="<?= h($code) ?>" <?= in_array($code, $activeLangs) ? 'checked' : '' ?>><span><strong><?= h($label) ?></strong><small><?= strtoupper($code) ?></small></span></label><?php endforeach; ?>
-<div class="notice"><strong>I testi restano al sicuro.</strong><p>Disattivare una lingua la nasconde nei moduli, ma conserva le traduzioni già salvate. La navigazione del sito dipende dai suoi template.</p></div></div></section>
+<section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('language') ?></span><div><h2>Lingue del sito</h2><p>Le lingue in cui si scrivono i contenuti. La principale è quella degli indirizzi senza prefisso e dei testi che mancano nelle altre.</p></div></header><div class="card-body">
+<?php foreach ($DEFAULT_LANGS as $code => $label): ?><label class="setting-row"><input type="checkbox" name="langs[]" value="<?= h($code) ?>" <?= in_array($code, $activeLangs) ? 'checked' : '' ?>><span><strong><?= h($label) ?></strong><small><?= strtoupper($code) ?><?= $code === ($activeLangs[0] ?? '') ? ' · principale' : '' ?></small></span></label><?php endforeach; ?>
+<label class="field-label">Lingua principale<select class="input" name="main_lang"><?php foreach ($DEFAULT_LANGS as $code => $label): ?><option value="<?= h($code) ?>" <?= $code === ($activeLangs[0] ?? '') ? 'selected' : '' ?>><?= h($label) ?></option><?php endforeach; ?></select></label>
+<div class="notice"><strong>I testi restano al sicuro.</strong><p>Disattivare una lingua la toglie dai moduli e dal sito, ma conserva le traduzioni già scritte. La navigazione fra le lingue dipende dai template del sito.</p></div></div></section>
 <?php require __DIR__ . '/../partials/save_bar.php'; ?>
 </form>
 <?php elseif ($tab === 'caricamenti'):
-    $uploadOptions = \Kris\Entity\MediaStore::normalizeOptions(is_array($settings['uploads'] ?? null) ? $settings['uploads'] : []);
+    $uploadOptions = \Kris\Entity\MediaStore::normalizeOptions(is_array(editorSite()['settings']['uploads'] ?? null) ? editorSite()['settings']['uploads'] : []);
     $canProcess = \Kris\Entity\MediaStore::canProcessImages();
     $canWebp = \Kris\Entity\MediaStore::canWriteWebp(); ?>
 <section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('media') ?></span><div><h2>Caricamenti</h2><p>Nomi dei file e trattamento delle foto caricate da te o dall'assistente.</p></div></header><div class="card-body">
@@ -61,6 +63,15 @@ $tab = is_string($_GET['tab'] ?? null) && isset($settingsTabs[$_GET['tab']]) ? $
 </div></section>
 <?php elseif ($tab === 'agent'): ?>
 <?php require __DIR__ . '/../partials/agent_settings.php'; ?>
+<?php elseif ($tab === 'archivio'):
+    $driver = \Kris\Store\Stores::driver(KRIS_ROOT);
+    $documents = count(editorSite()['content']); ?>
+<section class="card"><header class="card-header"><span class="collection-icon"><?= uiIcon('code') ?></span><div><h2>Archivio dei dati</h2><p>Dove Kris conserva struttura, contenuti e impostazioni del sito.</p></div></header><div class="card-body">
+<div class="setting-row static"><span><strong>Archivio in uso</strong><small><?= $driver === 'json' ? 'File JSON nella cartella data/: va bene per quasi tutti i siti.' : 'Database (' . h(strtoupper($driver)) . '): utile con molti contenuti o scritture frequenti.' ?></small></span><span class="setting-value"><?= $driver === 'json' ? 'File' : 'Database' ?></span></div>
+<div class="setting-row static"><span><strong>Contenuti</strong><small>Pagine, blocchi ed elementi delle raccolte.</small></span><span class="setting-value"><?= $documents ?></span></div>
+<div class="setting-row static"><span><strong>Copie di sicurezza</strong><small>Prima di ogni scrittura resta una copia della versione precedente.</small></span><span class="setting-value"><?= $driver === 'json' ? 'data/backups/' : 'nel database' ?></span></div>
+<div class="notice"><strong>Il passaggio fra file e database lo fa lo sviluppatore.</strong><p>Con <code>php tools/store.php convert</code>: copia tutto, lo rilegge e lo confronta prima di cambiare archivio, e quello vecchio resta come copia.</p></div>
+</div></section>
 <?php else:
 // Lo stato degli aggiornamenti e informativo: se il file e rovinato lo si
 // segnala qui, senza impedire di lavorare sui contenuti.

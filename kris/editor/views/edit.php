@@ -1,108 +1,156 @@
 <?php if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; }
 $id = (int) ($_GET['id'] ?? 0);
-$pathRaw = (string) ($_GET['path'] ?? '');
+$pathRaw = is_string($_GET['path'] ?? null) ? $_GET['path'] : '';
 $path = parsePath($pathRaw);
-$rootIdx = findRootIndex($data, $group, $id);
-$rootEntity = $rootIdx >= 0 ? $data[$rootIdx] : null;
-$entity = null;
-if ($rootEntity !== null && count($path) % 2 === 0) {
-    $copy = $rootEntity;
-    $target = &walkEntityPath($copy, $path);
-    if ($target !== null && isset($target['data'])) $entity = $target;
-    unset($target);
-}
-$schema = resolveSchemaAtPath($models, $group, $path);
-$values = $entity ? array_column($entity['data'], 'value', 'name') : [];
+$node = count($path) % 2 === 0 ? editorNode($group, $id, $path) : null;
+$root = editorItem($group, $id);
+$fields = editorFields($group, editorListNames($path));
+$values = is_array($node['values'] ?? null) ? $node['values'] : [];
 $editUrl = '?action=edit&group=' . urlencode($group) . '&id=' . $id;
-$backPath = array_slice($path, 0, -2);
-$backHref = $path ? $editUrl . ($backPath ? '&path=' . urlencode(pathToString($backPath)) : '') : '?action=list&group=' . urlencode($group);
-$backLabel = $path ? 'Torna al contenuto' : 'Torna alla raccolta';
-if ($inPosts) {
-    // Un post di un elenco torna al suo elenco, un post di una raccolta alla raccolta
-    $backHref = '?action=posts&group=' . urlencode($group) . ($path ? '&id=' . $id . '&field=' . urlencode($path[0]) : '');
-    $backLabel = 'Torna ai post';
-}
-$title = $entity ? editorTitle($entity) : 'Contenuto non disponibile';
-// Contenuto unico: si chiama come la raccolta (il primo campo di testo puo essere il meta title) e non ha una lista
-if ($entity && !$path && isSingleCollection($group)) {
-    $title = collectionLabel($group);
+$reserved = isReservedCollection($group);
+$title = editorTitle($node, $fields);
+$kicker = collectionLabel($group);
+$backHref = '?action=list&group=' . urlencode($group);
+$backLabel = 'Torna a ' . collectionLabel($group);
+if ($path) {
+    $parentPath = array_slice($path, 0, -2);
+    $listDef = editorFieldDef(editorFields($group, editorListNames($parentPath)), (string) $path[count($path) - 2]);
+    $kicker = collectionLabel($group) . ' / ' . editorFieldLabel($listDef ?? ['name' => (string) $path[count($path) - 2]]);
+    $backHref = $editUrl . ($parentPath ? '&path=' . urlencode(pathToString($parentPath)) : '') . '#list-' . $path[count($path) - 2];
+    $backLabel = 'Torna al contenuto';
+} elseif ($reserved || isSingleCollection($group)) {
+    // Un contenuto unico porta il nome della raccolta e non ha una lista
+    $title = $reserved ? ($reservedViews[$group] ?? collectionLabel($group)) : collectionLabel($group);
+    $kicker = $reserved ? 'Sito' : 'Pagine e blocchi';
     $backHref = '?action=dashboard';
     $backLabel = 'Torna ai contenuti';
 }
-$firstLang = $activeLangs[0] ?? 'it';
-// L'elemento aperto si puo sospendere, tranne l'unico contenuto di una raccolta
-// (sarebbe un'intera pagina) e le raccolte del framework.
-$siblings = count(array_filter($data, fn($d) => ($d['name'] ?? null) === $group));
-$canHideCurrent = $entity !== null && !isReservedCollection($group) && ($path || $siblings > 1);
+$intro = [
+    'kris_site' => 'Icona, nome, titolo e condivisione del sito, codici di verifica dei motori di ricerca. Kris li aggiunge a ogni pagina solo dove il template non li ha già.',
+    'kris_legal' => 'Dati del titolare, informative e testi dell\'avviso sui cookie. Il sito li mostra dove i suoi template li usano.',
+    'kris_notfound' => 'Quello che vede chi apre un indirizzo che non esiste. Se il tema ha un suo 404.html usa questi testi, altrimenti li usa la pagina di serie di Kris.',
+    'kris_wip' => 'Con l\'interruttore acceso i visitatori vedono solo questa pagina (stato 503: i motori di ricerca tornano più tardi). Tu, con l\'editor aperto, continui a vedere il sito.',
+][$group] ?? '';
+// Si sospende un elemento di un elenco o un contenuto fra tanti; non l'unico contenuto né le sezioni di Kris
+$canHide = $node !== null && !$reserved && ($path || count(editorItems($group)) > 1);
+$langNames = $DEFAULT_LANGS;
+$localized = array_filter($fields, fn($f) => ($f['type'] ?? '') !== 'list' && !empty($f['localized']));
+// Lingue con testi mancanti: campi compilati nella lingua principale e vuoti in quella
+$missing = [];
+foreach (array_slice($activeLangs, 1) as $lang) {
+    $missing[$lang] = count(array_filter($localized, function ($f) use ($values, $activeLangs, $lang) {
+        $v = $values[$f['name']] ?? null;
+        return in_array($f['type'], ['text', 'richtext'], true) && is_array($v)
+            && trim((string) ($v[$activeLangs[0]] ?? '')) !== '' && trim((string) ($v[$lang] ?? '')) === '';
+    }));
+}
+$sections = schemaSections($fields);
+$openSection = $sections && $sections[0]['section'] !== '' ? 0 : 1;
+$typeLabel = fn(array $f): string => ($f['type'] ?? '') === 'list' ? 'Elenco' : (!empty($f['localized']) ? 'Per lingua' : 'Uguale in tutte le lingue');
 ?>
 <div class="container">
-    <?php if ($group === 'kris_notfound'): ?>
-    <header class="page-heading"><div><h1>Pagina 404</h1><p>Quello che vede chi apre un indirizzo che non esiste. Se il tema ha un suo <code>404.html</code> usa questi testi, altrimenti li usa la pagina di serie di Kris.</p></div></header>
-    <?php elseif ($group === 'kris_wip'): ?>
-    <header class="page-heading"><div><h1>Lavori in corso</h1><p>Con l'interruttore acceso i visitatori vedono solo questa pagina (stato 503, i motori di ricerca tornano più tardi). Tu, con l'editor aperto, continui a vedere il sito. Se il tema ha un suo <code>kris_wip.html</code> usa questi testi, altrimenti li usa la pagina di serie di Kris.</p></div></header>
-    <?php elseif ($group === 'kris_site'): ?>
-    <header class="page-heading"><div><h1>Proprietà del sito</h1><p>Icona, nome, titolo e condivisione del sito, codici di verifica dei motori di ricerca. Kris li aggiunge a ogni pagina solo dove il template non li ha già; una pagina con i campi seo_title, seo_description o seo_image usa i suoi.</p></div></header>
-    <?php elseif (isReservedCollection($group)): ?>
-    <header class="page-heading"><div><h1>Privacy e cookie</h1><p>Dati del titolare, informative e testi del banner. Il sito li mostra dove i suoi template li usano.</p></div></header>
+    <div class="edit-head">
+        <a class="back" href="<?= h($backHref) ?>" aria-label="<?= h($backLabel) ?>"><?= uiIcon('back') ?></a>
+        <div class="edit-head-text"><p class="kicker"><?= h($kicker) ?></p><h1><?= h($title) ?></h1></div>
+        <div class="edit-head-tools">
+            <?php if ($node !== null && $localized && count($activeLangs) > 1): ?>
+            <div class="lang-switch" role="group" aria-label="Lingua di modifica"><?php foreach ($activeLangs as $i => $lang): ?><button type="button" data-editor-language="<?= h($lang) ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"><?= h($langNames[$lang] ?? strtoupper($lang)) ?><?php if (!empty($missing[$lang])): ?><span class="pill pill-danger"><?= $missing[$lang] ?> <?= $missing[$lang] === 1 ? 'vuoto' : 'vuoti' ?></span><?php endif; ?></button><?php endforeach; ?></div>
+            <?php endif; ?>
+            <?php if ($canHide): ?><?= visibilityToggle('vis_current', !isHiddenItem($node), $title, true) ?><?= visibilityForm('vis_current', $group, $id, $pathRaw) ?><?php endif; ?>
+        </div>
+    </div>
+    <?php if ($intro !== ''): ?><p class="sub"><?= h($intro) ?></p><?php endif; ?>
+    <?php if ($path && $root !== null): ?><nav class="nested-crumb" aria-label="Contenuto annidato"><a href="<?= h($editUrl) ?>"><?= h(editorTitle($root, editorFields($group))) ?></a><?php for ($i = 0; $i < count($path); $i += 2): $sub = editorNode($group, $id, array_slice($path, 0, $i + 2)); ?><span aria-hidden="true">/</span><a href="<?= h($editUrl . '&path=' . urlencode(pathToString(array_slice($path, 0, $i + 2)))) ?>"><?= h(editorTitle($sub, editorFields($group, editorListNames(array_slice($path, 0, $i + 1))))) ?></a><?php endfor; ?></nav><?php endif; ?>
+
+    <?php if ($node === null): ?>
+    <div class="empty-state"><h2>Questo contenuto non è più disponibile.</h2><p>Potrebbe essere stato eliminato. Torna alla raccolta e scegli un altro contenuto.</p><a class="btn btn-primary" href="?action=list&amp;group=<?= urlencode($group) ?>">Apri la raccolta</a></div>
+    <?php elseif (!$fields): ?>
+    <div class="empty-state"><h2>Non ci sono campi da compilare.</h2><?php if (!$stagingMode && !$reserved): ?><a href="?action=structure&amp;group=<?= urlencode($group) ?>" class="btn btn-primary">Scegli i campi in Struttura</a><?php endif; ?></div>
     <?php else: ?>
-    <header class="page-heading"><div><p class="eyebrow"><?= h(collectionLabel($group)) ?><?= $path ? ' / ' . h(editorLabel($path[count($path)-2])) : '' ?></p><h1><?= h($title) ?></h1><?php if ($path): ?><p>Modifica questo elemento, poi torna al contenuto principale.</p><?php endif; ?></div><div class="actions"><?php if ($canHideCurrent): ?><?= visibilityToggle('vis_current', !isHiddenItem($entity), $title) ?><?= visibilityForm('vis_current', $group, $id, $pathRaw) ?><?php endif; ?><a class="btn btn-white" href="<?= h($backHref) ?>"><?= uiIcon('back') ?><?= h($backLabel) ?></a></div></header>
-    <?php endif; ?>
-    <?php if ($path): ?><nav class="nested-breadcrumb" aria-label="Contenuto annidato"><a href="<?= h($editUrl) ?>"><?= h(editorTitle($rootEntity)) ?></a><?php for ($i=0; $i<count($path); $i+=2): ?><span aria-hidden="true">/</span><a href="<?= h($editUrl . '&path=' . urlencode(pathToString(array_slice($path,0,$i+2)))) ?>"><?= h(editorLabel($path[$i])) ?> #<?= (int) $path[$i+1] ?></a><?php endfor; ?></nav><?php endif; ?>
-    <?php if ($entity === null): ?><div class="empty-state"><h2>Questo contenuto non è più disponibile.</h2><p>Potrebbe essere stato rimosso. Torna alla raccolta e scegli un altro elemento.</p><a class="btn btn-primary" href="?action=list&amp;group=<?= urlencode($group) ?>">Apri raccolta</a></div><?php else: ?>
-    <div class="edit-layout"><div class="edit-content">
-    <form method="POST" id="contentForm" data-dirty-form data-async-save>
-        <input type="hidden" name="save_entity" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($pathRaw) ?>">
-        <div class="language-toolbar"><div><strong>Lingua di modifica</strong><small>I campi non tradotti e le liste sono condivisi.</small></div><div class="language-switch" role="group" aria-label="Lingua di modifica"><?php foreach ($activeLangs as $i => $lang): ?><button type="button" data-editor-language="<?= h($lang) ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>" class="<?= $i === 0 ? 'active' : '' ?>"><?= h($DEFAULT_LANGS[$lang] ?? strtoupper($lang)) ?></button><?php endforeach; ?></div></div>
-        <?php $sections = schemaSections($schema); $openSection = $sections[0]['section'] !== '' ? 0 : 1; // il primo pannello e aperto
-        foreach ($sections as $sectionIndex => $section): if ($section['section'] !== ''): ?>
-        <details class="field-section" id="section-<?= $sectionIndex ?>" <?= $sectionIndex === $openSection ? 'open' : '' ?>><summary><span class="field-section-title"><?= h($section['section']) ?></span><span class="badge"><?= count($section['fields']) ?> <?= count($section['fields']) === 1 ? 'campo' : 'campi' ?></span></summary><div class="field-section-body">
-        <?php endif; foreach ($section['fields'] as $fieldIndex => $f):
-            $n = $f['name']; $t = $f['type']; $saved = $values[$n] ?? null;
-            $label = $f['label'] ?? $f['description'] ?? editorLabel($n);
-            $fieldId = 'field-' . $fieldIndex;
-        ?>
-        <section class="card field-card" id="<?= $fieldId ?>"><header class="card-header"><span class="section-number"><?= str_pad((string) ($fieldIndex+1), 2, '0', STR_PAD_LEFT) ?></span><div><h2><?= h($label) ?></h2><p><?= h($n) ?> <span aria-hidden="true">&middot;</span> <?= h(['plain'=>'Testo condiviso','text'=>'Testo multilingua','richtext'=>'Testo formattato','image'=>'Media multilingua','array'=>'Elenco di contenuti','boolean'=>\Kris\Entity\Entity::isShared($f)?'Interruttore condiviso':'Interruttore per lingua','select'=>\Kris\Entity\Entity::isShared($f)?'Scelta condivisa':'Scelta per lingua'][$t] ?? $t) ?></p></div></header><div class="card-body">
-        <?php if ($t === 'array'):
-            $children = is_array($saved) ? $saved : [];
-            $prefix = $pathRaw === '' ? $n : $pathRaw . '/' . $n;
-        ?>
-            <div class="nested-heading" id="list-<?= h($n) ?>"><span class="badge"><?= count($children) ?> elementi</span><button type="submit" form="create_nested_<?= h($n) ?>" class="btn btn-white"><?= uiIcon('plus') ?>Aggiungi elemento</button></div>
-            <?php if (!$children): ?><p class="empty-inline">La lista è vuota. Aggiungi il primo elemento per iniziare.</p><?php else: ?>
-            <div class="table-scroll"><table class="dnd-table nested-table" data-dnd-scope="nested" data-reorder-form="reorder_nested_<?= h($n) ?>"><thead><tr><th>Contenuto</th><th>Sul sito</th><th>Ordine</th><th><span class="sr-only">Azioni</span></th></tr></thead><tbody>
-            <?php foreach ($children as $childIndex => $ch): $chId = (int) ($ch['id'] ?? 0); $childTitle = editorTitle($ch); ?>
-                <tr id="item-<?= h($n) ?>-<?= $chId ?>" draggable="true" data-id="<?= $chId ?>" class="<?= isHiddenItem($ch) ? 'is-hidden' : '' ?>"><td><strong><?= h($childTitle) ?></strong><small>Elemento #<?= $chId ?></small></td><td><?= visibilityToggle('vis_' . $n . '_' . $chId, !isHiddenItem($ch), $childTitle) ?></td><td><div class="order-actions"><button type="button" class="icon-button" data-move="-1" aria-label="Sposta <?= h($childTitle) ?> in alto" <?= $childIndex === 0 ? 'disabled' : '' ?>><?= uiIcon('up') ?></button><button type="button" class="icon-button" data-move="1" aria-label="Sposta <?= h($childTitle) ?> in basso" <?= $childIndex === count($children)-1 ? 'disabled' : '' ?>><?= uiIcon('down') ?></button></div></td><td><div class="row-actions"><a class="btn btn-white" href="<?= h($editUrl . '&path=' . urlencode($prefix . '/' . $chId)) ?>">Modifica</a><button type="submit" form="del_nested_<?= h($n) ?>_<?= $chId ?>" class="icon-button danger" aria-label="Elimina <?= h($childTitle) ?>"><?= uiIcon('trash') ?></button></div></td></tr>
-            <?php endforeach; ?></tbody></table></div><?php endif; ?>
-            <p class="hint">Aggiunta, eliminazione e ordine si salvano subito. Se hai modificato i testi, potrai salvarli prima di continuare.</p>
-        <?php elseif (in_array($t, ['boolean', 'select'], true) && \Kris\Entity\Entity::isShared($f)): ?>
-            <?= editorChoiceInput($f, 'f[' . $n . '][val]', 'input-' . $fieldIndex, $label, $saved) ?>
-        <?php elseif ($t === 'plain'): ?>
-            <label class="sr-only" for="input-<?= $fieldIndex ?>"><?= h($label) ?></label><textarea id="input-<?= $fieldIndex ?>" name="f[<?= h($n) ?>][val]" rows="3"><?= h(is_array($saved) ? '' : $saved) ?></textarea>
-        <?php else: foreach ($activeLangs as $i => $lang): $v = is_array($saved) ? ($saved[$lang] ?? '') : ''; $inputId = 'input-' . $fieldIndex . '-' . $lang; ?>
-            <div class="localized-field" data-language-panel="<?= h($lang) ?>" <?= $i ? 'hidden' : '' ?>>
-            <label class="sr-only" for="<?= $inputId ?>"><?= h($label . ' · ' . ($DEFAULT_LANGS[$lang] ?? $lang)) ?></label>
-            <?php if (in_array($t, ['boolean', 'select'], true)): ?>
-                <?= editorChoiceInput($f, 'f[' . $n . '][' . $lang . ']', $inputId, $label . ' · ' . ($DEFAULT_LANGS[$lang] ?? $lang), $v) ?>
-            <?php elseif ($t === 'image'): ?>
-                <div class="media-field"><div class="media-preview" data-preview-for="<?= $inputId ?>"><?php $src = editorMediaSource((string) $v); if ($src !== ''): ?><?= editorMediaThumb($src, (string) $v, 'Anteprima di ' . $label) ?><?php else: ?><?= uiIcon('media') ?><?php endif; ?></div><div class="media-field-controls"><input type="text" id="<?= $inputId ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" value="<?= h($v) ?>" placeholder="URL del file" data-media-input><button type="button" class="btn btn-white" data-pick-media="<?= $inputId ?>"><?= uiIcon('media') ?>Scegli dalla libreria</button></div></div>
-            <?php else: ?><textarea id="<?= $inputId ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" rows="<?= $t === 'richtext' ? 8 : 3 ?>" <?= $t === 'richtext' ? 'class="richtext"' : '' ?>><?= h($v) ?></textarea><?php endif; ?>
-            </div>
-        <?php endforeach; endif; ?>
-        </div></section>
-        <?php endforeach; if ($section['section'] !== ''): ?></div></details><?php endif; endforeach; ?>
-        <?php if (!$schema): ?><div class="empty-state"><h2>Non ci sono campi da compilare.</h2><a href="?action=structure&amp;group=<?= urlencode($group) ?>" class="btn btn-primary">Configura la struttura</a></div><?php endif; ?>
-        <?php require __DIR__ . '/../partials/save_bar.php'; ?>
-    </form>
-    <?php foreach ($schema as $f): if (($f['type'] ?? '') !== 'array') continue;
-        $n=$f['name']; $children=is_array($values[$n] ?? null) ? $values[$n] : [];
-        $prefix=$pathRaw === '' ? $n : $pathRaw . '/' . $n;
-    ?>
-    <form method="POST" id="create_nested_<?= h($n) ?>" hidden><input type="hidden" name="create_nested" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix) ?>"></form>
-    <form method="POST" action="<?= h($BASE) ?>" id="reorder_nested_<?= h($n) ?>" hidden><input type="hidden" name="reorder_nested" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix) ?>"><input type="hidden" name="order" value=""></form>
-    <?php foreach (array_values($children) as $k => $ch): $chId=(int) $ch['id'];
-        $near = $children[$k + 1] ?? $children[$k - 1] ?? null;
-        $returnTo = $near !== null ? 'item-' . $n . '-' . (int) $near['id'] : 'list-' . $n;
-    ?><?= visibilityForm('vis_' . $n . '_' . $chId, $group, $id, $prefix . '/' . $chId) ?><form method="POST" id="del_nested_<?= h($n) ?>_<?= $chId ?>" hidden data-confirm-title="Eliminare questo elemento?" data-confirm="&ldquo;<?= h(editorTitle($ch)) ?>&rdquo; e i suoi sotto-elementi verranno eliminati subito. Non puoi annullare dall’editor." data-confirm-label="Elimina elemento"><input type="hidden" name="delete_nested" value="1"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix . '/' . $chId) ?>"></form><?php endforeach; ?>
+    <div class="edit-cols">
+        <form method="POST" id="contentForm" class="panel" data-dirty-form data-async-save>
+            <input type="hidden" name="save_entity" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($pathRaw) ?>">
+            <?php foreach ($sections as $sectionIndex => $section):
+                $inPanel = $section['section'] !== '';
+                if ($inPanel): ?><details class="field-section" id="section-<?= $sectionIndex ?>" <?= $sectionIndex === $openSection ? 'open' : '' ?>><summary><?= h($section['section']) ?> <span class="count"><?= count($section['fields']) ?> <?= count($section['fields']) === 1 ? 'campo' : 'campi' ?></span></summary><?php endif;
+                foreach ($section['fields'] as $fieldIndex => $f):
+                    $n = $f['name']; $t = $f['type']; $saved = $values[$n] ?? null;
+                    $label = editorFieldLabel($f);
+                    $inputBase = 'input-' . $fieldIndex; ?>
+                <div class="field" id="field-<?= $fieldIndex ?>">
+                    <div class="field-head"><?php if (in_array($t, ['list', 'media', 'richtext'], true) || ($t === 'select' && !empty($f['multiple']))): ?><span><?= h($label) ?></span><?php else: ?><label for="<?= h($inputBase . (empty($f['localized']) ? '' : '-' . $activeLangs[0])) ?>"><?= h($label) ?></label><?php endif; ?><span class="scope"><?= h($typeLabel($f)) ?></span><span class="field-tech"><?= h($n) ?></span></div>
+                    <?php if ($t === 'list'):
+                        $children = array_values(array_filter(is_array($saved) ? $saved : [], 'is_array'));
+                        $childFields = editorFields($group, [...editorListNames($path), $n]);
+                        $prefix = $pathRaw === '' ? $n : $pathRaw . '/' . $n; ?>
+                        <div class="list-field" id="list-<?= h($n) ?>">
+                            <?php if ($children): ?>
+                            <div class="rows" data-dnd-list data-reorder-form="reorder_nested_<?= h($n) ?>">
+                            <?php foreach ($children as $child): $childId = (int) ($child['id'] ?? 0); $childTitle = editorTitle($child, $childFields); $childHidden = isHiddenItem($child); ?>
+                                <div class="row<?= $childHidden ? ' is-hidden' : '' ?>" id="item-<?= h($n) ?>-<?= $childId ?>" data-id="<?= $childId ?>">
+                                    <a class="row-main" href="<?= h($editUrl . '&path=' . urlencode($prefix . '/' . $childId)) ?>"><span class="row-text"><span class="row-title"><?= h($childTitle) ?></span></span></a>
+                                    <div class="row-actions">
+                                        <?php if ($childHidden): ?><span class="pill">Sospeso</span><?php endif; ?>
+                                        <?= visibilityToggle('vis_' . $n . '_' . $childId, !$childHidden, $childTitle) ?>
+                                        <button type="submit" form="del_nested_<?= h($n) ?>_<?= $childId ?>" class="icon-button danger" aria-label="Elimina <?= h($childTitle) ?>"><?= uiIcon('trash') ?></button>
+                                        <button type="button" class="icon-button handle" data-handle aria-label="Sposta <?= h($childTitle) ?>: trascina, o usa le frecce su e giù"><?= uiIcon('drag') ?></button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                            </div>
+                            <?php else: ?><p class="muted">Ancora nessun elemento.</p><?php endif; ?>
+                            <div class="bar"><button type="submit" form="create_nested_<?= h($n) ?>" class="btn btn-white btn-small"><?= uiIcon('plus') ?>Aggiungi elemento</button><span class="muted">Aggiunta, eliminazione e ordine si salvano subito.</span></div>
+                        </div>
+                    <?php elseif (in_array($t, ['boolean', 'select'], true) && empty($f['localized'])): ?>
+                        <?= editorChoiceInput($f, 'f[' . $n . '][val]', $inputBase, $label, $saved) ?>
+                    <?php elseif (empty($f['localized'])): ?>
+                        <?php if ($t === 'media'): $v = is_string($saved) ? $saved : ''; ?>
+                            <div class="media-field"><div class="media-preview" data-preview-for="<?= h($inputBase) ?>"><?php $src = editorMediaSource($v); ?><?= $src !== '' ? editorMediaThumb($src, $v, 'Anteprima di ' . $label) : 'Nessun file' ?></div><div class="media-field-controls"><input class="input" type="text" id="<?= h($inputBase) ?>" name="f[<?= h($n) ?>][val]" value="<?= h($v) ?>" placeholder="assets/uploads/…" aria-label="<?= h($label) ?>: indirizzo del file" data-media-input><button type="button" class="btn btn-white btn-small" data-pick-media="<?= h($inputBase) ?>">Scegli</button><button type="button" class="btn btn-white btn-small" data-clear-media="<?= h($inputBase) ?>">Togli</button></div></div>
+                        <?php else: ?>
+                            <textarea class="input<?= $t === 'richtext' ? ' richtext' : ' autogrow' ?>" id="<?= h($inputBase) ?>" name="f[<?= h($n) ?>][val]" rows="<?= $t === 'richtext' ? 8 : 1 ?>"><?= h(is_string($saved) ? $saved : '') ?></textarea>
+                        <?php endif; ?>
+                    <?php else: foreach ($activeLangs as $i => $lang):
+                        $v = is_array($saved) ? ($saved[$lang] ?? null) : null;
+                        $inputId = $inputBase . '-' . $lang;
+                        $langLabel = $label . ' · ' . ($langNames[$lang] ?? $lang); ?>
+                        <div class="localized-field" data-language-panel="<?= h($lang) ?>" <?= $i ? 'hidden' : '' ?>>
+                        <?php if (in_array($t, ['boolean', 'select'], true)): ?>
+                            <?= editorChoiceInput($f, 'f[' . $n . '][' . $lang . ']', $inputId, $langLabel, $v) ?>
+                        <?php elseif ($t === 'media'): $v = is_string($v) ? $v : ''; $src = editorMediaSource($v); ?>
+                            <div class="media-field"><div class="media-preview" data-preview-for="<?= h($inputId) ?>"><?= $src !== '' ? editorMediaThumb($src, $v, 'Anteprima di ' . $label) : 'Nessun file' ?></div><div class="media-field-controls"><input class="input" type="text" id="<?= h($inputId) ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" value="<?= h($v) ?>" placeholder="assets/uploads/…" aria-label="<?= h($langLabel) ?>: indirizzo del file" data-media-input><button type="button" class="btn btn-white btn-small" data-pick-media="<?= h($inputId) ?>">Scegli</button><button type="button" class="btn btn-white btn-small" data-clear-media="<?= h($inputId) ?>">Togli</button></div></div>
+                        <?php else: ?>
+                            <textarea class="input<?= $t === 'richtext' ? ' richtext' : ' autogrow' ?>" id="<?= h($inputId) ?>" name="f[<?= h($n) ?>][<?= h($lang) ?>]" rows="<?= $t === 'richtext' ? 8 : 1 ?>" <?= $t === 'richtext' ? 'aria-label="' . h($langLabel) . '"' : '' ?>><?= h(is_string($v) ? $v : '') ?></textarea>
+                        <?php endif; ?>
+                        </div>
+                    <?php endforeach; endif; ?>
+                </div>
+                <?php endforeach;
+                if ($inPanel): ?></details><?php endif;
+            endforeach; ?>
+            <?php require __DIR__ . '/../partials/save_bar.php'; ?>
+        </form>
+        <nav class="index" aria-label="Campi del contenuto">
+            <p>In questa pagina</p>
+            <?php foreach ($sections as $sectionIndex => $section): ?>
+                <?php if ($section['section'] !== ''): ?><a href="#section-<?= $sectionIndex ?>"><?= h($section['section']) ?> <span class="mono"><?= count($section['fields']) ?></span></a>
+                <?php else: foreach ($section['fields'] as $i => $f): ?><a href="#field-<?= $i ?>"><?= h(editorFieldLabel($f)) ?></a><?php endforeach; endif; ?>
+            <?php endforeach; ?>
+            <p class="note"><?= $stagingMode ? 'Salvando, le modifiche restano in attesa: il sito cambia quando pubblichi.' : 'Salvando, le modifiche sono subito visibili sul sito.' ?></p>
+        </nav>
+    </div>
+    <?php foreach ($fields as $f): if (($f['type'] ?? '') !== 'list') continue;
+        $n = $f['name'];
+        $children = array_values(array_filter(is_array($values[$n] ?? null) ? $values[$n] : [], 'is_array'));
+        $childFields = editorFields($group, [...editorListNames($path), $n]);
+        $prefix = $pathRaw === '' ? $n : $pathRaw . '/' . $n; ?>
+        <form method="POST" id="create_nested_<?= h($n) ?>" hidden><input type="hidden" name="create_nested" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix) ?>"></form>
+        <form method="POST" action="<?= h($BASE) ?>" id="reorder_nested_<?= h($n) ?>" hidden><input type="hidden" name="reorder_nested" value="1"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix) ?>"><input type="hidden" name="order" value=""></form>
+        <?php foreach ($children as $k => $child): $childId = (int) ($child['id'] ?? 0);
+            $near = $children[$k + 1] ?? $children[$k - 1] ?? null;
+            $returnTo = $near !== null ? 'item-' . $n . '-' . (int) $near['id'] : 'list-' . $n; ?>
+            <?= visibilityForm('vis_' . $n . '_' . $childId, $group, $id, $prefix . '/' . $childId) ?>
+            <form method="POST" id="del_nested_<?= h($n) ?>_<?= $childId ?>" hidden data-confirm-title="Eliminare questo elemento?" data-confirm="«<?= h(editorTitle($child, $childFields)) ?>» e i suoi elementi verranno eliminati<?= $stagingMode ? ' quando pubblichi' : ' subito dal sito' ?>." data-confirm-label="Elimina"><input type="hidden" name="delete_nested" value="1"><input type="hidden" name="return_to" value="<?= h($returnTo) ?>"><input type="hidden" name="group" value="<?= h($group) ?>"><input type="hidden" name="id" value="<?= $id ?>"><input type="hidden" name="path" value="<?= h($prefix . '/' . $childId) ?>"></form>
+        <?php endforeach; ?>
     <?php endforeach; ?>
-    </div><aside class="context-panel"><p class="eyebrow">IN QUESTA PAGINA</p><nav aria-label="Campi del contenuto"><?php foreach ($sections ?? [] as $section): ?><?php if ($section['section'] !== ''): ?><p class="context-section"><?= h($section['section']) ?></p><?php endif; ?><?php foreach ($section['fields'] as $i => $f): ?><a href="#field-<?= $i ?>"><span><?= str_pad((string) ($i+1),2,'0',STR_PAD_LEFT) ?></span><?= h($f['label'] ?? $f['description'] ?? editorLabel($f['name'])) ?></a><?php endforeach; ?><?php endforeach; ?></nav><div class="context-note"><strong>Salva quando sei pronto.</strong><p><?= $stagingMode ? 'Le modifiche salvate restano in attesa: “Apri l’anteprima” le mostra, il sito pubblico cambia quando le pubblichi.' : 'I contenuti salvati sono subito visibili sul sito. “Apri il sito” mostra la versione salvata.' ?></p></div><?php if (!isReservedCollection($group) && !$stagingMode): ?><a class="text-link" href="?action=structure&amp;group=<?= urlencode($group) ?>"><?= uiIcon('structure') ?>Configura i campi</a><?php endif; ?></aside>
-    </div><?php endif; ?>
+    <?php endif; ?>
 </div>

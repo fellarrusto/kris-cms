@@ -31,6 +31,9 @@ final class Migrator
     /** Chiave vista dalle migrazioni => documento dell'archivio, nel formato 1 e nel formato 2. */
     private const LEGACY = ['k_data' => 'data', 'k_model' => 'model', 'cms_settings' => 'cms_settings', 'allowed_pages' => 'pages', 'seo' => 'seo'];
     private const FORMAT2 = ['schema' => 'schema', 'content' => 'content', 'settings' => 'settings'];
+
+    /** Le migrazioni fino a questa versione lavorano sui documenti della 1.x; la 0009 li converte nel formato 2. */
+    private const FORMAT2_VERSION = 9;
     private ?array $migrations = null;
 
     public function __construct(private string $root, private string $dir)
@@ -93,8 +96,9 @@ final class Migrator
             $store = \Kris\Store\Stores::site($this->root);
             $current = [];
             foreach (array_merge(self::LEGACY, self::FORMAT2) as $doc) $current[$doc] = $store->read($doc)->value;
-            $files = $this->files($store, $current)[0];
+            [$files, $format2] = $this->files($store, $current);
             foreach ($pending as $name) {
+                if ($format2 && $this->all()[$name]['version'] < self::FORMAT2_VERSION) continue;
                 $before = $files;
                 $files = ($this->all()[$name]['up'])($files);
                 if (!$this->all()[$name]['auto'] && $files !== $before) return false;
@@ -160,6 +164,12 @@ final class Migrator
             $original = $files;
             foreach ($pending as $name) {
                 $def = $this->all()[$name];
+                // Dati già nel formato 2 (un sito nuovo della 2.0): le migrazioni della 1.x non hanno niente da fare
+                if (isset($files['schema']) && $def['version'] < self::FORMAT2_VERSION) {
+                    $applied[] = $name;
+                    $version = max($version, $def['version']);
+                    continue;
+                }
                 $result = ($def['up'])($files);
                 $valid = is_array($result) && (isset($result['schema'])
                     ? is_array($result['schema']) && is_array($result['content'] ?? null) && is_array($result['settings'] ?? null)

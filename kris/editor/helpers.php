@@ -1,55 +1,13 @@
 <?php
 declare(strict_types=1);
 
-use Kris\Entity\JsonStore;
 if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno
 
 /**
- * Funzioni pure del pannello: lettura/scrittura JSON, navigazione dei
- * percorsi annidati, schema e rendering dei campi della schermata Struttura.
+ * Funzioni del pannello che non dipendono dai dati: testo, date, file della
+ * libreria, percorsi, icone e controlli ricorrenti. Il formato dei dati è in
+ * model.php.
  */
-
-// Lettura e scrittura passano da JsonStore: un archivio illeggibile solleva
-// un'eccezione invece di diventare un array vuoto (che alla prima azione
-// successiva verrebbe riscritto, cancellando tutti i contenuti).
-/**
- * Lettura e scrittura dei dati dell'editor: i file di contenuti, schema e
- * impostazioni passano dall'archivio del sito (Kris\Store), gli altri
- * restano file JSON.
- */
-function getJson(string $path, array $def = []): array
-{
-    $doc = editorStoreDocument($path);
-    if ($doc === null) return (new JsonStore($path))->read($def);
-    // Contenuti, schema e impostazioni: il formato 2 nella forma che l'editor conosce (format1.php)
-    if (in_array($doc, ['data', 'model', 'cms_settings'], true)) {
-        return editorFormat1(\Kris\Store\Site::current(KRIS_ROOT))[$doc];
-    }
-    $snapshot = \Kris\Store\Stores::site()->read($doc);
-    return $snapshot->rev === '' ? $def : $snapshot->value;
-}
-function saveJson(string $path, array $data): void
-{
-    $doc = editorStoreDocument($path);
-    if ($doc === null) {
-        (new JsonStore($path))->write($data);
-        return;
-    }
-    if (in_array($doc, ['data', 'model', 'cms_settings'], true)) {
-        editorSaveFormat1($doc, $data);
-        return;
-    }
-    \Kris\Store\Stores::site()->write($doc, $data);
-}
-/** Il documento dell'archivio che corrisponde a un file del sito, o null. */
-function editorStoreDocument(string $path): ?string
-{
-    $normalize = fn(string $p): string => strtolower(str_replace('\\', '/', $p));
-    foreach (\Kris\Store\Store::DOCUMENTS as $doc) {
-        if ($normalize($path) === $normalize(KRIS_ROOT . '/' . \Kris\Store\FileStore::relativePath($doc))) return $doc;
-    }
-    return null;
-}
 
 function h(mixed $value): string
 {
@@ -58,8 +16,7 @@ function h(mixed $value): string
 
 /**
  * Data ISO 8601 in forma leggibile ("30/09/2026 alle 14:05"), o null se assente o illeggibile.
- * Sempre in ora italiana: le date si salvano con il loro fuso, ma molti
- * hosting tengono PHP in UTC e mostrerebbero l'ora sbagliata di una o due ore.
+ * Sempre in ora italiana: molti hosting tengono PHP in UTC.
  */
 function editorDateTime(mixed $iso): ?string
 {
@@ -73,33 +30,20 @@ function editorDateTime(mixed $iso): ?string
 }
 
 /**
- * Raccolte del framework (prefisso kris_): schema fisso, gestite da sezioni
- * dedicate dell'editor e non da Contenuti o Struttura.
- */
-function isReservedCollection(mixed $name): bool
-{
-    return is_string($name) && str_starts_with($name, 'kris_');
-}
-
-/**
- * Vero se la richiesta cambia struttura o numero dei contenuti di una
- * raccolta del framework, o crea una raccolta con il prefisso riservato.
+ * Vero se la richiesta cambia struttura o numero dei contenuti di un tipo
+ * riservato (kris_, plg_), o crea un tipo con un prefisso riservato.
  */
 function isReservedStructuralPost(array $post): bool
 {
-    $structural = ['create_collection', 'save_structure', 'delete_collection', 'save_collection_info', 'create_instance', 'delete_instance', 'reorder_root'];
-    if (!array_intersect($structural, array_keys($post))) {
-        return false;
-    }
+    $structural = ['create_collection', 'save_structure', 'delete_collection', 'save_collection_info', 'create_instance', 'delete_instance', 'reorder_root', 'toggle_post_collection'];
+    if (!array_intersect($structural, array_keys($post))) return false;
     $newName = preg_replace('/[^a-z0-9_]/', '', strtolower((string) ($post['collection_name'] ?? '')));
-    return isReservedCollection($post['group_name'] ?? null)
-        || isReservedCollection($post['group'] ?? null)
-        || isReservedCollection($newName);
+    return isReservedCollection($post['group_name'] ?? null) || isReservedCollection($post['group'] ?? null) || isReservedCollection($newName);
 }
 
 /**
- * Richieste che non riguardano i contenuti (account, Kris Agent, pubblicazione
- * dello staging): valgono uguali anche mentre si preparano modifiche in attesa.
+ * Richieste che non riguardano i contenuti (account, Kris Agent, pubblicazione,
+ * impostazioni del sito): valgono uguali anche in «In attesa».
  */
 function isStagingNeutralPost(array $post): bool
 {
@@ -123,93 +67,7 @@ function editorStagedUploads(?array $names = null): array
     return $set;
 }
 
-function editorLabel(string $name): string
-{
-    return ucfirst(str_replace('_', ' ', $name));
-}
-
-// --- RACCOLTE: NOME, DESCRIZIONE, CONTENUTO UNICO, ORDINE ---
-// In cms_settings.json, separati dal nome tecnico:
-//   "collections": {"site": {"label": "Elementi comuni", "description": "...", "single": true}}
-//   "collection_order": ["homepage", "logopedia", "site"]
-
-/** Le informazioni delle raccolte; con $settings le registra (index.php, una volta). */
-function editorCollectionInfo(?array $settings = null): array
-{
-    static $info = [];
-    if ($settings !== null) {
-        $info = [
-            'collections' => is_array($settings['collections'] ?? null) ? $settings['collections'] : [],
-            'order' => is_array($settings['collection_order'] ?? null) ? array_values(array_filter($settings['collection_order'], 'is_string')) : [],
-        ];
-    }
-    return $info + ['collections' => [], 'order' => []];
-}
-
-/** Nome visibile della raccolta, o quello ricavato dal nome tecnico. */
-function collectionLabel(string $name): string
-{
-    $label = editorCollectionInfo()['collections'][$name]['label'] ?? '';
-    return is_string($label) && trim($label) !== '' ? trim($label) : editorLabel($name);
-}
-
-function collectionDescription(string $name): string
-{
-    $description = editorCollectionInfo()['collections'][$name]['description'] ?? '';
-    return is_string($description) ? trim($description) : '';
-}
-
-/** Raccolta con un solo contenuto (una pagina, gli elementi comuni): si apre direttamente la modifica. */
-function isSingleCollection(string $name): bool
-{
-    return (editorCollectionInfo()['collections'][$name]['single'] ?? false) === true;
-}
-
-/**
- * Una raccolta a contenuto unico non riceve un secondo contenuto e non perde
- * il suo: eliminarlo svuoterebbe la pagina. null se la richiesta va bene.
- */
-function singleCollectionViolation(array $post, array $data): ?string
-{
-    $group = is_string($post['group'] ?? null) ? $post['group'] : '';
-    if ($group === '' || !isSingleCollection($group)) return null;
-    if (isset($post['delete_instance'])) {
-        return '«' . collectionLabel($group) . '» ha un contenuto unico: non si elimina. Nulla è stato modificato.';
-    }
-    if (isset($post['create_instance']) && array_filter($data, fn($e) => ($e['name'] ?? null) === $group)) {
-        return '«' . collectionLabel($group) . '» ha già il suo contenuto unico. Nulla è stato modificato.';
-    }
-    return null;
-}
-
-/** Le raccolte nell'ordine scelto; quelle non ordinate seguono, nell'ordine dello schema. */
-function orderCollections(array $models): array
-{
-    $out = [];
-    foreach (editorCollectionInfo()['order'] as $name) {
-        if (array_key_exists($name, $models)) $out[$name] = $models[$name];
-    }
-    return $out + $models;
-}
-
-function editorTitle(array $entity): string
-{
-    foreach (['title', 'page_title', 'name', 'meta_title', null] as $preferred) {
-        foreach ($entity['data'] ?? [] as $field) {
-            if ($preferred !== null && $field['name'] !== $preferred) continue;
-            if (!in_array($field['type'] ?? '', ['text', 'plain', 'richtext'], true)) continue;
-            $value = $field['value'] ?? '';
-            foreach (is_array($value) ? $value : [$value] as $text) {
-                if (is_scalar($text) && trim(strip_tags((string) $text)) !== '') {
-                    return mb_substr(trim(strip_tags((string) $text)), 0, 85);
-                }
-            }
-        }
-    }
-    return 'Contenuto #' . ($entity['id'] ?? '');
-}
-
-/** Che cosa e un file della libreria, dall'estensione: image, video o pdf. */
+/** Che cosa è un file della libreria, dall'estensione: image, video o pdf. */
 function editorMediaKind(string $name): string
 {
     $ext = strtolower(pathinfo((string) parse_url($name, PHP_URL_PATH), PATHINFO_EXTENSION));
@@ -236,6 +94,12 @@ function editorMediaFiles(string $directory): array
     return $files;
 }
 
+/** Peso leggibile: «412 KB», «1,2 MB». */
+function editorFileSize(int $bytes): string
+{
+    return $bytes >= 1048576 ? number_format($bytes / 1048576, 1, ',', '.') . ' MB' : max(1, (int) round($bytes / 1024)) . ' KB';
+}
+
 function editorMediaSource(string $url): string
 {
     if ($url === '' || preg_match('~^(?:[a-z][a-z0-9+.-]*:|//)~i', $url)) {
@@ -247,26 +111,47 @@ function editorMediaSource(string $url): string
     return str_starts_with($url, '/') || str_starts_with($url, '../') ? $url : '../' . $url;
 }
 
+/** Icone dell'editor: tratto da 1,6 su una griglia di 24. */
 function uiIcon(string $name): string
 {
     $paths = [
-        'content' => '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
-        'media' => '<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 6"/>',
-        'settings' => '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/>',
+        'grid' => '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
+        'media' => '<rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="M20 16l-5-5-8 8"/>',
+        'list' => '<path d="M5 7h14M5 12h14M5 17h9"/>',
+        'page' => '<path d="M6 3h9l4 4v14H6z"/>',
+        'block' => '<path d="M4 17h16"/><rect x="4" y="5" width="16" height="8" rx="2"/>',
+        'posts' => '<path d="M5 5h14v14H5zM8 9h8M8 13h8M8 16h5"/>',
+        'globe' => '<circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.5 3 2.5 13 0 16M12 4c-2.5 3-2.5 13 0 16"/>',
+        'shield' => '<path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/>',
+        'notfound' => '<circle cx="12" cy="12" r="8"/><path d="M9 9l6 6M15 9l-6 6"/>',
+        'wip' => '<path d="M4 20h16M7 20V9l5-4 5 4v11"/>',
+        'code' => '<path d="M8 6l-5 6 5 6M16 6l5 6-5 6"/>',
+        'link' => '<path d="M10 14a4 4 0 006 0l3-3a4 4 0 00-6-6l-1 1M14 10a4 4 0 00-6 0l-3 3a4 4 0 006 6l1-1"/>',
+        'settings' => '<circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+        'logout' => '<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>',
+        'publish' => '<path d="M12 4v11M7 9l5-5 5 5M5 20h14"/>',
+        'clock' => '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
+        'external' => '<path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5"/>',
+        'search' => '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4-4"/>',
         'plus' => '<path d="M12 5v14M5 12h14"/>',
-        'arrow' => '<path d="M5 12h14m-6-6 6 6-6 6"/>',
-        'back' => '<path d="M19 12H5m6-6-6 6 6 6"/>',
+        'back' => '<path d="M15 6l-6 6 6 6"/>',
+        'arrow' => '<path d="M9 6l6 6-6 6"/>',
         'check' => '<path d="m5 12 4 4L19 6"/>',
         'close' => '<path d="m6 6 12 12M6 18 18 6"/>',
-        'search' => '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/>',
-        'upload' => '<path d="M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6"/>',
-        'up' => '<path d="m6 14 6-6 6 6"/>',
-        'down' => '<path d="m6 10 6 6 6-6"/>',
         'trash' => '<path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7"/>',
-        'posts' => '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13 7 4 4M13 20h7"/>',
-        'structure' => '<rect x="8" y="3" width="8" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4M6 16v-4h12v4"/>',
+        'up' => '<path d="m6 15 6-6 6 6"/>',
+        'down' => '<path d="m6 9 6 6 6-6"/>',
+        'drag' => '<circle cx="9" cy="6" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="18" r="1"/>',
+        'upload' => '<path d="M12 16V4M7 9l5-5 5 5M4 15v5h16v-5"/>',
+        'copy' => '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>',
+        'theme' => '<path d="M12 3a9 9 0 100 18 7 7 0 010-18z"/>',
+        'warning' => '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',
+        'agent' => '<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/>',
+        'language' => '<path d="M4 6h10M9 4v2c0 4-2 8-5 10M6 10c1 2 3 4 6 5"/><path d="M13 20l4-9 4 9M14.5 17h5"/>',
+        'version' => '<path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>',
+        'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
     ];
-    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? $paths['content']) . '</svg>';
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' . ($paths[$name] ?? $paths['page']) . '</svg>';
 }
 
 /** Pagina di errore bloccante: mostrata quando i dati non sono leggibili. */
@@ -277,21 +162,20 @@ function renderStorageError(string $detail): void // termina sempre con exit
     echo <<<HTML
     <!DOCTYPE html>
     <html lang="it"><head><meta charset="UTF-8">
-    <title>Archivio non disponibile - Kris CMS</title>
+    <title>Archivio non disponibile - Kris</title>
     <style>
-        body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background:#f3f4f6;
-               display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }
-        .box { background:#fff; padding:36px; border-radius:12px; max-width:560px;
-               box-shadow:0 4px 6px rgba(0,0,0,.1); border-top:4px solid #ef4444; }
-        h1 { margin:0 0 12px; font-size:1.3rem; color:#111827; }
-        p { color:#4b5563; line-height:1.55; }
-        code { background:#f3f4f6; padding:2px 6px; border-radius:4px; font-size:.85rem;
-               display:block; margin-top:14px; color:#b91c1c; word-break:break-all; }
+        body { font-family: Geist, system-ui, sans-serif; background:#EDEDEA; color:#17171A;
+               display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:16px; box-sizing:border-box; }
+        .box { background:#fff; padding:32px; border-radius:20px; max-width:560px; }
+        h1 { margin:0 0 12px; font-size:22px; font-weight:500; }
+        p { color:#3A3936; line-height:1.55; }
+        code { background:#F1F0EC; padding:8px 10px; border-radius:10px; font-size:13px;
+               display:block; margin-top:14px; color:#7F1D1D; word-break:break-all; }
     </style></head><body><div class="box">
         <h1>I contenuti non sono disponibili</h1>
-        <p><strong>Non e stato modificato nulla.</strong> L'archivio dei contenuti non e
-        leggibile, quindi il pannello si e fermato per non sovrascriverlo.</p>
-        <p>Le copie di sicurezza si trovano in <code>data/backups/</code>: ripristina la piu
+        <p><strong>Non è stato modificato nulla.</strong> L'archivio dei contenuti non è
+        leggibile, quindi il pannello si è fermato per non sovrascriverlo.</p>
+        <p>Le copie di sicurezza si trovano in <code>data/backups/</code>: ripristina la più
         recente rinominandola al posto del file danneggiato, poi ricarica questa pagina.</p>
         <code>{$detail}</code>
     </div></body></html>
@@ -299,12 +183,12 @@ function renderStorageError(string $detail): void // termina sempre con exit
     exit;
 }
 
-// --- VISIBILITA ---
-// Un elemento sospeso ha "hidden": true: resta nei dati e nell'editor, ma
-// il sito non lo mostra. Il form e separato (attributo form sul checkbox)
-// perche nelle liste annidate i controlli stanno gia dentro un altro form.
+// --- Visibilità ---------------------------------------------------------------
+// Un elemento sospeso ha "hidden": true: resta nei dati e nell'editor, ma il
+// sito non lo mostra. Il form è separato (attributo form sull'interruttore)
+// perché nelle liste annidate i controlli stanno già dentro un altro form.
 
-/** Form nascosto che salva la visibilita di un elemento. */
+/** Form nascosto che salva la visibilità di un elemento. */
 function visibilityForm(string $formId, string $group, int $id, string $path): string
 {
     return '<form method="POST" id="' . h($formId) . '" hidden data-visibility-form>'
@@ -314,65 +198,53 @@ function visibilityForm(string $formId, string $group, int $id, string $path): s
         . '<input type="hidden" name="path" value="' . h($path) . '"></form>';
 }
 
-/** Interruttore "Visibile" collegato a un form di visibilityForm(). */
-/** Controllo di un interruttore o di una scelta nella modifica di un contenuto. $name: nome del campo nel form. */
+/** Interruttore «Visibile» collegato a un form di visibilityForm(). */
+function visibilityToggle(string $formId, bool $visible, string $title, bool $withLabel = false): string
+{
+    return '<label class="switch' . ($withLabel ? ' switch-labeled' : '') . '" title="Mostra o sospendi sul sito">'
+        . ($withLabel ? '<span class="switch-text" data-visibility-label>' . ($visible ? 'Visibile' : 'Sospeso') . '</span>' : '')
+        . '<input type="checkbox" role="switch" name="visible" value="1" form="' . h($formId) . '" data-visibility-toggle'
+        . ($visible ? ' checked' : '') . ' aria-label="' . h('Visibile sul sito: ' . $title) . '">'
+        . '<span class="switch-track" aria-hidden="true"></span></label>';
+}
+
+/**
+ * Controllo di un interruttore o di una scelta nella modifica di un contenuto.
+ * $name è il nome nel modulo, $value il valore salvato (true/false, una
+ * stringa o una lista di opzioni).
+ */
 function editorChoiceInput(array $def, string $name, string $id, string $label, mixed $value): string
 {
-    $value = is_string($value) ? $value : '';
     if ($def['type'] === 'boolean') {
-        // Il campo nascosto manda "" quando la casella è spenta
-        return '<input type="hidden" name="' . h($name) . '" value=""><label class="setting-row" for="' . h($id) . '">'
-            . '<input type="checkbox" id="' . h($id) . '" name="' . h($name) . '" value="1"' . ($value === '1' ? ' checked' : '') . '>'
-            . '<span><strong>' . h($label) . '</strong><small>Acceso o spento</small></span></label>';
+        // Il campo nascosto manda "" quando l'interruttore è spento
+        return '<input type="hidden" name="' . h($name) . '" value=""><label class="switch switch-labeled" for="' . h($id) . '">'
+            . '<input type="checkbox" role="switch" id="' . h($id) . '" name="' . h($name) . '" value="1"' . ($value === true || $value === '1' ? ' checked' : '') . '>'
+            . '<span class="switch-track" aria-hidden="true"></span><span class="switch-text">Acceso</span></label>';
     }
-    $picked = $value === '' ? [] : explode(',', $value);
+    $picked = array_map('strval', is_array($value) ? $value : ($value === null || $value === '' ? [] : [$value]));
     if (!empty($def['multiple'])) {
-        $out = '<fieldset class="choice-group"><legend class="sr-only">' . h($label) . '</legend><input type="hidden" name="' . h($name) . '[]" value="">';
+        $out = '<fieldset class="chips"><legend class="sr-only">' . h($label) . '</legend><input type="hidden" name="' . h($name) . '[]" value="">';
         foreach ((array) ($def['options'] ?? []) as $i => $option) {
             $optId = $id . '-' . $i;
-            $out .= '<label class="setting-row" for="' . h($optId) . '"><input type="checkbox" id="' . h($optId) . '" name="' . h($name) . '[]" value="' . h((string) $option) . '"'
-                . (in_array((string) $option, $picked, true) ? ' checked' : '') . '><span><strong>' . h((string) $option) . '</strong></span></label>';
+            $out .= '<label class="chip" for="' . h($optId) . '"><input type="checkbox" id="' . h($optId) . '" name="' . h($name) . '[]" value="' . h((string) $option) . '"'
+                . (in_array((string) $option, $picked, true) ? ' checked' : '') . '><span>' . h((string) $option) . '</span></label>';
         }
         return $out . '</fieldset>';
     }
-    $out = '<label class="sr-only" for="' . h($id) . '">' . h($label) . '</label><select id="' . h($id) . '" name="' . h($name) . '"><option value="">—</option>';
+    $out = '<select class="input" id="' . h($id) . '" name="' . h($name) . '"><option value="">—</option>';
     foreach ((array) ($def['options'] ?? []) as $option) {
         $out .= '<option value="' . h((string) $option) . '"' . (in_array((string) $option, $picked, true) ? ' selected' : '') . '>' . h((string) $option) . '</option>';
     }
     return $out . '</select>';
 }
 
-function visibilityToggle(string $formId, bool $visible, string $title): string
-{
-    return '<label class="visibility-toggle" title="Mostra o sospendi sul sito">'
-        . '<input type="checkbox" name="visible" value="1" form="' . h($formId) . '" data-visibility-toggle'
-        . ($visible ? ' checked' : '') . ' aria-label="' . h('Visibile sul sito: ' . $title) . '">'
-        . '<span class="visibility-switch" aria-hidden="true"></span><span class="visibility-label">'
-        . ($visible ? 'Visibile' : 'Sospeso') . '</span></label>';
-}
+// --- Percorsi annidati ---------------------------------------------------------
+// "elenco/id/elenco/id..." (può finire su un nome di elenco)
 
-function isHiddenItem(array $item): bool
-{
-    return ($item['hidden'] ?? false) === true;
-}
-
-// --- NESTED PATH HELPERS ---
-// Path format: "fieldName/subId/fieldName/subId..." (may end on a field name for list views)
 function parsePath(?string $raw): array
 {
     if ($raw === null || $raw === '') return [];
     return array_values(array_filter(explode('/', $raw), fn($s) => $s !== ''));
-}
-
-/**
- * L'ancora dove tornare dopo un'azione su un elenco (return_to del modulo),
- * cosi la pagina resta all'altezza a cui si lavorava invece di ripartire
- * dall'alto. Vuota se manca o non e un id valido.
- */
-function returnAnchor(): string
-{
-    $anchor = (string) ($_POST['return_to'] ?? '');
-    return preg_match('/^[A-Za-z0-9_-]{1,160}$/', $anchor) === 1 ? '#' . $anchor : '';
 }
 
 function pathToString(array $path): string
@@ -380,441 +252,22 @@ function pathToString(array $path): string
     return implode('/', $path);
 }
 
-// Walk the path inside a root entity ($rootEntity has keys id/name/data).
-// Returns a reference to the node addressed by the path:
-//   - even-length path  → sub-entity ['id'=>..., 'data'=>[...]]
-//   - odd-length path   → field definition ['name', 'type'=>'array', 'value'=>[...]]
-//   - empty path        → the root entity itself
-function &walkEntityPath(array &$rootEntity, array $path)
-{
-    $cur = &$rootEntity;
-    $i = 0;
-    $n = count($path);
-    while ($i < $n) {
-        $fieldName = $path[$i];
-        $fieldIdx = -1;
-        foreach ($cur['data'] as $k => $d) {
-            if ($d['name'] === $fieldName) { $fieldIdx = $k; break; }
-        }
-        if ($fieldIdx < 0 || ($cur['data'][$fieldIdx]['type'] ?? null) !== 'array') {
-            $null = null; return $null;
-        }
-        $field = &$cur['data'][$fieldIdx];
-        if ($i + 1 >= $n) {
-            return $field;
-        }
-        $subId = (int) $path[$i + 1];
-        $subIdx = -1;
-        foreach ($field['value'] as $k => $s) {
-            if ((int) ($s['id'] ?? -1) === $subId) { $subIdx = $k; break; }
-        }
-        if ($subIdx < 0) { $null = null; return $null; }
-        unset($cur);
-        $cur = &$field['value'][$subIdx];
-        unset($field);
-        $i += 2;
-    }
-    return $cur;
-}
-
-// Walk the model path: returns the schema (list of field defs) that applies at the position.
-// - Empty path         → schema of the root group
-// - Ends on field name → the sub-schema 'of' of that array field (used for children)
-// - Ends on sub-id     → the sub-schema 'of' (used for an individual sub-entity form)
-function resolveSchemaAtPath(array $models, string $rootGroup, array $path): array
-{
-    $schema = $models[$rootGroup] ?? [];
-    $i = 0;
-    $n = count($path);
-    while ($i < $n) {
-        $fieldName = $path[$i];
-        $found = null;
-        foreach ($schema as $f) {
-            if ($f['name'] === $fieldName) { $found = $f; break; }
-        }
-        if ($found === null || ($found['type'] ?? null) !== 'array') return [];
-        $schema = $found['of'] ?? [];
-        $i += ($i + 1 < $n) ? 2 : 1;
-    }
-    return $schema;
-}
-
-// --- POSTS (accesso rapido) ---
-// Un elenco di primo livello con "posts": true nello schema compare nella
-// sezione Posts: stessi dati e stesso rendering, cambia solo l'accesso.
-
-/** Definizione del campo se $field e un elenco posts di $group, altrimenti null. */
-function postsFieldDef(array $models, string $group, string $field): ?array
-{
-    foreach ($models[$group] ?? [] as $f) {
-        if (($f['name'] ?? null) === $field) {
-            return ($f['type'] ?? '') === 'array' && ($f['posts'] ?? false) === true ? $f : null;
-        }
-    }
-    return null;
-}
-
 /**
- * Raccolte intere mostrate in Posts (cms_settings.json, "post_collections"):
- * ogni contenuto della raccolta e un post. Solo raccolte del sito esistenti.
+ * L'ancora dove tornare dopo un'azione su un elenco (return_to del modulo),
+ * così la pagina resta all'altezza a cui si lavorava. Vuota se non valida.
  */
-function editorPostCollections(array $settings, array $models): array
+function returnAnchor(): string
 {
-    $names = is_array($settings['post_collections'] ?? null) ? $settings['post_collections'] : [];
-    return array_values(array_filter(array_unique($names), fn($n) => is_string($n) && isset($models[$n]) && !isReservedCollection($n)));
+    $anchor = (string) ($_POST['return_to'] ?? '');
+    return preg_match('/^[A-Za-z0-9_-]{1,160}$/', $anchor) === 1 ? '#' . $anchor : '';
 }
+
+// --- Struttura ---------------------------------------------------------------
 
 /**
- * Le fonti della sezione Posts: le raccolte in Posts, poi un elenco per ogni
- * contenuto root che ha un campo posts, nell'ordine dei dati. Una raccolta ha
- * id -1 e field vuoto; i suoi elementi sono i contenuti root.
- */
-function editorPostSources(array $models, array $data, array $postCollections = []): array
-{
-    $sources = [];
-    foreach ($postCollections as $group) {
-        $sources[] = [
-            'group' => $group, 'id' => -1, 'field' => '', 'label' => collectionLabel($group), 'owner' => 'Raccolta',
-            'items' => array_values(array_filter($data, fn($e) => ($e['name'] ?? null) === $group)),
-        ];
-    }
-    foreach ($data as $entity) {
-        $group = (string) ($entity['name'] ?? '');
-        foreach ($models[$group] ?? [] as $f) {
-            if (postsFieldDef($models, $group, (string) ($f['name'] ?? '')) === null) continue;
-            $items = [];
-            foreach ($entity['data'] ?? [] as $d) {
-                if ($d['name'] === $f['name'] && is_array($d['value'] ?? null)) $items = $d['value'];
-            }
-            $sources[] = [
-                'group' => $group, 'id' => (int) $entity['id'], 'field' => $f['name'],
-                'label' => $f['description'] ?? editorLabel($f['name']),
-                'owner' => editorTitle($entity), 'items' => $items,
-            ];
-        }
-    }
-    return $sources;
-}
-
-/** Il flag posts vale solo sugli elenchi di primo livello: altrove si rimuove. */
-function normalizePostsFlag(array $schema, bool $root = true): array
-{
-    foreach ($schema as &$f) {
-        if ($root && ($f['type'] ?? '') === 'array' && ($f['posts'] ?? false) === true) {
-            $f['posts'] = true;
-        } else {
-            unset($f['posts']);
-        }
-        if (($f['type'] ?? '') === 'array') $f['of'] = normalizePostsFlag($f['of'] ?? [], false);
-    }
-    unset($f);
-    return $schema;
-}
-
-/**
- * Sezioni dei campi ("section" nello schema): l'editor raccoglie i campi
- * con la stessa sezione in un pannello a scomparsa. Nome ripulito, al
- * massimo 60 caratteri; una sezione vuota si toglie. Vale a ogni livello.
- */
-function normalizeSections(array $schema): array
-{
-    foreach ($schema as &$f) {
-        $section = is_string($f['section'] ?? null) ? trim(preg_replace('/\s+/u', ' ', $f['section'])) : '';
-        if ($section === '') {
-            unset($f['section']);
-        } else {
-            $f['section'] = mb_substr($section, 0, 60);
-        }
-        if (($f['type'] ?? '') === 'array') $f['of'] = normalizeSections($f['of'] ?? []);
-    }
-    unset($f);
-    return $schema;
-}
-
-/**
- * I campi divisi per sezione, nell'ordine in cui le sezioni compaiono:
- * [['section' => '' | nome, 'fields' => [indice => campo]]]. I campi senza
- * sezione stanno in testa, fuori dai pannelli.
- */
-function schemaSections(array $schema): array
-{
-    $sections = ['' => []];
-    foreach ($schema as $i => $f) {
-        $sections[is_string($f['section'] ?? null) ? $f['section'] : ''][$i] = $f;
-    }
-    $out = [];
-    foreach ($sections as $name => $fields) {
-        if ($fields) $out[] = ['section' => (string) $name, 'fields' => $fields];
-    }
-    return $out;
-}
-
-function findRootIndex(array $data, string $group, int $id): int
-{
-    foreach ($data as $i => $d) {
-        if ($d['name'] === $group && (int) $d['id'] === $id) return $i;
-    }
-    return -1;
-}
-
-// Build an empty skeleton for a schema. Array fields default to empty list.
-function buildSkeleton(array $schema, array $activeLangs): array
-{
-    $out = [];
-    foreach ($schema as $f) {
-        if (($f['type'] ?? null) === 'array') {
-            $out[] = ['name' => $f['name'], 'type' => 'array', 'value' => []];
-        } elseif (\Kris\Entity\Entity::isShared($f)) {
-            $out[] = ['name' => $f['name'], 'type' => $f['type'], 'value' => ''];
-        } else {
-            $out[] = ['name' => $f['name'], 'type' => $f['type'], 'value' => array_fill_keys($activeLangs, '')];
-        }
-    }
-    return $out;
-}
-
-// Nomi che il form usa per i propri controlli: un campo dello schema che si
-// chiamasse cosi sovrascriverebbe $_POST['id'] o $_POST['group'] e manderebbe
-// il salvataggio in errore (o creerebbe entita duplicate). I valori dei campi
-// viaggiano quindi dentro f[...], fuori dalla portata di questi nomi.
-const RESERVED_FIELD_NAMES = ['id', 'group', 'path', 'save_entity', 'create_instance',
-    'create_nested', 'delete_nested', 'delete_instance', 'reorder_root', 'reorder_nested',
-    'save_structure', 'delete_collection', 'save_settings', 'delete_media', 'file_name',
-    'order', 'group_name', 'schema_json', 'collection_name', 'langs', 'f', 'return_posts'];
-
-/**
- * Controlla uno schema prima di salvarlo: tipi ammessi, nomi validi, nomi
- * duplicati e nomi riservati. Restituisce la lista dei problemi trovati.
- */
-function validateSchema(array $schema, array $previous, string $where = ''): array
-{
-    $allowedTypes = ['text', 'richtext', 'image', 'plain', 'array', 'boolean', 'select'];
-    $problems = [];
-    $seen = [];
-
-    foreach ($schema as $f) {
-        $name = $f['name'] ?? '';
-        $type = $f['type'] ?? '';
-        $label = $where === '' ? "«{$name}»" : "«{$where} / {$name}»";
-
-        if (!is_string($name) || !preg_match('/^[a-z0-9_]+$/', $name)) {
-            $problems[] = "il nome {$label} non e valido (ammessi lettere minuscole, numeri e _).";
-            continue;
-        }
-        if (in_array($name, RESERVED_FIELD_NAMES, true)) {
-            $problems[] = "«{$name}» e un nome riservato dal pannello: usane un altro (es. «{$name}_campo»).";
-        }
-        if (isset($seen[$name])) {
-            $problems[] = "il campo {$label} e presente due volte.";
-        }
-        $seen[$name] = true;
-
-        if (!in_array($type, $allowedTypes, true)) {
-            $problems[] = "il tipo del campo {$label} non e riconosciuto.";
-        }
-        if ($type === 'select' && !array_filter((array) ($f['options'] ?? []), fn($o) => is_string($o) && trim($o) !== '' && !str_contains($o, ','))) {
-            $problems[] = "la scelta {$label} non ha opzioni valide (una per riga, senza virgole).";
-        }
-        if ($type === 'array') {
-            $problems = array_merge(
-                $problems,
-                validateSchema($f['of'] ?? [], [], $where === '' ? $name : "{$where} / {$name}")
-            );
-        }
-    }
-
-    return $problems;
-}
-
-/**
- * Il builder dell'interfaccia invia solo nome, tipo e sotto-campi: le
- * descrizioni (e ogni altro metadato aggiunto a mano nel modello) vanno
- * riportate, altrimenti si perderebbero al primo salvataggio dalla UI.
- */
-function mergeSchemaMetadata(array $new, array $previous): array
-{
-    $byName = [];
-    foreach ($previous as $f) {
-        if (isset($f['name'])) $byName[$f['name']] = $f;
-    }
-
-    $out = [];
-    foreach ($new as $f) {
-        $old = $byName[$f['name']] ?? [];
-        foreach ($old as $key => $value) {
-            // 'of' viene ricalcolato ricorsivamente, il resto si conserva
-            if (!array_key_exists($key, $f) && $key !== 'of') {
-                $f[$key] = $value;
-            }
-        }
-        if (($f['type'] ?? '') === 'array') {
-            $f['of'] = mergeSchemaMetadata($f['of'] ?? [], $old['of'] ?? []);
-        }
-        $out[] = $f;
-    }
-    return $out;
-}
-
-/**
- * Mappa "percorso del campo => tipo" di uno schema, scendendo negli array.
- * Es: ['title' => 'text', 'features' => 'array', 'features/title' => 'text'].
- */
-function schemaFieldMap(array $schema, string $prefix = ''): array
-{
-    $map = [];
-    foreach ($schema as $f) {
-        $name = $f['name'] ?? null;
-        if (!is_string($name) || $name === '') continue;
-
-        $path = $prefix === '' ? $name : $prefix . '/' . $name;
-        $map[$path] = (string) ($f['type'] ?? '');
-
-        if (($f['type'] ?? '') === 'array') {
-            $map += schemaFieldMap($f['of'] ?? [], $path);
-        }
-    }
-    return $map;
-}
-
-/** Valori non vuoti di un campo, in forma leggibile. */
-function fieldValuePreviews(array $field): array
-{
-    $value = $field['value'] ?? null;
-
-    // Per una lista si elenca un elemento per riga, identificato dal suo primo
-    // testo compilato: "3 elementi" dice molto meno di "Strategia e identita".
-    if (($field['type'] ?? '') === 'array') {
-        $out = [];
-        foreach (is_array($value) ? $value : [] as $child) {
-            $label = '';
-            foreach (is_array($child['data'] ?? null) ? $child['data'] : [] as $sub) {
-                $preview = fieldValuePreviews($sub);
-                if ($preview !== []) { $label = $preview[0]; break; }
-            }
-            $out[] = $label !== '' ? $label : ('elemento #' . ($child['id'] ?? '?'));
-        }
-        return $out;
-    }
-
-    $out = [];
-    foreach (is_array($value) ? $value : [$value] as $lang => $single) {
-        if (is_string($single) && trim($single) !== '') {
-            $text = trim(strip_tags($single));
-            $out[] = (is_string($lang) ? strtoupper($lang) . ': ' : '') . mb_substr($text, 0, 60);
-        }
-    }
-    return $out;
-}
-
-/** Cerca nei dati tutti i valori presenti a un certo percorso di schema. */
-function collectValuesAtPath(array $dataLists, array $segments): array
-{
-    $segment = array_shift($segments);
-    $values = [];
-
-    foreach ($dataLists as $data) {
-        foreach ($data as $field) {
-            if (($field['name'] ?? null) !== $segment) continue;
-
-            if ($segments === []) {
-                $values = array_merge($values, fieldValuePreviews($field));
-            } elseif (($field['type'] ?? '') === 'array' && is_array($field['value'] ?? null)) {
-                $children = [];
-                foreach ($field['value'] as $child) {
-                    if (is_array($child['data'] ?? null)) $children[] = $child['data'];
-                }
-                $values = array_merge($values, collectValuesAtPath($children, $segments));
-            }
-        }
-    }
-    return $values;
-}
-
-/**
- * Cosa perderebbero i contenuti applicando il nuovo schema.
- *
- * Elenca solo i campi che spariscono o cambiano tipo E che hanno davvero
- * qualcosa dentro: togliere un campo mai compilato non e un problema e non
- * deve far comparire un avviso che poi si impara a ignorare.
- */
-function schemaImpact(array $oldSchema, array $newSchema, array $data, string $group): array
-{
-    $old = schemaFieldMap($oldSchema);
-    $new = schemaFieldMap($newSchema);
-
-    $dataLists = [];
-    foreach ($data as $entity) {
-        if (($entity['name'] ?? null) === $group && is_array($entity['data'] ?? null)) {
-            $dataLists[] = $entity['data'];
-        }
-    }
-
-    $impact = [];
-    foreach ($old as $path => $type) {
-        if (!isset($new[$path])) {
-            $reason = 'viene rimosso';
-        } elseif ($new[$path] !== $type) {
-            $reason = sprintf('cambia tipo da «%s» a «%s»', $type, $new[$path]);
-        } else {
-            continue;
-        }
-
-        $values = collectValuesAtPath($dataLists, explode('/', $path));
-        if ($values === []) continue;
-
-        $impact[] = [
-            'path'    => $path,
-            'type'    => $type,
-            'reason'  => $reason,
-            'count'   => count($values),
-            'samples' => array_slice($values, 0, 3),
-        ];
-    }
-
-    return $impact;
-}
-
-/** Valori dei campi inviati dal form di modifica (sempre sotto la chiave "f"). */
-function postedFields(array $post): array
-{
-    return is_array($post['f'] ?? null) ? $post['f'] : [];
-}
-
-// Apply POSTed fields onto an existing data[] list, preserving array-type values (which are managed separately).
-function applyPostToData(array $existing, array $schema, array $post, array $activeLangs): array
-{
-    // Index existing by field name for lookup (to preserve array values)
-    $byName = [];
-    foreach ($existing as $item) $byName[$item['name']] = $item;
-
-    $fields = postedFields($post);
-
-    $out = [];
-    foreach ($schema as $def) {
-        $fname = $def['name'];
-        $ftype = $def['type'];
-        if ($ftype === 'array') {
-            // preserve existing nested value, or start empty
-            $out[] = ['name' => $fname, 'type' => 'array', 'value' => $byName[$fname]['value'] ?? []];
-        } elseif (\Kris\Entity\Entity::isShared($def)) {
-            $out[] = ['name' => $fname, 'type' => $ftype, 'value' => \Kris\Entity\Entity::normalizeChoice($def, $fields[$fname]['val'] ?? '')];
-        } else {
-            // Si parte dalle traduzioni gia salvate: una lingua disattivata
-            // nelle impostazioni non compare nel form, e non deve sparire
-            // dal file solo perche non e stata reinviata.
-            $vals = is_array($byName[$fname]['value'] ?? null) ? $byName[$fname]['value'] : [];
-            foreach ($activeLangs as $l) $vals[$l] = \Kris\Entity\Entity::normalizeChoice($def, $fields[$fname][$l] ?? '');
-            $out[] = ['name' => $fname, 'type' => $ftype, 'value' => $vals];
-        }
-    }
-    return $out;
-}
-
-/**
- * Campi di primo livello della schermata Struttura, divisi in sezioni: un
- * gruppo senza sezione in testa, poi un riquadro per sezione con il nome
- * modificabile una volta sola. I campi si spostano trascinandoli o con il
- * menu «Sezione»; al salvataggio ogni campo riceve il nome del suo riquadro.
+ * Campi di primo livello della Struttura divisi in sezioni: un gruppo senza
+ * sezione in testa, poi un riquadro per sezione con il nome modificabile una
+ * volta sola. Al salvataggio ogni campo riceve il nome del suo riquadro.
  */
 function renderSchemaRoot(array $schema): void
 {
@@ -829,54 +282,42 @@ function renderSchemaRoot(array $schema): void
         if ($section['section'] === ''): ?>
         <div class="sf-group sf-group-none" data-sf-group="<?= $key ?>"><p class="sf-group-label">Campi senza sezione</p><div class="sf-group-fields" data-sf-drop><?php renderSchemaFields($section['fields'], 0, $options, $key); ?></div></div>
         <?php else: ?>
-        <section class="sf-group sf-section-group" data-sf-group="<?= $key ?>"><div class="sf-group-header"><label>Nome della sezione<input type="text" class="sf-section-name" value="<?= h($section['section']) ?>" maxlength="60" required placeholder="Es. Meta, Contatti"></label><button type="button" class="btn btn-white sf-section-remove">Togli sezione</button></div><div class="sf-group-fields" data-sf-drop><?php renderSchemaFields($section['fields'], 0, $options, $key); ?></div><p class="sf-drop-hint">Trascina qui i campi, oppure scegli questa sezione dal menu «Sezione» di un campo. Una sezione vuota non viene salvata.</p></section>
+        <section class="sf-group sf-section-group" data-sf-group="<?= $key ?>"><div class="sf-group-header"><label class="field-label">Nome della sezione<input type="text" class="input sf-section-name" value="<?= h($section['section']) ?>" maxlength="60" required placeholder="Es. Meta, Contatti"></label><button type="button" class="btn btn-white btn-small sf-section-remove">Togli sezione</button></div><div class="sf-group-fields" data-sf-drop><?php renderSchemaFields($section['fields'], 0, $options, $key); ?></div><p class="sf-drop-hint">Trascina qui i campi, oppure scegli questa sezione dal menu «Sezione» di un campo. Una sezione vuota non viene salvata.</p></section>
         <?php endif;
     endforeach;
 }
 
-// Render ricorsivo dei campi dello schema nell'editor struttura.
-// $depth controlla l'indentazione visiva (max consigliato: 3-4 livelli).
-// Al primo livello: maniglia per trascinare e menu della sezione ($sections: chiave => nome).
+/** Campi della Struttura, ricorsivo negli elenchi. Al primo livello maniglia e menu della sezione. */
 function renderSchemaFields(array $schema, int $depth = 0, array $sections = [], string $current = 'none'): void
 {
-    $typeLabels = [
-        'text'     => 'Testo Multilingua',
-        'richtext' => 'Richtext',
-        'image'    => 'Media / File',
-        'plain'    => 'Testo Semplice',
-        'array'    => 'Array (lista innestata)',
-        'boolean'  => 'Interruttore',
-        'select'   => 'Scelta fra opzioni',
-    ];
     foreach ($schema as $f):
-        $isArray = ($f['type'] ?? '') === 'array'; ?>
+        $type = $f['type'] ?? 'text';
+        $isList = $type === 'list'; ?>
         <div class="sf-row" data-depth="<?= $depth ?>">
             <div class="sf-header">
-                <?php if ($depth === 0): ?><button type="button" class="icon-button sf-drag" aria-label="Trascina per spostare il campo in un'altra sezione" title="Trascina"><span aria-hidden="true">&#x2807;</span></button><?php endif; ?>
-                <input type="text" class="sf-name" value="<?= htmlspecialchars($f['name'] ?? '') ?>" placeholder="Nome campo (es. title)" aria-label="Nome tecnico del campo" required pattern="[a-z0-9_]+">
-                <select class="sf-type" aria-label="Tipo del campo">
-                    <?php foreach ($typeLabels as $val => $label): ?>
-                        <option value="<?= $val ?>" <?= ($f['type'] ?? '') === $val ? 'selected' : '' ?>><?= $label ?></option>
+                <?php if ($depth === 0): ?><button type="button" class="icon-button sf-drag" aria-label="Trascina per spostare il campo in un'altra sezione" title="Trascina"><?= uiIcon('drag') ?></button><?php endif; ?>
+                <input type="text" class="input sf-name" value="<?= h($f['name'] ?? '') ?>" placeholder="nome_tecnico" aria-label="Nome tecnico del campo" required pattern="[a-z][a-z0-9_]*">
+                <select class="input sf-type" aria-label="Tipo del campo">
+                    <?php foreach (EDITOR_FIELD_TYPES as $val => $label): ?>
+                        <option value="<?= $val ?>" <?= $type === $val ? 'selected' : '' ?>><?= h($label) ?></option>
                     <?php endforeach; ?>
                 </select>
-                <button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo"><?= uiIcon('trash') ?></button>
+                <button type="button" class="icon-button danger sf-remove" aria-label="Rimuovi campo"><?= uiIcon('close') ?></button>
             </div>
-            <label class="sf-description-label">Descrizione visibile<input type="text" class="sf-description" value="<?= h($f['description'] ?? '') ?>" placeholder="Aiuta chi modifica il contenuto"></label>
-            <?php if ($depth === 0): ?><label class="sf-section-label">Sezione<select class="sf-move"><?php foreach ($sections as $key => $name): ?><option value="<?= h($key) ?>" <?= $key === $current ? 'selected' : '' ?>><?= $name === '' ? 'Nessuna sezione' : h($name) ?></option><?php endforeach; ?></select></label><?php endif; ?>
-            <?php $type = $f['type'] ?? ''; ?>
-            <div class="sf-choice" <?= in_array($type, ['boolean', 'select'], true) ? '' : 'hidden' ?>>
-                <label class="setting-row"><input type="checkbox" class="sf-localized" <?= !empty($f['localized']) ? 'checked' : '' ?>><span><strong>Diverso per lingua</strong><small>Spento: un solo valore per tutte le lingue.</small></span></label>
+            <label class="field-label sf-description-label">Descrizione per chi modifica<input type="text" class="input sf-description" value="<?= h($f['description'] ?? '') ?>" placeholder="Es. Titolo in testa alla pagina"></label>
+            <?php if ($depth === 0): ?><label class="field-label sf-section-label">Sezione<select class="input sf-move"><?php foreach ($sections as $key => $name): ?><option value="<?= h($key) ?>" <?= $key === $current ? 'selected' : '' ?>><?= $name === '' ? 'Nessuna sezione' : h($name) ?></option><?php endforeach; ?></select></label><?php endif; ?>
+            <div class="sf-scalar" <?= $isList ? 'hidden' : '' ?>>
+                <label class="check-row"><input type="checkbox" class="sf-localized" <?= !empty($f['localized']) ? 'checked' : '' ?>><span><strong>Diverso per lingua</strong><small>Spento: un solo valore per tutte le lingue (prezzi, codici, indirizzi).</small></span></label>
                 <div class="sf-options" <?= $type === 'select' ? '' : 'hidden' ?>>
-                    <label>Opzioni, una per riga<textarea class="sf-options-list" rows="4"><?= h(implode("\n", (array) ($f['options'] ?? []))) ?></textarea></label>
-                    <label class="setting-row"><input type="checkbox" class="sf-multiple" <?= !empty($f['multiple']) ? 'checked' : '' ?>><span><strong>Più opzioni insieme</strong><small>Per tag e categorie: nei template si controllano con «has».</small></span></label>
+                    <label class="field-label">Opzioni, una per riga<textarea class="input sf-options-list" rows="4"><?= h(implode("\n", (array) ($f['options'] ?? []))) ?></textarea></label>
+                    <label class="check-row"><input type="checkbox" class="sf-multiple" <?= !empty($f['multiple']) ? 'checked' : '' ?>><span><strong>Più opzioni insieme</strong><small>Per tag e categorie: nei template si controllano con «has».</small></span></label>
                 </div>
             </div>
-            <?php if ($depth === 0): ?><label class="sf-posts-label" <?= $isArray ? '' : 'hidden' ?>><input type="checkbox" class="sf-posts" <?= ($f['posts'] ?? false) === true ? 'checked' : '' ?>><span><strong>Mostra in Posts</strong><small>Accesso rapido dalla barra laterale; i nuovi elementi vengono aggiunti in cima.</small></span></label><?php endif; ?>
-            <div class="sf-nested" <?= $isArray ? '' : 'style="display:none"' ?>>
-                <?php if ($isArray): renderSchemaFields($f['of'] ?? [], $depth + 1); endif; ?>
-                <button type="button" class="btn btn-white sf-add-child">+ Sotto-campo</button>
+            <div class="sf-nested" <?= $isList ? '' : 'hidden' ?>>
+                <p class="sf-nested-label">Campi di ogni elemento</p>
+                <?php if ($isList): renderSchemaFields($f['of'] ?? [], $depth + 1); endif; ?>
+                <button type="button" class="btn btn-white btn-small sf-add-child"><?= uiIcon('plus') ?>Campo dell'elemento</button>
             </div>
         </div>
     <?php endforeach;
 }
-

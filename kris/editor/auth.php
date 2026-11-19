@@ -205,56 +205,38 @@ function kris_auth_page(string $title, string $body): void // termina sempre con
     <!DOCTYPE html>
     <html lang="it"><head><meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{$title} - Kris CMS</title>
+    <title>{$title} · Kris</title>
     <script>try{var t=localStorage.getItem('kris-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-               background:#f3f4f6; display:flex; align-items:center; justify-content:center;
-               height:100vh; margin:0; }
-        .login-card { background:#fff; padding:40px; border-radius:12px; width:100%; max-width:380px;
-                      box-shadow:0 4px 6px rgba(0,0,0,.1); text-align:center; }
-        h2 { margin:0 0 20px; color:#111827; font-size:1.5rem; }
-        label { display:block; text-align:left; font-size:.85rem; color:#4b5563; margin-bottom:4px; }
-        input { width:100%; padding:12px; margin-bottom:15px; border:1px solid #e5e7eb;
-                border-radius:6px; box-sizing:border-box; font-size:1rem; }
-        button { width:100%; padding:12px; background:#3b82f6; color:#fff; border:none;
-                 border-radius:6px; font-size:1rem; font-weight:600; cursor:pointer; }
-        button:hover { background:#2563eb; }
-        .error { background:#fee2e2; color:#b91c1c; padding:10px; border-radius:6px;
-                 margin-bottom:15px; font-size:.9rem; text-align:left; }
-        .hint { color:#6b7280; font-size:.85rem; line-height:1.5; text-align:left; margin:0 0 18px; }
-        .ok { background:#dcfce7; color:#166534; padding:10px; border-radius:6px;
-              margin-bottom:15px; font-size:.9rem; text-align:left; }
-        .help { color:#6b7280; font-size:.8rem; line-height:1.5; text-align:left; margin:18px 0 0;
-                padding-top:14px; border-top:1px solid #e5e7eb; }
-        .alt { display:block; margin-top:16px; font-size:.85rem; color:#2563eb; }
-        .brand { font-weight:800; color:#3b82f6; margin-bottom:10px; display:inline-block;
-                 letter-spacing:-1px; font-size:1.2rem; }
-        /* Tema scuro: come nell'editor, segue il sistema salvo una scelta esplicita */
-        @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) { color-scheme:dark; }
-            :root:not([data-theme="light"]) body { background:#111513; }
-            :root:not([data-theme="light"]) .login-card { background:#191f1c; box-shadow:none; border:1px solid #2d3732; }
-            :root:not([data-theme="light"]) h2 { color:#e3eae6; }
-            :root:not([data-theme="light"]) label, :root:not([data-theme="light"]) .hint, :root:not([data-theme="light"]) .help { color:#9aa9a1; }
-            :root:not([data-theme="light"]) .help { border-color:#2d3732; }
-            :root:not([data-theme="light"]) input { background:#1e2521; color:#e3eae6; border-color:#3e4b45; }
-            :root:not([data-theme="light"]) .error { background:#3a1e21; color:#ff8f95; }
-            :root:not([data-theme="light"]) .ok { background:#1d3027; color:#8fdcbb; }
-            :root:not([data-theme="light"]) .alt, :root:not([data-theme="light"]) .brand { color:#7fb2ff; }
-        }
-        :root[data-theme="dark"] { color-scheme:dark; }
-        :root[data-theme="dark"] body { background:#111513; }
-        :root[data-theme="dark"] .login-card { background:#191f1c; box-shadow:none; border:1px solid #2d3732; }
-        :root[data-theme="dark"] h2 { color:#e3eae6; }
-        :root[data-theme="dark"] label, :root[data-theme="dark"] .hint, :root[data-theme="dark"] .help { color:#9aa9a1; }
-        :root[data-theme="dark"] .help { border-color:#2d3732; }
-        :root[data-theme="dark"] input { background:#1e2521; color:#e3eae6; border-color:#3e4b45; }
-        :root[data-theme="dark"] .error { background:#3a1e21; color:#ff8f95; }
-        :root[data-theme="dark"] .ok { background:#1d3027; color:#8fdcbb; }
-        :root[data-theme="dark"] .alt, :root[data-theme="dark"] .brand { color:#7fb2ff; }
+        :root { color-scheme:light; --ground:#EDEDEA; --surface:#fff; --text:#17171A; --muted:#6B6A66; --border:#DCDBD6; --line:#EEEDE9;
+                --primary:#17171A; --on-primary:#fff; --danger-soft:#FDECEC; --danger-ink:#7F1D1D; --ok-soft:#E7F5EC; --ok-ink:#14532D; --focus:#2563EB; }
+        @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme:dark; --ground:#0F0F0E; --surface:#1A1A19; --text:#EDEDEA; --muted:#A3A29C;
+                --border:#3A3936; --line:#2A2A28; --primary:#EDEDEA; --on-primary:#17171A; --danger-soft:#3A1616; --danger-ink:#FFB4B4; --ok-soft:#16301F; --ok-ink:#A7E8C1; --focus:#7AA7FF; } }
+        :root[data-theme="dark"] { color-scheme:dark; --ground:#0F0F0E; --surface:#1A1A19; --text:#EDEDEA; --muted:#A3A29C;
+                --border:#3A3936; --line:#2A2A28; --primary:#EDEDEA; --on-primary:#17171A; --danger-soft:#3A1616; --danger-ink:#FFB4B4; --ok-soft:#16301F; --ok-ink:#A7E8C1; --focus:#7AA7FF; }
+        * { box-sizing:border-box; }
+        body { font:15px/1.5 Geist, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--ground); color:var(--text);
+               display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:16px; -webkit-font-smoothing:antialiased; }
+        .login-card { background:var(--surface); padding:32px; border-radius:22px; width:100%; max-width:400px; }
+        .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:17px; margin-bottom:24px; }
+        .brand::before { content:"K"; width:28px; height:28px; border-radius:8px; background:var(--primary); color:var(--on-primary); display:grid; place-items:center; font-size:14px; }
+        h2 { margin:0 0 16px; font-size:24px; font-weight:500; letter-spacing:-.02em; }
+        label { display:block; font-size:14px; font-weight:500; margin-bottom:6px; }
+        input { width:100%; min-height:44px; padding:0 14px; margin-bottom:14px; border:1px solid var(--border); border-radius:12px;
+                font:inherit; background:var(--surface); color:var(--text); }
+        input:focus, button:focus-visible, a:focus-visible { outline:2px solid var(--focus); outline-offset:1px; border-color:transparent; }
+        button { width:100%; min-height:44px; padding:0 18px; background:var(--primary); color:var(--on-primary); border:none;
+                 border-radius:999px; font:inherit; font-weight:500; cursor:pointer; margin-top:4px; }
+        button:hover { opacity:.9; }
+        .error, .ok { padding:10px 14px; border-radius:12px; margin-bottom:14px; font-size:14px; }
+        .error { background:var(--danger-soft); color:var(--danger-ink); }
+        .ok { background:var(--ok-soft); color:var(--ok-ink); }
+        .hint { color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 16px; }
+        .help { color:var(--muted); font-size:13px; line-height:1.5; margin:18px 0 0; padding-top:14px; border-top:1px solid var(--line); }
+        .alt { display:block; margin-top:16px; font-size:14px; color:var(--text); text-underline-offset:3px; }
+        code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13px; }
     </style></head><body><div class="login-card">
-        <div class="brand">KRIS CMS</div>
+        <div class="brand">Kris</div>
         {$body}
     </div></body></html>
     HTML;

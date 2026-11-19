@@ -2,6 +2,8 @@
     "format": 2,
     "types": {
         "homepage": {
+            "label": "Homepage",
+            "single": true,
             "fields": [
                 {
                     "name": "meta_title",
@@ -311,6 +313,9 @@
             ]
         },
         "navbar": {
+            "label": "Barra di navigazione",
+            "description": "Logo e voci del menu in cima a ogni pagina",
+            "single": true,
             "fields": [
                 {
                     "name": "logo",

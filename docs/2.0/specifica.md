@@ -237,7 +237,7 @@ La migrazione è `auto: false`: l'editor la propone (e l'installer la applica co
 - **Rimandati al livello `Content`** (1.4), che oggi non c'è: `rev` e `updated_at` dei contenuti, `slug` e `slug_history` salvati nel contenuto. L'indirizzo leggibile viene ancora da un campo indicato dalla pagina (`slug`), come nella 1.x.
 - **Opzioni delle scelte**: restano stringhe (`["web", "app"]`), senza etichette per lingua.
 - **Pagine**: niente `path` personalizzato; l'indirizzo è il nome della pagina (`/progetto/3`), come nella 1.x. `noindex` non c'è.
-- **Editor**: le schermate di oggi lavorano ancora sulla forma della 1.x attraverso `kris/editor/format1.php`, che converte all'apertura e a ogni salvataggio; nessun altro codice la vede. Il passaggio diretto al formato 2 è nel rifacimento dell'editor.
+- **Editor**: lavora direttamente sul formato 2 (`kris/editor/model.php`); ogni scrittura è un'operazione, applicata subito da `Kris\Staging\Live` o registrata nello staging. Restano da fare le schermate nuove del canvas: Indirizzi, Elenchi di valori, dettaglio di un file della libreria, Plugin.
 
 ## 3. Indirizzi
 
