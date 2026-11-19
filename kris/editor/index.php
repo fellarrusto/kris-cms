@@ -167,6 +167,15 @@ if ($isPost && isset($_POST['do_login'])) {
     }
 }
 
+// L API risponde in JSON anche a chi non ha la sessione: l app torna all accesso
+if (isset($_GET['api']) && !kris_is_logged_in()) {
+    while (ob_get_level() > 0) ob_end_clean();
+    http_response_code(401);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok' => false, 'error' => 'Sessione scaduta: accedi di nuovo.']);
+    exit;
+}
+
 // Gatekeeper: la pagina di login vive in auth.php
 if (!kris_is_logged_in()) {
     kris_render_login($login_error);
@@ -283,6 +292,9 @@ $action = is_string($_GET['action'] ?? null) ? $_GET['action'] : 'dashboard';
 $group = is_string($_GET['group'] ?? null) ? $_GET['group'] : null;
 $msg = '';
 $error = '';
+
+// --- API JSON (app Vue) ---
+if (isset($_GET['api'])) require __DIR__ . '/api.php';
 
 // --- AZIONI POST ---
 require __DIR__ . '/actions.php';
