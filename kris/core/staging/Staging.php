@@ -781,6 +781,34 @@ final class Staging
         return $files;
     }
 
+    /**
+     * I file caricati (sul sito e in attesa) che nessun contenuto, template,
+     * foglio di stile o script usa, contando anche le modifiche in attesa. Le
+     * misure ridotte (-480w.webp…) seguono l'originale e non si elencano.
+     *
+     * @return list<array{url: string, staged: bool, size: int}>
+     */
+    public function unusedUploads(): array
+    {
+        [$state] = $this->replay($this->operations(), false);
+        $corpus = json_encode([$state['content'], $state['settings']], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        foreach ($this->templateSources() as $html) $corpus .= "\n" . $html;
+        foreach ([$this->root, $this->dir] as $base) {
+            foreach ([...(glob("{$base}/assets/css/*.css") ?: []), ...(glob("{$base}/assets/js/*.js") ?: [])] as $file) $corpus .= "\n" . file_get_contents($file);
+        }
+        $files = [];
+        foreach (glob("{$this->root}/assets/uploads/*") ?: [] as $file) $files[basename($file)] = [$file, false];
+        foreach ($this->uploadFiles() as $file) $files[basename($file)] ??= [$file, true];
+        $extensions = [...\Kris\Entity\MediaStore::allowedExtensions(), 'svg'];
+        $out = [];
+        foreach ($files as $name => [$path, $staged]) {
+            if (!is_file($path) || !in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), $extensions, true) || \Kris\Entity\MediaStore::isVariant($name)) continue;
+            if (str_contains((string) $corpus, 'uploads/' . $name)) continue;
+            $out[] = ['url' => "assets/uploads/{$name}", 'staged' => $staged, 'size' => (int) filesize($path)];
+        }
+        return $out;
+    }
+
     /** Vero se il file e stato caricato nello staging e non esiste ancora nel sito. */
     public function isStagedUpload(string $url): bool
     {

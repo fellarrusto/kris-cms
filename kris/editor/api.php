@@ -178,6 +178,8 @@ function editorSavedPayload(array $ops): array
 $mediaList = function () use ($uploadDir, $uploadUrl, &$stagingMode): array {
     $staging = new Staging();
     $files = editorMediaFiles($uploadDir);
+    // I file che nessun contenuto, template o stile usa (contando le modifiche in attesa)
+    $unused = array_flip(array_column($staging->unusedUploads(), 'url'));
     $staged = [];
     foreach ($staging->uploadFiles() as $file) {
         if (!is_file($uploadDir . basename($file))) $staged[basename($file)] = $file;
@@ -188,7 +190,7 @@ $mediaList = function () use ($uploadDir, $uploadUrl, &$stagingMode): array {
         $url = $uploadUrl . rawurlencode($name);
         $out[] = ['name' => $name, 'url' => $url, 'src' => editorMediaSource($url), 'kind' => editorMediaKind($name),
             'ext' => strtoupper(pathinfo($name, PATHINFO_EXTENSION)), 'size' => (int) @filesize($path), 'mtime' => (int) @filemtime($path),
-            'staged' => isset($staged[$name]), 'variants' => MediaStore::isVariant($name) ? [] : array_values(array_map('basename', glob($uploadDir . pathinfo($name, PATHINFO_FILENAME) . '-*w.webp') ?: []))];
+            'staged' => isset($staged[$name]), 'unused' => isset($unused['assets/uploads/' . $name]), 'variants' => MediaStore::isVariant($name) ? [] : array_values(array_map('basename', glob($uploadDir . pathinfo($name, PATHINFO_FILENAME) . '-*w.webp') ?: []))];
     }
     return $out;
 };

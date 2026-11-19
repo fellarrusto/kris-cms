@@ -158,6 +158,19 @@ final class Server
                 $s->deleteUpload($this->string($r, 'url'), $by);
                 return ['deleted' => true];
 
+            case 'upload_slot':
+                // Un indirizzo sul dominio del sito per mandare il file direttamente (kris-agent.php?upload=…)
+                $slot = $this->slots()->create(basename(is_string($r['name'] ?? null) ? $r['name'] : ''), $by);
+                $base = \Kris\Template\Seo::baseUrl(\Kris\Template\Seo::config($this->root), $_SERVER);
+                return ['slot_id' => $slot['id'], 'upload_url' => $base . '/kris-agent.php?upload=' . $slot['token'],
+                    'expires_at' => $slot['expires_at'], 'max_bytes' => \Kris\Entity\MediaStore::maxBytes(), 'video_max_bytes' => \Kris\Entity\MediaStore::videoMaxBytes()];
+
+            case 'upload_slot_status':
+                return $this->slots()->status($this->string($r, 'slot_id')) ?? throw new AgentException('Indirizzo di caricamento sconosciuto.', 404);
+
+            case 'unused_uploads':
+                return ['files' => $s->unusedUploads(), 'note' => 'I file in attesa si tolgono con delete_upload; quelli già sul sito li elimina l\'admin dalla Libreria media.'];
+
             case 'upload':
                 $data = base64_decode($this->string($r, 'data', true), true);
                 if ($data === false || $data === '') throw new AgentException('"data" deve essere il file in base64.', 400);
@@ -389,6 +402,37 @@ final class Server
             if (is_string($value) && $value !== '') return mb_substr($value, 0, 80);
         }
         return '';
+    }
+
+    private function slots(): UploadSlots
+    {
+        return new UploadSlots($this->root . '/data/agent_upload_slots.json');
+    }
+
+    /**
+     * Un file mandato a un indirizzo di caricamento (kris-agent.php?upload=<gettone>):
+     * nessuna firma, il gettone monouso basta. Va nello staging come gli upload dell'agente.
+     *
+     * @param ?string $name nome originale (modulo del browser), o null: quello dell'indirizzo
+     * @return array{status: int, body: array}
+     */
+    public function receiveUpload(string $token, string $tmpFile, ?string $name): array
+    {
+        $config = $this->config->load();
+        if ($config === null || empty($config['enabled'])) return ['status' => 403, 'body' => ['ok' => false, 'error' => 'Kris Agent non è attivo su questo sito.']];
+        $slot = $this->slots()->begin($token);
+        if ($slot === null) return ['status' => 404, 'body' => ['ok' => false, 'error' => 'Indirizzo di caricamento sconosciuto, scaduto o già usato: chiedine uno nuovo.']];
+        $name = basename($name !== null && $name !== '' ? $name : ((string) $slot['name'] ?: 'file'));
+        try {
+            if (!is_file($tmpFile) || filesize($tmpFile) === 0) throw new StagingException('Il file è vuoto.');
+            $url = str_ends_with(strtolower($name), '.woff2') ? $this->staging->uploadFont($tmpFile, $name, (string) $slot['by']) : $this->staging->upload($tmpFile, $name, (string) $slot['by']);
+            $this->slots()->finish($slot['id'], $url);
+            return ['status' => 200, 'body' => ['ok' => true, 'url' => $url]];
+        } catch (StagingException | \Kris\Entity\StorageException | \RuntimeException $e) {
+            // Il file è stato rifiutato: l'indirizzo resta libero per un altro, finché non scade
+            $this->slots()->finish($slot['id'], null, $e->getMessage());
+            return ['status' => 422, 'body' => ['ok' => false, 'error' => $e->getMessage()]];
+        }
     }
 
     /** @throws AgentException */

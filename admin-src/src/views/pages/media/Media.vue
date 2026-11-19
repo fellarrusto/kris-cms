@@ -12,6 +12,7 @@ const ui = useUiStore()
 const files = ref([])
 const loading = ref(true)
 const search = ref('')
+const onlyUnused = ref(false)
 const results = ref([]) // caricamenti di questa visita: { name, status, ok }
 const over = ref(false)
 const input = ref(null)
@@ -19,7 +20,8 @@ const optimizing = ref(false)
 
 const limits = computed(() => session.data?.uploads || {})
 const accept = computed(() => (limits.value.accept || []).map((e) => '.' + e).join(','))
-const shown = computed(() => files.value.filter((f) => !search.value || f.name.toLowerCase().includes(search.value.toLowerCase())))
+const unusedCount = computed(() => files.value.filter((f) => f.unused).length)
+const shown = computed(() => files.value.filter((f) => (!search.value || f.name.toLowerCase().includes(search.value.toLowerCase())) && (!onlyUnused.value || f.unused)))
 
 async function load() {
   try {
@@ -120,7 +122,10 @@ async function optimize() {
     <div v-if="results.length" class="upload-results" aria-live="polite">
       <div v-for="(r, i) in results" :key="i" class="upload-result" :class="{ success: r.ok === true, error: r.ok === false }"><strong>{{ r.name }}</strong><p>{{ r.status }}</p></div>
     </div>
-    <div class="toolbar"><label class="search"><KIcon name="search" /><input v-model="search" type="search" placeholder="Cerca per nome" aria-label="Cerca un file" /></label></div>
+    <div class="toolbar">
+      <label class="search"><KIcon name="search" /><input v-model="search" type="search" placeholder="Cerca per nome" aria-label="Cerca un file" /></label>
+      <label v-if="unusedCount" class="check-row"><input v-model="onlyUnused" type="checkbox" /> Solo i non usati ({{ unusedCount }})</label>
+    </div>
     <p v-if="loading" class="loading">Carico la libreria…</p>
     <div v-else-if="shown.length" class="media-grid">
       <article v-for="f in shown" :key="f.url" class="media-card">
@@ -129,6 +134,7 @@ async function optimize() {
           <video v-else-if="f.kind === 'video'" :src="f.src" muted playsinline preload="metadata"></video>
           <span v-else class="file-placeholder">PDF</span>
           <span v-if="f.staged" class="pill pill-pending media-badge">In attesa</span>
+          <span v-else-if="f.unused" class="pill media-badge" title="Nessun contenuto, template o stile lo usa">Non usato</span>
         </router-link>
         <div class="media-name" :title="f.name">{{ f.name }}</div>
         <div class="media-meta">
