@@ -90,6 +90,8 @@ function included(string $relative, bool $first): bool
         if ($part === 'node_modules' || ($part !== '.htaccess' && str_starts_with($part, '.'))) return false;
     }
     if (str_ends_with($relative, '.map')) return false;
+    // I plugin si installano dall'editor su ogni sito (plugins/ non è fra le cartelle): i loro file pubblici nemmeno
+    if (str_starts_with($relative, 'assets/plugins/')) return false;
     // Gli upload del cliente solo al primo caricamento
     if (str_starts_with($relative, 'assets/uploads/') && $relative !== 'assets/uploads/.htaccess') return $first;
     return true;

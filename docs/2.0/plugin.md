@@ -1,6 +1,6 @@
 # Kris 2.0: plugin
 
-Stato: specifica della fase 1, da implementare nella fase 7 (dopo il rifacimento dell'editor). Traduce in contratti le decisioni di `piano.md` §6 e i vincoli di `specifica.md` §4. Dove diverge dal piano vale questa specifica.
+Stato: implementata nella fase 7 (`api` 1): `kris/core/plugin/` (`Kris\Plugin\Plugins`, `Context`, `Items`, `Manifest`, `Installer`, `PluginHttp`), API e schermate dell'editor, `tools/plugin-release.php`. Traduce in contratti le decisioni di `piano.md` §6 e i vincoli di `specifica.md` §4. Dove diverge dal piano vale questa specifica.
 
 ## 1. Cos'è un plugin
 
@@ -10,7 +10,7 @@ Un plugin:
 
 - ha il suo codice fuori da `kris/`, che gli aggiornamenti sostituiscono;
 - aggiunge al sito tag, script, blocchi nei template ed endpoint HTTP;
-- aggiunge all'editor impostazioni, voci e schermate, costruite con i componenti dell'editor;
+- aggiunge all'editor impostazioni, voci, riquadri e schermate intere: moduli Vue compilati che usano lo stesso Vue e il kit dei componenti dell'editor, senza limiti di complessità (un e-commerce, un calendario delle prenotazioni);
 - conserva i suoi dati in tipi privati (`plg_<nome>_*`) attraverso l'archivio, mai con file propri in `data/` o tabelle proprie;
 - arriva solo dalle repository ufficiali, firmato con le chiavi del core.
 
@@ -25,9 +25,12 @@ Su un hosting condiviso PHP non ha una sandbox: un plugin installato ha gli stes
 | `plugins/<nome>/` | Il pacchetto installato: manifest, codice, viste, migrazioni. Si sostituisce in blocco a ogni aggiornamento del plugin. |
 | `assets/plugins/<nome>/` | I file pubblici del plugin (CSS, JS, immagini, font), copiati dalla cartella `public/` del pacchetto all'installazione. |
 | `data/kris_plugins.json` | Stato dei plugin: installati, versione, attivo o no, migrazioni applicate, ultimo errore. Lo scrive solo il core. |
+| `data/kris_plugin_logs/<nome>.log` | Registro del plugin (ultime 200 righe), visibile nella scheda Plugin. |
+| `data/kris_plugin_rate.json` | Richieste recenti agli endpoint, per il limite di frequenza (IP non in chiaro). |
+| `config/plugin_key.php` | Chiave dei gettoni dei moduli, creata al primo uso. Privata, esclusa da Git. |
 | `config/plugins.php` | Facoltativo: `return ['safe_mode' => true];` spegne tutti i plugin (modalità sicura); `'enabled' => false` toglie i plugin dall'editor. |
 
-`plugins/` non è servita direttamente: l'`.htaccess` di Kris la nega (regola aggiunta da `Stubs`), e ogni file PHP del pacchetto si apre con `defined('KRIS_ROOT') || exit;`, così anche su Nginx senza regole un file chiamato dal browser non fa niente. In `assets/plugins/` l'installazione copia solo `.css`, `.js`, `.svg`, `.png`, `.jpg`, `.webp`, `.avif`, `.gif`, `.woff2`; niente PHP né `.htaccess`.
+`plugins/` non è servita direttamente: la prima installazione crea `plugins/.htaccess` (`Require all denied`), e ogni file PHP del pacchetto si apre con `defined('KRIS_ROOT') || exit;` (l'installazione lo controlla), così anche su Nginx senza regole un file chiamato dal browser non fa niente. `tools/package.php` non mette nel pacchetto FTP né `plugins/` né `assets/plugins/`: i plugin si installano dall'editor di ogni sito. In `assets/plugins/` l'installazione copia solo `.css`, `.js`, `.svg`, `.png`, `.jpg`, `.webp`, `.avif`, `.gif`, `.woff2`; niente PHP né `.htaccess`.
 
 Gli asset del plugin ricevono `?v=` come quelli del tema (`Kris\Template\Assets`).
 
@@ -38,15 +41,15 @@ plugin/
   plugin.json          manifest
   plugin.php           punto di ingresso: restituisce una funzione
   src/                 classi del plugin (namespace Kris\Plugins\<Nome>)
-  views/               schermate proprie dell'editor
   templates/           frammenti HTML per i blocchi nei template
   migrations/          NNNN_nome.php, sui propri tipi
   public/              file pubblici, copiati in assets/plugins/<nome>/
+    editor/            il modulo Vue compilato delle schermate (index.js, style.css)
   MANIFEST.json        sha256 di ogni file
   MANIFEST.sig         firma Ed25519 di MANIFEST.json
 ```
 
-Lo zip contiene la sola cartella `plugin/` con `MANIFEST.json` e `MANIFEST.sig`, come il pacchetto del core contiene `kris/`. La verifica riusa `Kris\Update\Package` (limiti di dimensione, percorsi, firma, hash di ogni file) con la radice `plugin/`.
+Lo zip contiene la sola cartella `plugin/` con `MANIFEST.json` e `MANIFEST.sig`, come il pacchetto del core contiene `kris/`. La verifica riusa `Kris\Update\Package` (`extract` con la radice `plugin/`, `verifyFiles`: limiti di dimensione, percorsi, firma, hash di ogni file). PHP solo in `plugin.php`, `src/` e `migrations/NNNN_nome.php`; niente `.htaccess` né estensioni eseguibili alternative; in `public/` solo le estensioni ammesse. I sorgenti delle schermate (`editor/src/`, `vite.config.mjs`) stanno nella repository del plugin, fuori da `plugin/`: nel pacchetto va solo il compilato.
 
 ## 3. Manifest
 
@@ -66,7 +69,7 @@ Lo zip contiene la sola cartella `plugin/` con `MANIFEST.json` e `MANIFEST.sig`,
     {"name": "contact_events", "type": "boolean", "localized": false, "description": "Registra i clic su telefono, WhatsApp e mappe"}
   ],
   "hooks": ["head", "body_end"],
-  "editor": {"nav": false, "settings_tab": true, "dashboard": false, "actions": []},
+  "editor": {"module": null, "views": [], "dashboard": null, "actions": []},
   "endpoints": [],
   "cookies": [
     {"name": "_ga", "duration": "2 anni", "provider": "Google Ireland Ltd.", "category": "statistics", "purpose": "Distingue i visitatori"}
@@ -86,8 +89,8 @@ Lo zip contiene la sola cartella `plugin/` con `MANIFEST.json` e `MANIFEST.sig`,
 | `types` | Tutti i tipi che il plugin crea, ciascuno con prefisso `plg_<name>_`. Le migrazioni non possono toccarne altri. |
 | `settings` | Campi del pannello di impostazioni, con i tipi del formato 2 (`specifica.md` §2). Il core crea il tipo `plg_<name>_settings` a contenuto unico con questi campi. |
 | `hooks` | Gli agganci che il plugin registra (§4). Registrarne uno non dichiarato è un errore. |
-| `editor` | Le voci dell'editor (§6). Dichiarative: l'editor le mostra senza eseguire codice del plugin. |
-| `endpoints` | Nomi degli endpoint HTTP (§4.4), con il limite di frequenza. |
+| `editor` | Le schermate dell'editor (§6): `module` (il modulo in `public/`, per esempio `editor/index.js`), `style` (facoltativo, `editor/style.css`), `views` (`name`, `title`, `icon`, `nav`), `dashboard` (il nome di una vista per il riquadro della dashboard), `actions` (le azioni sul server, agganci `editor:<azione>`), `settings_tab` (falso per non mostrare le impostazioni). Le voci si leggono dal manifest senza eseguire codice del plugin. |
+| `endpoints` | Endpoint HTTP (§4.4): `name`, `methods` (`GET`, `POST`), `rate` (`5/10m`: richieste per IP nella finestra, in `s`, `m` o `h`; predefinito `30/1m`), `form_token`. Ogni endpoint è anche l'aggancio `endpoint:<nome>`. |
 | `cookies` | Ogni cookie che il plugin imposta o fa impostare: nome, durata, fornitore, categoria (`technical`, `thirdparty`, `statistics`, `marketing`), finalità. |
 | `domains` | I domini esterni da cui il plugin carica risorse o a cui manda dati. Mostrati all'installazione e nel riepilogo privacy. |
 | `database_recommended` | Vero se il plugin scrive spesso (prenotazioni): l'editor consiglia l'archivio nel database. |
@@ -117,8 +120,9 @@ return function (Context $kris): void {
 | --- | --- |
 | `on(string $hook, callable $fn)` | Registra un aggancio dichiarato nel manifest. |
 | `settings(): array` | I valori del pannello di impostazioni, per nome (localizzati nella lingua della richiesta). |
-| `items(string $type)` | Accesso ai contenuti dei propri tipi: `get`, `list`, `save`, `delete`, `atomic` (interfaccia `Content` di `specifica.md` §1.4). Un tipo fuori da `types` è rifiutato. |
-| `read(string $type, int $id = 0)` | Lettura in sola lettura di un contenuto del sito (non `kris_`, non di altri plugin), come `{{tipo.campo}}`. |
+| `items(string $type)` | I contenuti di un proprio tipo (`Kris\Plugin\Items`): `get(id)`, `list(where, limit, offset)`, `save(['id'?, 'hidden'?, 'values'])`, `delete(id)`, `atomic(fn)` (tutto o niente sotto il lock dell'archivio, per prenotazioni e contatori). Un contenuto è `{id, hidden, values}` con i valori per nome. Un tipo fuori da `types` è rifiutato. |
+| `read(string $type, int $id = 0)` | Un contenuto del sito in sola lettura, con i valori nella lingua della richiesta (non `kris_`, non dei plugin), come `{{tipo.campo}}`; null se non c'è. |
+| `formToken(string $endpoint)` | Il gettone per un modulo verso un endpoint con `form_token`, da mettere nel campo `kris_form_token`. |
 | `script(string $src, string $category, array $attrs = [])`, `tag(string $html, string $category)` | HTML da restituire a `head` e `body_end`, già bloccato secondo il consenso (§4.3). |
 | `render(string $template, array $values)` | Rende un frammento di `templates/` con il motore di Kris: `{{campo}}` escapati, condizioni, nessun PHP. |
 | `url(string $path)` | Indirizzo pubblico di un file in `assets/plugins/<nome>/` o di un endpoint del plugin. |
@@ -158,11 +162,11 @@ Il core prima di chiamare il plugin:
 - con `form_token`, verifica il gettone del modulo: `$kris->formToken()` lo genera nella pagina (HMAC con una chiave del sito, valido 2 ore, legato al plugin e all'endpoint); i visitatori non hanno una sessione, quindi non è il CSRF dell'editor;
 - limita il corpo a 64 KB e rifiuta i caricamenti di file (non previsti nella `api` 1).
 
-L'aggancio riceve `method`, `query`, `body` (campi del modulo o JSON decodificato), `lang` e restituisce `['status' => 200, 'json' => …]` oppure `['status' => 303, 'location' => …]` (solo indirizzi del sito). Kris non manda email per conto dei plugin: un modulo contatti che deve inviarne una usa `mail()` sotto la propria responsabilità o un fornitore dichiarato in `domains`.
+L'aggancio riceve `method`, `query`, `body` (campi del modulo o JSON decodificato), `lang` e restituisce `['status' => 200, 'json' => …]`, `['status' => 200, 'text' => …]` (testo semplice: la chiave di IndexNow) oppure `['status' => 303, 'location' => '/percorso']` (solo percorsi del sito: un indirizzo verso un altro dominio è rifiutato). Kris non manda email per conto dei plugin: un modulo contatti che deve inviarne una usa `mail()` sotto la propria responsabilità o un fornitore dichiarato in `domains`.
 
 ## 5. Caricamento e isolamento
 
-- Il core legge `data/kris_plugins.json` e include `plugin.php` solo dei plugin attivi, e solo nelle richieste che li riguardano: pagine pubbliche (`head`, `body_end`, blocchi), il proprio endpoint, gli eventi. L'editor non include codice dei plugin, tranne nelle loro schermate (§6) e negli eventi.
+- Il core legge `data/kris_plugins.json` e include `plugin.php` solo dei plugin attivi, e solo nelle richieste che li riguardano: pagine pubbliche (`head`, `body_end`, blocchi), il proprio endpoint, gli eventi. L'editor non include codice dei plugin, tranne per le azioni delle loro schermate (§6) e negli eventi.
 - Ogni chiamata a un aggancio è in un `try` su `Throwable`. Un'eccezione non rompe la pagina: l'aggancio restituisce niente, l'errore va nel registro del plugin e in `kris_plugins.json` (`last_error`).
 - Un errore fatale (memoria, sintassi, funzione mancante) non si cattura. Il core segna in `kris_plugins.json` il plugin in esecuzione prima di ogni aggancio; una funzione di shutdown che trova un errore fatale con quel segno spegne il plugin (`active: false`, `disabled_reason`). La richiesta successiva parte senza il plugin e l'editor mostra l'avviso «Plugin disattivato» con il motivo.
 - **Modalità sicura:** `config/plugins.php` con `safe_mode` vero spegne tutti i plugin senza toccare il loro stato; l'editor lo segnala in ogni schermata. È la via d'uscita quando il sito non risponde e l'editor non si apre: si crea il file via FTP.
@@ -171,20 +175,44 @@ L'aggancio riceve `method`, `query`, `body` (campi del modulo o JSON decodificat
 
 ## 6. Editor
 
-L'editor rifatto (task 19, `editor-specifiche.md` §6.10) offre ai plugin due livelli.
+**Dichiarativo.** Il pannello di impostazioni (`#/plugin/<nome>`) è generato dai campi di `settings`, con gli stessi controlli della modifica di un contenuto; si salva in entrambe le modalità (sono dati del plugin, non contenuti in attesa). Le voci di `editor` (gruppo «Plugin installati» nella barra laterale, riquadro nella dashboard, scheda delle impostazioni) sono lette dal manifest: per mostrarle l'editor non esegue codice del plugin.
 
-**Dichiarativo.** Il pannello di impostazioni è generato dai campi di `settings`, con gli stessi controlli della modifica di un contenuto, sezioni e barra di salvataggio. Le voci di `editor` (navigazione nel gruppo «Plugin installati», scheda nelle impostazioni, riquadro della dashboard, azione su un contenuto) sono lette dal manifest: per mostrarle l'editor non esegue codice del plugin.
+**Schermate.** Un plugin può avere schermate intere, di qualunque complessità: un modulo ES compilato (`public/editor/index.js`, più `style.css` facoltativo) che l'editor carica con `import()` quando serve. Il modulo esporta:
 
-**Vista propria.** Per un'interfaccia che un modulo non copre (un calendario delle prenotazioni): `views/<nome>.php`, inclusa dall'editor dentro il suo layout, con a disposizione solo i componenti documentati del kit dell'editor (partial e classi). Niente CSS proprio nell'editor: i componenti bastano o il plugin non ha quella vista. Le azioni della vista passano da `endpoint` dell'editor (`kris-admin/?plugin=<nome>&action=<x>`), che richiede sessione e CSRF dell'editor.
+```js
+import Ordini from './Ordini.vue'
+import Riepilogo from './Riepilogo.vue'
+export default { views: { ordini: Ordini, riepilogo: Riepilogo } }
+```
 
-Il riquadro della dashboard e l'azione su un contenuto sono viste proprie piccole, con lo stesso contratto. I tipi di campo nuovi restano fuori dalla `api` 1: richiedono che il kit dell'editor abbia un contratto per i controlli, che il rifacimento deve prima definire.
+e importa `vue` e `@kris/editor` come moduli esterni: la pagina dell'editor li risolve con una import map verso i file compilati dell'editor stesso (`kris/editor/dist/`, voci `src/vue.js` e `src/kit.js` del manifest di Vite), quindi il plugin usa la stessa istanza di Vue, di Pinia e dei componenti, senza ricaricarli. Ogni vista riceve le prop `plugin` (nome, titolo, versione) e `view`; nel riquadro della dashboard anche `compact`.
 
+`@kris/editor` (`admin-src/src/kit.js`) è il contratto con le schermate dentro la stessa `api`: `KIcon`, `KSwitch`, `SortableList`, `MediaPicker`, `RichText`, `FieldInput`, `useDirty` (modifiche non salvate), `useSessionStore`, `useSiteStore`, `useUiStore` (`toast`, `confirm`), `upload`, `ApiError`, `pluginApi(nome)` e `KIT_API`. L'aspetto è quello del design system dell'editor: classi e variabili di `styles.css` (`box`, `table-list`, `btn`, `input`, `field`, `savebar`, i colori in `var(--…)`), che il plugin usa senza ridefinirle; il suo CSS (`style` nel manifest, meglio `scoped`) aggiunge solo quello che il kit non ha, con le stesse variabili, così chiaro e scuro funzionano da soli.
+
+**Azioni sul server.** `pluginApi(nome).get(azione, query)` e `.post(azione, corpo)` chiamano `index.php?api=plugin-call&name=<nome>&action=<azione>` dell'editor (sessione e, per le scritture, CSRF già controllati) e restituiscono quello che restituisce l'aggancio `editor:<azione>` del plugin, dichiarato in `editor.actions`. L'aggancio riceve `method`, `query`, `body`, `user`, `mode`; una `PluginException` arriva all'editor come messaggio da mostrare, le altre eccezioni vanno nel registro.
+
+Il modulo si compila con Vite in modalità libreria nella repository del plugin:
+
+```js
+// vite.config.mjs
+export default defineConfig({
+  plugins: [vue()],
+  build: {
+    outDir: '../plugin/public/editor',
+    emptyOutDir: true,
+    lib: { entry: 'src/index.js', formats: ['es'], fileName: () => 'index.js', cssFileName: 'style' },
+    rollupOptions: { external: ['vue', '@kris/editor'] },
+  },
+})
+```
+
+I tipi di campo nuovi nel pannello delle impostazioni restano fuori dalla `api` 1: un plugin che ne ha bisogno usa una schermata propria.
 ## 7. Dati
 
 - I tipi del plugin sono nello schema del sito come gli altri, con `"reserved": true` come i tipi `kris_`; è il prefisso `plg_<nome>_` a dire di quale plugin sono. Non compaiono fra le raccolte dell'editor, in Struttura né nelle operazioni dello staging: le operazioni su un tipo `plg_` sono rifiutate come quelle sui tipi `kris_`. L'agente non vede né scrive i dati dei plugin.
 - Le migrazioni del plugin (`migrations/NNNN_nome.php`) hanno lo stesso contratto di quelle del core (funzione pura su `schema`, `content`, `settings`, idempotente, solo in avanti) e possono toccare solo i tipi elencati in `types`: il core confronta prima e dopo e rifiuta il risultato se cambia altro. Lo stato delle migrazioni applicate è in `kris_plugins.json`.
 - Il tipo delle impostazioni (`plg_<nome>_settings`) lo crea e lo aggiorna il core dai campi del manifest, senza migrazione: campi nuovi si aggiungono vuoti, campi tolti restano nei dati finché il plugin non viene rimosso.
-- Le snapshot degli aggiornamenti del core comprendono i dati dei plugin (sono nei documenti) e la cartella `plugins/`.
+- Le snapshot degli aggiornamenti del core comprendono i dati dei plugin (sono nei documenti); l'aggiornamento del core non tocca `plugins/` né `assets/plugins/`.
 
 ## 8. Catalogo, versioni e installazione
 
@@ -193,11 +221,11 @@ Il riquadro della dashboard e l'azione su un contenuto sono viste proprie piccol
 - Catalogo: `plugins.json` e `plugins.json.sig` su `main` di `fellarrusto/kris-cms`, letti da raw.githubusercontent.com come il canale del core. Elenca i plugin ufficiali: nome, repository, titolo, descrizione.
 - Ogni plugin ha la sua repository `fellarrusto/kris-plugin-<nome>`, con `releases.json` e `releases.json.sig` su `main`: le versioni (dai tag `vX.Y.Z`), lo zip della release, sha256, `requires`, changelog. Mai l'API di GitHub.
 - Il core accetta solo repository dell'account `fellarrusto` e solo zip firmati con le chiavi di `kris/update/keys.php`. Nessun caricamento di zip dall'editor e nessun catalogo alternativo da configurazione: un sito che vuole un plugin non ufficiale non ha la via per installarlo.
-- Una release di plugin si pubblica con `tools/release.php --plugin <cartella>` (stessa chiave e stessi controlli del core: pacchetto, firma, tag, zip riscaricato e confrontato, `releases.json` per ultimo).
+- Una release di plugin si pubblica dalla repository del plugin con `php <kris-cms>/tools/plugin-release.php --key … --changelog "…" --publish` (stessa chiave e stessi controlli del core: pacchetto, firma, tag, zip riscaricato e confrontato, `releases.json` per ultimo). Il catalogo si aggiorna con `--catalog --name … --title … --description …` nella repository kris-cms, poi PR su `main`.
 
 ### 8.2 Installazione
 
-Solo l'admin, dall'editor sul sito pubblico (non in «In attesa»), con la password dell'account. La conferma dice che il plugin esegue codice sul server con gli stessi permessi di Kris ed elenca domini esterni e cookie dichiarati.
+Da Impostazioni › Plugin, sul sito pubblico (non in «In attesa»), con la password di chi installa: qualunque utente dell'editor, perché l'unico potere in più dell'admin è gestire gli utenti (come per gli aggiornamenti del core). Installare e togliere chiedono la password; accendere chiede conferma, dice che il plugin esegue codice sul server con gli stessi permessi di Kris ed elenca i domini esterni e i cookie che dichiara (si leggono dal manifest del pacchetto installato, ancora spento).
 
 1. La versione si sceglie nella scheda; predefinita l'ultima compatibile con la versione di Kris e di PHP del sito.
 2. Scaricamento, verifica di firma e hash, controllo del manifest (nome uguale alla repository, `api` nota, `types` con il prefisso giusto, file pubblici ammessi), controllo di sintassi dei file PHP.
@@ -227,7 +255,9 @@ Banco di prova del contratto; ognuno usa una parte diversa degli agganci.
 
 Tipi di campo nuovi nell'editor, plugin nell'anteprima dello staging, dipendenze fra plugin, caricamento di file dagli endpoint, operazioni pianificate (non c'è cron sugli hosting condivisi), agganci che modificano il rendering. Ognuno entra in una `api` successiva solo con un caso d'uso concreto; una `api` nuova non rompe i plugin della precedente finché il core la supporta.
 
-## 12. Da decidere con l'implementazione
+## 12. Decisioni prese con l'implementazione
 
-- I componenti del kit dell'editor disponibili alle viste proprie: li fissa il rifacimento dell'editor (task 19).
-- Se il gettone dei moduli basta contro lo spam o serve anche un campo esca: si decide con il primo plugin con un modulo.
+- Il kit per le schermate è `@kris/editor` (§6); le schermate sono moduli Vue, non viste PHP.
+- Contro lo spam dei moduli c'è il gettone e il limite di frequenza; un campo esca, se servirà, lo aggiunge il primo plugin con un modulo pubblico.
+- L'errore fatale si riconosce in memoria (il plugin in esecuzione) dalla funzione di shutdown della stessa richiesta: niente scritture su disco prima di ogni aggancio.
+- Installano i plugin tutti gli utenti dell'editor, con la loro password (§8.2).

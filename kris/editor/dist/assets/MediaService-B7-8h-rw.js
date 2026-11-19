@@ -1,0 +1,1 @@
+import{a,u as i}from"./site-Bt7uiy-c.js";const t={list:async()=>(await a.get("media")).files,upload:e=>i(e),remove:e=>a.post("media-delete",{name:e}),optimize:()=>a.post("media-optimize")};export{t as M};

@@ -30,6 +30,10 @@ const SECTIONS = {
 const crumb = computed(() => {
   const type = String(route.params.type || '')
   if (RESERVED_VIEWS[type]) return [{ label: 'Sito' }, { label: RESERVED_VIEWS[type].label }]
+  if (route.name === 'plugin-view' || route.name === 'plugin-settings') {
+    const p = session.data?.plugins?.active?.find((x) => x.name === route.params.name)
+    return [{ label: 'Plugin', to: { name: 'settings', params: { tab: 'plugin' } } }, { label: p?.title || String(route.params.name) }]
+  }
   const section = SECTIONS[route.name]
   const out = [{ label: section || 'Contenuti', to: { name: section ? (route.name === 'structure-type' ? 'structure' : route.name === 'media-file' ? 'media' : route.name) : 'dashboard' } }]
   if (type && site.type(type)) out.push({ label: site.label(type), to: route.name === 'structure-type' ? undefined : { name: 'collection', params: { type } } })

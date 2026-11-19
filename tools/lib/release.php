@@ -57,6 +57,46 @@ function kris_build_package(string $krisDir, string $zipFile, array $release, st
     }
 }
 
+/**
+ * Lo zip di un plugin dalla sua cartella plugin/ (con plugin.json): la sola
+ * cartella plugin/ con MANIFEST.json e MANIFEST.sig, riproducibile come
+ * quello del core. La versione è quella di plugin.json.
+ *
+ * @return array{sha256: string, manifest: array}
+ */
+function kris_build_plugin_package(string $pluginDir, string $zipFile, string $secretKey): array
+{
+    $manifest = \Kris\Plugin\Manifest::parse((string) @file_get_contents($pluginDir . '/plugin.json'));
+    $build = sys_get_temp_dir() . '/kris-plugin-build-' . bin2hex(random_bytes(4));
+    kris_copy_tree($pluginDir, $build . '/plugin');
+    try {
+        @unlink($build . '/plugin/MANIFEST.json');
+        @unlink($build . '/plugin/MANIFEST.sig');
+        $files = [];
+        foreach (\Kris\Update\Package::listFiles($build . '/plugin') as $relative) {
+            $files['plugin/' . $relative] = hash_file('sha256', $build . '/plugin/' . $relative);
+        }
+        ksort($files);
+        $json = json_encode(['version' => $manifest['version'], 'files' => $files], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
+        file_put_contents($build . '/plugin/MANIFEST.json', $json);
+        file_put_contents($build . '/plugin/MANIFEST.sig', Signature::sign($json, $secretKey) . "\n");
+        @unlink($zipFile);
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::EXCL) !== true) {
+            throw new RuntimeException("impossibile creare {$zipFile}");
+        }
+        foreach (\Kris\Update\Package::listFiles($build) as $relative) {
+            $zip->addFile($build . '/' . $relative, $relative);
+            $zip->setMtimeName($relative, 315532800);
+            $zip->setCompressionName($relative, ZipArchive::CM_DEFLATE);
+        }
+        $zip->close();
+        return ['sha256' => hash_file('sha256', $zipFile), 'manifest' => $manifest];
+    } finally {
+        kris_remove_tree($build);
+    }
+}
+
 /** Aggiunge o sostituisce una release in releases.json e lo firma. */
 function kris_publish_release(string $channelFile, array $entry, string $secretKey): void
 {

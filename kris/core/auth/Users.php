@@ -74,7 +74,7 @@ final class Users
         $user = $this->read()['users'][$name] ?? null;
         // Si calcola comunque un hash: la risposta non rivela se il nome esiste
         static $dummy = null;
-        $hash = is_array($user) ? (string) ($user['hash'] ?? '') : ($dummy ??= password_hash(random_bytes(16), PASSWORD_DEFAULT));
+        $hash = is_array($user) ? (string) ($user['hash'] ?? '') : ($dummy ??= password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT));
         $ok = password_verify($password, $hash) && is_array($user);
         if (!$ok) return 'invalid';
         return !empty($user['blocked']) ? 'blocked' : 'ok';

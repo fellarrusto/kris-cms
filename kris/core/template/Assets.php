@@ -18,7 +18,7 @@ final class Assets
     public static function version(string $html, string $root): string
     {
         return (string) preg_replace_callback(
-            '#\b(href|src)=(["\'])((?:\./)?assets/(?:css|js)/[A-Za-z0-9][A-Za-z0-9_./-]*\.(?:css|js))\2#',
+            '#\b(href|src)=(["\'])((?:\./)?assets/(?:css|js|plugins/[a-z0-9_]+)/[A-Za-z0-9][A-Za-z0-9_./-]*\.(?:css|js))\2#',
             function (array $m) use ($root): string {
                 $relative = (string) preg_replace('#^\./#', '', $m[3]);
                 if (str_contains($relative, '..')) return $m[0];

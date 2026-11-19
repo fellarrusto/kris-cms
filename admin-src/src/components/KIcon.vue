@@ -39,6 +39,11 @@ const PATHS = {
   agent: `<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M18 15l.8 2.2L21 18l-2.2.8L18 21l-.8-2.2L15 18l2.2-.8z"/>`,
   language: `<path d="M4 6h10M9 4v2c0 4-2 8-5 10M6 10c1 2 3 4 6 5"/><path d="M13 20l4-9 4 9M14.5 17h5"/>`,
   version: `<path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3"/><path d="M18 3v4h-4M6 21v-4h4"/>`,
+  puzzle: `<path d="M9 4h4v2.5a1.5 1.5 0 003 0V4h4v6h-2.5a1.5 1.5 0 000 3H20v7h-6v-2.5a1.5 1.5 0 00-3 0V20H4v-7h2.5a1.5 1.5 0 000-3H4V4z"/>`,
+  calendar: `<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>`,
+  cart: `<path d="M3 4h2l2.4 11h10.2L20 8H6.2"/><circle cx="9" cy="19.5" r="1.3"/><circle cx="17" cy="19.5" r="1.3"/>`,
+  chart: `<path d="M4 20V4M4 20h16M8 16v-5M12 16V8M16 16v-3"/>`,
+  mail: `<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>`,
   user: `<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>`,
 }
 

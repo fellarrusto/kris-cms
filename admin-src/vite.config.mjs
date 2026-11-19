@@ -17,7 +17,12 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       manifest: 'manifest.json',
       sourcemap: false,
-      rollupOptions: { input: 'src/main.js' },
+      rollupOptions: {
+        // vue.js e kit.js sono punti d'ingresso con le loro esportazioni: i moduli dei plugin li importano
+        // (import map di index.php: "vue" e "@kris/editor") e usano la stessa istanza di Vue, Pinia e componenti.
+        input: { main: 'src/main.js', kit: 'src/kit.js', vue: 'src/vue.js' },
+        preserveEntrySignatures: 'exports-only',
+      },
     },
     server: {
       // In sviluppo le richieste all'editor PHP passano dal server di Kris (php -S)

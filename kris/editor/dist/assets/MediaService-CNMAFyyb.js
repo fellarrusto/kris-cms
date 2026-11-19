@@ -1,1 +1,0 @@
-import{W as i,X as a}from"./main-2q1qCmcK.js";const t={list:async()=>(await i.get("media")).files,upload:e=>a(e),remove:e=>i.post("media-delete",{name:e}),optimize:()=>i.post("media-optimize")};export{t as M};

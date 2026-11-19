@@ -19,3 +19,10 @@
 /config/store.php
 /data/*.sqlite
 /data/format1/
+/config/plugins.php
+/config/plugin_key.php
+/data/kris_plugins.json
+/data/kris_plugin_logs/
+/data/kris_plugin_rate.json
+/plugins/
+/assets/plugins/

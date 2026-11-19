@@ -97,6 +97,11 @@ async function emailLater() {
     <router-link class="btn btn-primary btn-small" :to="{ name: 'settings', params: { tab: 'versione' } }">Aggiorna ora</router-link>
     <button type="button" class="text-link" @click="dismissUpdate">Più tardi</button>
   </div>
+  <div v-for="(a, i) in session.data?.plugins?.alerts || []" :key="`plugin-${i}`" class="alert" :class="a.kind === 'danger' ? 'alert-error' : 'alert-warning'" role="status">
+    <KIcon name="puzzle" />
+    <p>{{ a.text }}</p>
+    <router-link v-if="route.name !== 'settings'" class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'plugin' } }">Plugin</router-link>
+  </div>
   <div v-if="wipOn" class="alert alert-warning" role="status">
     <p><strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor aperto.</p>
     <router-link class="btn btn-white btn-small" :to="{ name: 'edit', params: { type: 'kris_wip', id: 0 } }">Lavori in corso</router-link>
