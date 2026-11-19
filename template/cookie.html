@@ -16,6 +16,7 @@
             <h1 class="detail-title">Cookie policy</h1>
             {{#if updated_at != ""}}<p class="post-date">{{updated_at}}</p>{{/if}}
             <div class="post-content">{{cookie_policy}}</div>
+            <div class="post-content cookie-table-wrap"><div k-cookie-table data-class="cookie-table"></div></div>
             <address class="legal-owner">
                 <strong>{{owner_name}}</strong><br>
                 <a href="mailto:{{privacy_email}}">{{privacy_email}}</a>
