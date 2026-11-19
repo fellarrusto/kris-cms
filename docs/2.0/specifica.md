@@ -265,7 +265,7 @@ Dopo il rendering, `href`, `src`, `srcset`, `poster`, `action` e gli `url()` neg
 
 ## 4. Plugin
 
-Contratto rimandato a una specifica separata, `plugin.md`, da scrivere prima della fase 7. Vincoli già fissati:
+Il contratto è in `plugin.md` (manifest, agganci, isolamento, editor, dati, catalogo e installazione). Vincoli che valgono anche fuori da lì:
 
 - un plugin dichiara i suoi tipi privati `plg_<nome>_*` nello schema e li usa con `Content`;
 - non apre file di `data/` né il database direttamente;

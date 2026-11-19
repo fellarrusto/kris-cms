@@ -213,6 +213,8 @@ Lavoro di refactoring: oggi `Entity` riceve il nome del file e circa 130 punti i
 
 ## 6. Plugin
 
+Il contratto preciso è in `plugin.md`; dove diverge da questa sezione vale quello.
+
 ### 6.1 Pacchetto
 
 Zip firmato con: manifest, codice PHP, pannelli dell'editor, asset pubblici (JS e CSS per il sito), migrazioni dei propri tipi.
