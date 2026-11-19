@@ -239,7 +239,7 @@ Da Impostazioni › Plugin, sul sito pubblico (non in «In attesa»), con la pas
 
 ## 9. Privacy
 
-- Il registro dei cookie è l'unione dei `cookies` dei plugin attivi. Privacy e cookie lo mostra in sola lettura; `Kris\Plugin\Plugins::cookies()` lo dà al plugin della cookie policy, che lo rende come blocco.
+- Il registro dei cookie è l'unione dei `cookies` dei plugin attivi. Privacy e cookie lo mostra in sola lettura. La tabella dei cookie dell'informativa è del core (`<div k-cookie-table data-class="…"></div>` nel template, `Plugins::cookieTable`): i cookie tecnici di Kris e poi quelli dei plugin accesi, nella lingua della pagina. Era previsto come plugin («Cookie policy automatica»): è nel core perché il registro c'è già e serve a ogni sito con plugin.
 - Le categorie dei cookie dichiarati devono esistere nel banner: un plugin con cookie `statistics` su un sito senza banner fa comparire nell'editor un avviso («Il plugin Misurazione usa cookie di statistica: serve il banner dei cookie»).
 - I domini dichiarati compaiono nel riepilogo della privacy, per l'informativa che compila il cliente.
 
@@ -250,7 +250,6 @@ Banco di prova del contratto; ognuno usa una parte diversa degli agganci.
 | Plugin | Usa |
 | --- | --- |
 | **Misurazione**: GA4 e Pixel di Meta con Consent Mode v2, eventi di contatto (clic su `tel:`, `wa.me`, link alle mappe) | `head`, `body_end`, consenso per categoria, impostazioni dichiarative, `cookies`, `domains` |
-| **Cookie policy automatica**: tabella dei cookie dal registro | `block:tabella`, `Plugins::cookies()`, impostazioni |
 | **IndexNow**: avvisa i motori di ricerca delle pagine pubblicate | `published`, `http()`, chiave servita da un endpoint `GET`, registro |
 
 ## 11. Fuori dalla `api` 1

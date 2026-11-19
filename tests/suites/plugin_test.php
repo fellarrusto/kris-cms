@@ -459,3 +459,24 @@ test('nessun template rende i dati di un plugin: ?key=, k-array e {{tipo.campo}}
         pluginDone();
     }
 });
+
+test('tabella dei cookie del core: tecnici sempre, poi quelli dei plugin accesi, nella lingua della pagina', function () {
+    $site = pluginSite();
+    try {
+        $html = '<main><div k-cookie-table data-class="tabella"></div></main>';
+        $base = sitePage($html);
+        assertContains('<table class="tabella">', $base);
+        assertContains('<td>kris_consent</td>', $base);
+        assertNotContains('_prova', $base);
+        $i = pluginInstaller();
+        $i->installZip(pluginPackage(), 'prova', 'a');
+        $i->setActive('prova', true);
+        assertContains('<td>_prova</td>', sitePage($html));
+        $en = sitePage($html, ['lang' => 'en']);
+        assertContains('<th scope="col">Provider</th>', $en);
+        assertContains('<td>Statistics</td>', $en);
+        assertNotContains('k-cookie-table', $en);
+    } finally {
+        pluginDone();
+    }
+});

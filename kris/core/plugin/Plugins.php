@@ -222,6 +222,17 @@ final class Plugins
      */
     public static function decorate(string $html, array $page): string
     {
+        // La tabella dei cookie dell'informativa è del core: c'è anche senza plugin
+        if (str_contains($html, 'k-cookie-table')) {
+            $html = (string) preg_replace_callback(
+                '#<([a-z][a-z0-9]*)\b([^>]*?)\sk-cookie-table\b([^>]*)>\s*</\1>#i',
+                function (array $m) use ($page): string {
+                    $class = preg_match('#\sdata-class=(["\'])([A-Za-z0-9_ -]{1,80})\1#', $m[2] . ' ' . $m[3], $c) === 1 ? $c[2] : 'kris-cookie-table';
+                    return self::cookieTable((string) ($page['lang'] ?? 'it'), $class);
+                },
+                $html
+            );
+        }
         if (!str_contains($html, 'k-plugin') && self::active() === []) return $html;
         // Blocchi: <div k-plugin="plugin:nome" data-…></div>, sostituito come k-component; senza plugin sparisce
         $html = (string) preg_replace_callback(
@@ -381,6 +392,35 @@ final class Plugins
             foreach ($installed[$name]['manifest']['cookies'] as $c) $out[] = $c + ['plugin' => $installed[$name]['manifest']['title']];
         }
         return $out;
+    }
+
+    /**
+     * La tabella dei cookie per l'informativa (<div k-cookie-table></div> nel
+     * template): i cookie tecnici di Kris, poi quelli dichiarati dai plugin
+     * accesi. In inglese sulle pagine in inglese, in italiano sulle altre. I
+     * cookie del tema o dei servizi incorporati li scrive il cliente nel testo
+     * dell'informativa (kris_legal, cookie_policy).
+     */
+    public static function cookieTable(string $lang, string $class = 'kris-cookie-table'): string
+    {
+        $t = fn(string $it, string $en): string => $lang === 'en' ? $en : $it;
+        $esc = fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $categories = ['technical' => $t('Tecnico', 'Technical'), 'thirdparty' => $t('Terze parti', 'Third party'),
+            'statistics' => $t('Statistiche', 'Statistics'), 'marketing' => 'Marketing'];
+        $rows = [
+            ['name' => 'PHPSESSID', 'provider' => $t('Questo sito', 'This website'), 'purpose' => $t('Sessione dell\'area riservata (solo per chi la usa).', 'Admin area session (only for its users).'), 'duration' => $t('Sessione', 'Session'), 'category' => 'technical'],
+            ['name' => 'kris_consent', 'provider' => $t('Questo sito', 'This website'), 'purpose' => $t('Ricorda la scelta sui cookie.', 'Remembers the cookie choice.'), 'duration' => $t('180 giorni', '180 days'), 'category' => 'technical'],
+            ['name' => 'kris_lang', 'provider' => $t('Questo sito', 'This website'), 'purpose' => $t('Ricorda la lingua scelta.', 'Remembers the chosen language.'), 'duration' => $t('180 giorni', '180 days'), 'category' => 'technical'],
+            ...self::cookies(),
+        ];
+        $html = '<table class="' . $esc($class) . '"><thead><tr><th scope="col">Cookie</th><th scope="col">' . $t('Fornitore', 'Provider')
+            . '</th><th scope="col">' . $t('Finalità', 'Purpose') . '</th><th scope="col">' . $t('Durata', 'Duration')
+            . '</th><th scope="col">' . $t('Categoria', 'Category') . '</th></tr></thead><tbody>';
+        foreach ($rows as $r) {
+            $html .= '<tr><td>' . $esc($r['name']) . '</td><td>' . $esc($r['provider']) . '</td><td>' . $esc($r['purpose'])
+                . '</td><td>' . $esc($r['duration']) . '</td><td>' . $esc($categories[$r['category']] ?? $r['category']) . '</td></tr>';
+        }
+        return $html . '</tbody></table>';
     }
 
     /** I domini esterni dei plugin accesi, per il riepilogo della privacy. */
