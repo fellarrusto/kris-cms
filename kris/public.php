@@ -204,10 +204,7 @@ $html = $preview !== null
     : $page['html'];
 // Lavori in corso accesi e editor aperto: il sito si vede, ma una striscia in cima ricorda che i visitatori no
 if ($wip !== null && $preview === null && Preview::isAdmin()) {
-    $bar = '<div role="status" style="position:sticky;top:0;z-index:2147483000;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;'
-        . 'padding:6px 16px;background:#E8590C;color:#fff;font:500 13px/1.4 system-ui,sans-serif">'
-        . '<span>Lavori in corso attivi: i visitatori vedono la pagina di lavorazione, tu il sito perché hai l\'editor aperto.</span>'
-        . '<a href="' . htmlspecialchars($basePath . '/index.php?kris_wip_preview=1&ln=' . rawurlencode($lang), ENT_QUOTES) . '" style="color:#fff;text-decoration:underline">Vedi la pagina di lavorazione</a></div>';
-    $html = (string) preg_replace('#<body\b[^>]*>#i', '$0' . str_replace(['\\', '$'], ['\\\\', '\\$'], $bar), $html, 1);
+    $html = Preview::notice($html, 'Lavori in corso', 'I visitatori vedono la pagina di lavorazione; tu il sito, perché hai l\'editor aperto.',
+        [['Vedi la pagina', $basePath . '/index.php?kris_wip_preview=1&ln=' . rawurlencode($lang)]]);
 }
 echo $routes !== null ? Router::rewriteLinks($html, $routes, $basePath, PageRenderer::language([])[1][0]) : $html;

@@ -15,7 +15,6 @@ const route = useRoute()
 
 const newest = computed(() => site.userTypes.filter((t) => isNewestFirst(site.schema, t.name)))
 const hasSystem = computed(() => !!(site.type('kris_notfound') || site.type('kris_wip')))
-const wipOn = computed(() => site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true)
 const siteName = computed(() => session.data?.site_name || 'Il tuo sito')
 // Plugin accesi: le loro schermate, o le impostazioni se non ne hanno
 const pluginItems = computed(() =>
@@ -82,7 +81,7 @@ const contentsActive = computed(
     <div v-if="hasSystem" class="nav-group">
       <p class="nav-label">Sito</p>
       <router-link class="nav-item" active-class="is-active" :to="{ name: 'system' }">
-        <KIcon name="wip" /><span class="nav-text">Pagine di sistema</span><span v-if="wipOn" class="nav-count">Attivi</span>
+        <KIcon name="wip" /><span class="nav-text">Pagine di sistema</span>
       </router-link>
     </div>
     <div v-if="pluginItems.length" class="nav-group">
