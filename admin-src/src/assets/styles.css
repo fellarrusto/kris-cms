@@ -173,6 +173,14 @@ code { background: var(--subtle); padding: 1px 6px; border-radius: 6px; }
 .page-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .page-actions:empty { display: none; }
 .top .search { background: var(--surface-2); }
+/* Controlli della barra tutti alla stessa altezza, stesso testo e stesso bordo */
+.top-tools { --top-h: 40px; }
+.top-tools .btn, .top-tools .search { min-height: var(--top-h); height: var(--top-h); font-size: 14px; }
+.top-tools .btn-small { padding: 0 18px; }
+.top-tools .search input { min-height: 0; font-size: 14px; }
+.top-tools .round-button { width: var(--top-h); height: var(--top-h); }
+.top-tools .seg { height: var(--top-h); padding: 3px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); align-items: stretch; }
+.top-tools .seg button { min-height: 0; font-size: 14px; }
 .top .back { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; text-decoration: none; color: var(--text); flex: none; }
 .icon-button.menu-toggle { display: none; }
 .crumb { font-size: 13px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
