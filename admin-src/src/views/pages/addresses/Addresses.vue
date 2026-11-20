@@ -157,12 +157,7 @@ function saveRedirects() {
 
 <template>
   <div class="container">
-    <div class="page-head">
-      <div>
-        <h1>Indirizzi</h1>
-        <p class="sub">Le pagine pubbliche del sito e dove portano i vecchi indirizzi.</p>
-      </div>
-    </div>
+    <h1 class="sr-only">Indirizzi</h1>
     <div v-if="session.isStaging" class="notice notice-warning">
       <strong>Solo sul sito pubblico.</strong>
       <p>Gli indirizzi si cambiano sul sito pubblico: passa a «Sito pubblico» per modificarli.</p>

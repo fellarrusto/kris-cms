@@ -281,178 +281,183 @@ const isChanged = (def) =>
 
 <template>
   <div :class="embedded ? 'embedded-edit' : 'container'">
-    <div class="edit-head">
-      <template v-if="!embedded">
-        <router-link class="back" :to="back" aria-label="Torna indietro"><KIcon name="back" /></router-link>
-        <div class="edit-head-text">
-          <p class="kicker">{{ kicker }}</p>
-          <h1>{{ title }}</h1>
-        </div>
-      </template>
-      <div class="edit-head-tools">
-        <div v-if="node && localized.length && languages.length > 1" class="lang-switch" role="group" aria-label="Lingua di modifica">
-          <button v-for="l in languages" :key="l" type="button" :aria-pressed="String(lang === l)" @click="lang = l">
-            {{ session.languageName(l)
-            }}<span v-if="missing[l]" class="pill pill-danger">{{ missing[l] }} {{ missing[l] === 1 ? 'vuoto' : 'vuoti' }}</span>
-          </button>
-        </div>
-        <a
-          v-if="type === 'kris_wip'"
-          class="btn btn-white btn-small"
-          :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1&ln=${lang}`"
-          target="_blank"
-          rel="noopener"
-          ><KIcon name="external" />Vedi la pagina di lavorazione</a
-        >
-        <KSwitch
-          v-if="canHide"
-          :model-value="!node.hidden"
-          :label="`Visibile sul sito: ${title}`"
-          :text="node.hidden ? 'Sospeso' : 'Visibile'"
-          :disabled="saving || session.locked"
-          @update:model-value="setVisible"
-        />
-      </div>
-    </div>
-    <p v-if="INTRO[type] && !path.length" class="sub">{{ INTRO[type] }}</p>
-    <nav v-if="path.length && root" class="nested-crumb" aria-label="Contenuto annidato">
-      <router-link :to="{ name: 'edit', params: { type, id } }">{{ model.title(root, site.fieldsOf(type), languages[0]) }}</router-link>
-      <template v-for="c in crumbs" :key="c.label"
-        ><span aria-hidden="true">/</span><router-link :to="c.to">{{ c.label }}</router-link></template
-      >
-    </nav>
-    <div v-if="blockedHere" class="notice notice-warning">
-      <strong>Solo sul sito pubblico.</strong>
-      <p>Privacy e cookie si modificano sul sito pubblico: passa a «Sito pubblico» per cambiarli.</p>
-    </div>
-
-    <div v-if="!node" class="empty-state">
-      <h2>Questo contenuto non è più disponibile.</h2>
-      <p>Potrebbe essere stato eliminato. Torna indietro e scegline un altro.</p>
-      <router-link class="btn btn-primary" :to="back">Torna indietro</router-link>
-    </div>
-    <div v-else-if="!fields.length" class="empty-state">
-      <h2>Non ci sono campi da compilare.</h2>
-      <router-link v-if="!session.isStaging && !reserved" class="btn btn-primary" :to="{ name: 'structure-type', params: { type } }"
-        >Scegli i campi in Struttura</router-link
-      >
-    </div>
-    <div v-else class="edit-cols">
-      <form class="panel" @submit.prevent="save">
-        <component
-          :is="s.section ? 'details' : 'div'"
-          v-for="(s, si) in sections"
-          :id="`section-${si}`"
-          :key="si"
-          :class="{ 'field-section': s.section }"
-          :open="s.section ? si === openSection : undefined"
-        >
-          <summary v-if="s.section">
-            {{ s.section }} <span class="count">{{ s.fields.length }} {{ s.fields.length === 1 ? 'campo' : 'campi' }}</span>
-          </summary>
-          <div v-for="def in s.fields" :id="`field-${def.index}`" :key="def.name" class="field">
-            <div class="field-head">
-              <label
-                v-if="['text', 'select', 'boolean'].includes(def.type) && !(def.type === 'select' && def.multiple)"
-                :for="`f-${def.index}`"
-                >{{ model.fieldLabel(def) }}</label
+    <div class="edit-cols" :class="{ 'no-index': embedded || !node || !fields.length }">
+      <component :is="node && fields.length ? 'form' : 'div'" class="panel" @submit.prevent="save">
+        <div class="edit-top">
+          <div class="edit-head">
+            <template v-if="!embedded">
+              <router-link class="back" :to="back" aria-label="Torna indietro"><KIcon name="back" /></router-link>
+              <div class="edit-head-text">
+                <p class="kicker">{{ kicker }}</p>
+                <h1>{{ title }}</h1>
+              </div>
+            </template>
+            <div class="edit-head-tools">
+              <div v-if="node && localized.length && languages.length > 1" class="lang-switch" role="group" aria-label="Lingua di modifica">
+                <button v-for="l in languages" :key="l" type="button" :aria-pressed="String(lang === l)" @click="lang = l">
+                  {{ session.languageName(l)
+                  }}<span v-if="missing[l]" class="pill pill-danger">{{ missing[l] }} {{ missing[l] === 1 ? 'vuoto' : 'vuoti' }}</span>
+                </button>
+              </div>
+              <a
+                v-if="type === 'kris_wip'"
+                class="btn btn-white btn-small"
+                :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1&ln=${lang}`"
+                target="_blank"
+                rel="noopener"
+                ><KIcon name="external" />Vedi la pagina di lavorazione</a
               >
-              <span v-else>{{ model.fieldLabel(def) }}</span>
-              <span class="scope">{{ scopeLabel(def) }}</span><span class="field-tech">{{ def.name }}</span>
+              <KSwitch
+                v-if="canHide"
+                :model-value="!node.hidden"
+                :label="`Visibile sul sito: ${title}`"
+                :text="node.hidden ? 'Sospeso' : 'Visibile'"
+                :disabled="saving || session.locked"
+                @update:model-value="setVisible"
+              />
             </div>
+          </div>
+          <p v-if="INTRO[type] && !path.length" class="sub">{{ INTRO[type] }}</p>
+          <nav v-if="path.length && root" class="nested-crumb" aria-label="Contenuto annidato">
+            <router-link :to="{ name: 'edit', params: { type, id } }">{{
+              model.title(root, site.fieldsOf(type), languages[0])
+            }}</router-link>
+            <template v-for="c in crumbs" :key="c.label"
+              ><span aria-hidden="true">/</span><router-link :to="c.to">{{ c.label }}</router-link></template
+            >
+          </nav>
+          <div v-if="blockedHere" class="notice notice-warning">
+            <strong>Solo sul sito pubblico.</strong>
+            <p>Privacy e cookie si modificano sul sito pubblico: passa a «Sito pubblico» per cambiarli.</p>
+          </div>
+        </div>
+        <div v-if="!node" class="empty-state">
+          <h2>Questo contenuto non è più disponibile.</h2>
+          <p>Potrebbe essere stato eliminato. Torna indietro e scegline un altro.</p>
+          <router-link class="btn btn-primary" :to="back">Torna indietro</router-link>
+        </div>
+        <div v-else-if="!fields.length" class="empty-state">
+          <h2>Non ci sono campi da compilare.</h2>
+          <router-link v-if="!session.isStaging && !reserved" class="btn btn-primary" :to="{ name: 'structure-type', params: { type } }"
+            >Scegli i campi in Struttura</router-link
+          >
+        </div>
+        <template v-else>
+          <component
+            :is="s.section ? 'details' : 'div'"
+            v-for="(s, si) in sections"
+            :id="`section-${si}`"
+            :key="si"
+            :class="{ 'field-section': s.section }"
+            :open="s.section ? si === openSection : undefined"
+          >
+            <summary v-if="s.section">
+              {{ s.section }} <span class="count">{{ s.fields.length }} {{ s.fields.length === 1 ? 'campo' : 'campi' }}</span>
+            </summary>
+            <div v-for="def in s.fields" :id="`field-${def.index}`" :key="def.name" class="field">
+              <div class="field-head">
+                <label
+                  v-if="['text', 'select', 'boolean'].includes(def.type) && !(def.type === 'select' && def.multiple)"
+                  :for="`f-${def.index}`"
+                  >{{ model.fieldLabel(def) }}</label
+                >
+                <span v-else>{{ model.fieldLabel(def) }}</span>
+                <span class="scope">{{ scopeLabel(def) }}</span><span class="field-tech">{{ def.name }}</span>
+              </div>
 
-            <div v-if="def.type === 'list'" :id="`list-${def.name}`" class="list-field">
-              <SortableList
-                v-if="listItems(def).length"
-                :items="listItems(def)"
-                :disabled="saving || session.locked || blockedHere"
-                @reorder="reorderItems(def, $event)"
-              >
-                <template #default="{ item: child }">
-                  <button
-                    type="button"
-                    class="icon-button handle"
-                    data-handle
-                    :aria-label="`Sposta ${child.title}: trascina, o usa le frecce su e giù`"
-                  >
-                    <KIcon name="drag" />
-                  </button>
-                  <router-link class="row-main" :to="{ name: 'edit', params: { type, id, path: [...path, def.name, String(child.id)] } }"
-                    ><span class="row-text"
-                      ><span class="row-title">{{ child.title }}</span></span
-                    ></router-link
-                  >
-                  <div class="row-actions">
-                    <span v-if="child.hidden" class="pill">Sospeso</span>
-                    <KSwitch
-                      :model-value="!child.hidden"
-                      :label="`Visibile sul sito: ${child.title}`"
-                      :disabled="saving || session.locked"
-                      @update:model-value="setItemVisible(def, child, $event)"
-                    />
+              <div v-if="def.type === 'list'" :id="`list-${def.name}`" class="list-field">
+                <SortableList
+                  v-if="listItems(def).length"
+                  :items="listItems(def)"
+                  :disabled="saving || session.locked || blockedHere"
+                  @reorder="reorderItems(def, $event)"
+                >
+                  <template #default="{ item: child }">
                     <button
                       type="button"
-                      class="icon-button danger"
-                      :aria-label="`Elimina ${child.title}`"
-                      :disabled="saving || session.locked"
-                      @click="removeItem(def, child)"
+                      class="icon-button handle"
+                      data-handle
+                      :aria-label="`Sposta ${child.title}: trascina, o usa le frecce su e giù`"
                     >
-                      <KIcon name="trash" />
+                      <KIcon name="drag" />
                     </button>
-                  </div>
-                </template>
-              </SortableList>
-              <p v-else class="muted">Ancora nessun elemento.</p>
-              <div class="bar">
-                <button
-                  type="button"
-                  class="btn btn-white btn-small"
-                  :disabled="saving || session.locked || blockedHere"
-                  @click="addItem(def)"
-                >
-                  <KIcon name="plus" />Aggiungi elemento
-                </button>
-                <span class="muted">Aggiunta, eliminazione e ordine si salvano subito.</span>
+                    <router-link class="row-main" :to="{ name: 'edit', params: { type, id, path: [...path, def.name, String(child.id)] } }"
+                      ><span class="row-text"
+                        ><span class="row-title">{{ child.title }}</span></span
+                      ></router-link
+                    >
+                    <div class="row-actions">
+                      <span v-if="child.hidden" class="pill">Sospeso</span>
+                      <KSwitch
+                        :model-value="!child.hidden"
+                        :label="`Visibile sul sito: ${child.title}`"
+                        :disabled="saving || session.locked"
+                        @update:model-value="setItemVisible(def, child, $event)"
+                      />
+                      <button
+                        type="button"
+                        class="icon-button danger"
+                        :aria-label="`Elimina ${child.title}`"
+                        :disabled="saving || session.locked"
+                        @click="removeItem(def, child)"
+                      >
+                        <KIcon name="trash" />
+                      </button>
+                    </div>
+                  </template>
+                </SortableList>
+                <p v-else class="muted">Ancora nessun elemento.</p>
+                <div class="bar">
+                  <button
+                    type="button"
+                    class="btn btn-white btn-small"
+                    :disabled="saving || session.locked || blockedHere"
+                    @click="addItem(def)"
+                  >
+                    <KIcon name="plus" />Aggiungi elemento
+                  </button>
+                  <span class="muted">Aggiunta, eliminazione e ordine si salvano subito.</span>
+                </div>
               </div>
+              <FieldInput
+                v-else
+                :id="`f-${def.index}`"
+                :def="def"
+                :label="def.localized ? `${model.fieldLabel(def)} · ${session.languageName(lang)}` : model.fieldLabel(def)"
+                :model-value="valueFor(def)"
+                :changed="isChanged(def)"
+                :staged-names="stagedNames"
+                :accept="accept"
+                @update:model-value="setValue(def, $event)"
+              />
             </div>
-            <FieldInput
-              v-else
-              :id="`f-${def.index}`"
-              :def="def"
-              :label="def.localized ? `${model.fieldLabel(def)} · ${session.languageName(lang)}` : model.fieldLabel(def)"
-              :model-value="valueFor(def)"
-              :changed="isChanged(def)"
-              :staged-names="stagedNames"
-              :accept="accept"
-              @update:model-value="setValue(def, $event)"
-            />
-          </div>
-        </component>
+          </component>
 
-        <div class="savebar" :class="{ 'is-dirty': dirty, 'is-saving': saving }" role="status">
-          <div class="savebar-text">
-            <strong>{{
-              saving
-                ? 'Salvataggio…'
-                : dirty
-                  ? ops.length === 1
-                    ? '1 modifica non salvata'
-                    : `${ops.length} modifiche non salvate`
-                  : 'Tutte le modifiche sono salvate'
-            }}</strong>
-            <small>{{
-              session.isStaging
-                ? 'Salvando, diventano modifiche in attesa. Il sito non cambia.'
-                : 'Salvando, le modifiche sono subito visibili sul sito.'
-            }}</small>
+          <div class="savebar" :class="{ 'is-dirty': dirty, 'is-saving': saving }" role="status">
+            <div class="savebar-text">
+              <strong>{{
+                saving
+                  ? 'Salvataggio…'
+                  : dirty
+                    ? ops.length === 1
+                      ? '1 modifica non salvata'
+                      : `${ops.length} modifiche non salvate`
+                    : 'Tutte le modifiche sono salvate'
+              }}</strong>
+              <small>{{
+                session.isStaging
+                  ? 'Salvando, diventano modifiche in attesa. Il sito non cambia.'
+                  : 'Salvando, le modifiche sono subito visibili sul sito.'
+              }}</small>
+            </div>
+            <button v-if="dirty" type="button" class="btn" :disabled="saving" @click="discard">Annulla modifiche</button>
+            <button type="submit" class="btn" data-save-button :disabled="saving || !dirty || session.locked || blockedHere">
+              {{ session.isStaging ? 'Salva in attesa' : 'Salva' }}
+            </button>
           </div>
-          <button v-if="dirty" type="button" class="btn" :disabled="saving" @click="discard">Annulla modifiche</button>
-          <button type="submit" class="btn" data-save-button :disabled="saving || !dirty || session.locked || blockedHere">
-            {{ session.isStaging ? 'Salva in attesa' : 'Salva' }}
-          </button>
-        </div>
-      </form>
-      <nav class="index" aria-label="Campi del contenuto">
+        </template>
+      </component>
+      <nav v-if="node && fields.length" class="index" aria-label="Campi del contenuto">
         <p>In questa pagina</p>
         <template v-for="(s, si) in sections" :key="si">
           <a v-if="s.section" :href="`#section-${si}`" @click.prevent="openAndGo(`section-${si}`)"

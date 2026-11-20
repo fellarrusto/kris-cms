@@ -195,7 +195,6 @@ async function removeType() {
 
 <template>
   <div class="container">
-    <div v-if="session.isStaging" class="notice notice-warning"><strong>Solo sul sito pubblico.</strong><p>La struttura si cambia sul sito pubblico: passa a «Sito pubblico» per modificarla.</p></div>
     <div class="page-head">
       <div>
         <p class="kicker"><router-link :to="{ name: 'structure' }">Struttura</router-link></p>
@@ -204,6 +203,7 @@ async function removeType() {
       </div>
       <router-link class="btn btn-white" :to="{ name: 'collection', params: { type } }">Apri i contenuti</router-link>
     </div>
+    <div v-if="session.isStaging" class="notice notice-warning"><strong>Solo sul sito pubblico.</strong><p>La struttura si cambia sul sito pubblico: passa a «Sito pubblico» per modificarla.</p></div>
 
     <div v-if="impact" class="box" style="box-shadow: inset 0 0 0 1.5px var(--warn-line)" role="alert">
       <h2>Prima di salvare</h2>
