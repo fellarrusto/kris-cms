@@ -129,10 +129,14 @@ code { background: var(--subtle); padding: 1px 6px; border-radius: 6px; }
 
 /* --- Cornice ---------------------------------------------------------------- */
 .shell { display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: var(--gap); padding: var(--gap); min-height: 100vh; }
-.shell.is-pending { box-shadow: inset 0 0 0 4px var(--pending); }
-.pending-bar { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; background: var(--pending); color: #fff; border-radius: 16px; padding: 10px 10px 10px 18px; font-size: 14px; flex-wrap: wrap; }
-.pending-bar p { flex: 1; min-width: 220px; }
-.pending-bar .btn { background: #fff; color: #7A2E06; box-shadow: none; margin-left: auto; }
+/* Modalità In attesa: una striscia sottile a tutta larghezza in cima, sopra la cornice */
+.pending-bar { display: flex; align-items: center; gap: 10px; background: var(--pending); color: #fff; padding: 5px 8px 5px var(--gap); font-size: 13px; line-height: 1.3; }
+.pending-bar svg { width: 15px; height: 15px; flex: none; }
+.pending-bar p { flex: 1; min-width: 0; margin: 0; }
+.pending-bar .btn { background: #fff; color: #7A2E06; box-shadow: none; margin-left: auto; min-height: 28px; padding: 0 12px; font-size: 12px; }
+.round-button { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text); display: grid; place-items: center; cursor: pointer; flex: none; }
+.round-button:hover { background: var(--subtle); }
+.round-button svg { width: 18px; height: 18px; }
 
 .side { background: var(--surface); border-radius: var(--r-xl); padding: 20px 12px; display: flex; flex-direction: column; gap: 20px; position: sticky; top: var(--gap); max-height: calc(100vh - 2 * var(--gap)); overflow-y: auto; align-self: start; }
 .brand { display: flex; align-items: center; gap: 10px; padding: 0 8px; font-weight: 600; font-size: 17px; text-decoration: none; color: var(--text); min-width: 0; }
@@ -295,7 +299,7 @@ label { font-size: 14px; }
 
 /* --- Elenchi (raccolte ed elementi) ------------------------------------------- */
 .rows { background: var(--surface); border-radius: var(--r-xl); padding: 8px 12px; }
-.row { display: flex; align-items: center; gap: 14px; padding: 10px 8px 10px 12px; border-top: 1px solid var(--line); font-size: 14px; min-height: 62px; }
+.row { display: flex; align-items: center; gap: 10px; padding: 10px 8px 10px 4px; border-top: 1px solid var(--line); font-size: 14px; min-height: 62px; }
 .row:first-child { border-top: 0; }
 .row.is-hidden .row-title { color: var(--faint); }
 .row-main { display: flex; gap: 14px; align-items: center; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
@@ -321,6 +325,11 @@ label { font-size: 14px; }
 .lang-switch button { border: 0; background: transparent; font: inherit; font-size: 13px; min-height: 32px; padding: 0 12px; border-radius: var(--pill); display: flex; gap: 6px; align-items: center; cursor: pointer; color: var(--text-2); }
 .lang-switch button[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 500; }
 .edit-cols { display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: var(--gap); align-items: start; }
+/* Una sezione di Kris dentro una schermata a schede: niente indice laterale, gli strumenti a destra */
+.embedded-edit .edit-cols { grid-template-columns: minmax(0, 1fr); }
+.embedded-edit .edit-cols > .index { display: none; }
+.embedded-edit .edit-head { justify-content: flex-end; margin-bottom: 12px; }
+.embedded-edit .edit-head:not(:has(*)) { display: none; }
 .panel { background: var(--surface); border-radius: var(--r-xl); padding: 8px 24px 24px; min-width: 0; }
 .field-section { border-top: 1px solid var(--line); margin-top: 10px; }
 .field-section:first-of-type { border-top: 0; margin-top: 0; }
@@ -534,7 +543,7 @@ dialog::backdrop { background: var(--scrim); }
     h1, .page-heading h1 { font-size: 28px; }
     .search, .search-box { width: 100%; }
     .row { flex-wrap: wrap; }
-    .row-main { flex-basis: 100%; }
+    .row-main { flex: 1 1 calc(100% - 56px); }
     .row-actions { margin-left: auto; }
     .row .slug { display: none; }
     .panel { padding: 4px 16px 16px; }
@@ -590,3 +599,21 @@ dialog::backdrop { background: var(--scrim); }
 /* Un input file rimasto visibile ha comunque il pulsante del design system */
 input[type="file"] { font: inherit; font-size: 14px; color: var(--muted); max-width: 100%; }
 input[type="file"]::file-selector-button { font: inherit; font-size: 14px; margin-right: 12px; padding: 8px 16px; border-radius: var(--pill); border: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: pointer; }
+
+/* --- Scrollbar ---------------------------------------------------------------
+   Sottile, arrotondata, senza frecce né binario, con i colori del tema. Chrome, Edge e Safari
+   usano le pseudo-classi -webkit- (le proprietà standard, su Chrome per Windows, lasciano le frecce);
+   Firefox le proprietà standard. Nella barra laterale e negli indici il pollice compare al passaggio. */
+:root { --scroll-thumb: color-mix(in srgb, var(--text) 22%, transparent); --scroll-thumb-hover: color-mix(in srgb, var(--text) 40%, transparent); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color: var(--scroll-thumb-hover); }
+.side::-webkit-scrollbar-thumb, .settings-nav::-webkit-scrollbar-thumb, .index::-webkit-scrollbar-thumb { background-color: transparent; }
+.side:hover::-webkit-scrollbar-thumb, .settings-nav:hover::-webkit-scrollbar-thumb, .index:hover::-webkit-scrollbar-thumb { background-color: var(--scroll-thumb); }
+@supports (-moz-appearance: none) {
+    * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+    .side, .settings-nav, .index { scrollbar-color: transparent transparent; }
+    .side:hover, .side:focus-within, .settings-nav:hover, .index:hover { scrollbar-color: var(--scroll-thumb) transparent; }
+}

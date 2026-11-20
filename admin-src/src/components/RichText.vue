@@ -25,6 +25,8 @@ function init(attempt = 0) {
     menubar: false,
     skin: dark() ? 'oxide-dark' : 'oxide',
     content_css: dark() ? 'dark' : 'default',
+    // La stessa scrollbar dell'editor anche dentro l'iframe del testo
+    content_style: `::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}::-webkit-scrollbar-button{display:none;width:0;height:0}::-webkit-scrollbar-thumb{background:${dark() ? 'rgba(237,237,234,.22)' : 'rgba(23,23,26,.22)'};border-radius:999px;border:3px solid transparent;background-clip:padding-box}@supports (-moz-appearance:none){html{scrollbar-width:thin;scrollbar-color:${dark() ? 'rgba(237,237,234,.22)' : 'rgba(23,23,26,.22)'} transparent}}`,
     plugins: 'image link lists code fullscreen',
     toolbar: 'undo redo | blocks | bold italic | bullist numlist | link image | code fullscreen',
     file_picker_callback: (callback) => emit('pick-media', callback),
