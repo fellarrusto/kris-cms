@@ -74,7 +74,7 @@ async function remove() {
     </div>
     <template v-else>
       <PageHead>
-        <div><p class="kicker"><router-link :to="{ name: 'media' }">Libreria media</router-link></p><h1 style="word-break: break-all">{{ file.name }}</h1></div>
+        <div><h1 style="word-break: break-all">{{ file.name }}</h1></div>
         <template #actions>
           <router-link class="btn btn-white" :to="{ name: 'media' }"><KIcon name="back" />Torna alla libreria</router-link>
         </template>
