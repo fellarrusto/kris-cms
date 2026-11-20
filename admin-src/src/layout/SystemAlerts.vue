@@ -102,8 +102,13 @@ async function emailLater() {
     <p>{{ a.text }}</p>
     <router-link v-if="route.name !== 'settings'" class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'plugin' } }">Plugin</router-link>
   </div>
+  <div v-if="session.data?.rewrite_missing" class="alert alert-warning" role="status">
+    <KIcon name="link" />
+    <p><strong>Indirizzi leggibili non attivi.</strong> Il .htaccess del sito non ha la regola di Kris: le pagine restano con gli indirizzi index.php?… finché non la aggiungi (chi gestisce l'hosting la trova in AGENTS.md, «Pagina 404»).</p>
+  </div>
   <div v-if="wipOn" class="alert alert-warning" role="status">
     <p><strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor aperto.</p>
+    <a class="btn btn-white btn-small" :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1`" target="_blank" rel="noopener">Vedi la pagina</a>
     <router-link class="btn btn-white btn-small" :to="{ name: 'edit', params: { type: 'kris_wip', id: 0 } }">Lavori in corso</router-link>
   </div>
   <div v-if="session.data?.email_missing && !lock" class="alert account-alert" role="status">

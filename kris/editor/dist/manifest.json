@@ -1,6 +1,6 @@
 {
-  "_FieldInput-CanOMXKm.js": {
-    "file": "assets/FieldInput-CanOMXKm.js",
+  "_FieldInput-Cyo0X9J1.js": {
+    "file": "assets/FieldInput-Cyo0X9J1.js",
     "name": "FieldInput",
     "imports": [
       "_site-Bt7uiy-c.js",
@@ -57,7 +57,7 @@
     ]
   },
   "src/kit.js": {
-    "file": "assets/kit-reHvJFVf.js",
+    "file": "assets/kit-b7isOg7E.js",
     "name": "kit",
     "src": "src/kit.js",
     "isEntry": true,
@@ -65,13 +65,13 @@
       "_site-Bt7uiy-c.js",
       "_KSwitch-Dfgg_NGO.js",
       "_SortableList-yxlkyDTo.js",
-      "_FieldInput-CanOMXKm.js",
+      "_FieldInput-Cyo0X9J1.js",
       "_runtime-dom.esm-bundler-TZw0tkMS.js",
       "_MediaService-B7-8h-rw.js"
     ]
   },
   "src/main.js": {
-    "file": "assets/main-CzgrOOQM.js",
+    "file": "assets/main-DAbCiaG8.js",
     "name": "main",
     "src": "src/main.js",
     "isEntry": true,
@@ -94,11 +94,11 @@
       "src/views/pages/plugins/PluginView.vue"
     ],
     "css": [
-      "assets/main-DTeG1L8_.css"
+      "assets/main-PrTd17a9.css"
     ]
   },
   "src/views/pages/addresses/Addresses.vue": {
-    "file": "assets/Addresses-CzSfuugI.js",
+    "file": "assets/Addresses-CDwQXpt8.js",
     "name": "Addresses",
     "src": "src/views/pages/addresses/Addresses.vue",
     "isDynamicEntry": true,
@@ -109,7 +109,7 @@
     ]
   },
   "src/views/pages/collection/Collection.vue": {
-    "file": "assets/Collection-ibJ5tO1H.js",
+    "file": "assets/Collection-CDxMmelB.js",
     "name": "Collection",
     "src": "src/views/pages/collection/Collection.vue",
     "isDynamicEntry": true,
@@ -122,7 +122,7 @@
     ]
   },
   "src/views/pages/dashboard/Dashboard.vue": {
-    "file": "assets/Dashboard-D3B9ITlc.js",
+    "file": "assets/Dashboard-B4FARxwt.js",
     "name": "Dashboard",
     "src": "src/views/pages/dashboard/Dashboard.vue",
     "isDynamicEntry": true,
@@ -133,7 +133,7 @@
     ]
   },
   "src/views/pages/edit/Edit.vue": {
-    "file": "assets/Edit-xHTt-5o_.js",
+    "file": "assets/Edit-CWkjVfFT.js",
     "name": "Edit",
     "src": "src/views/pages/edit/Edit.vue",
     "isDynamicEntry": true,
@@ -143,7 +143,7 @@
       "_site-Bt7uiy-c.js",
       "_KSwitch-Dfgg_NGO.js",
       "_SortableList-yxlkyDTo.js",
-      "_FieldInput-CanOMXKm.js",
+      "_FieldInput-Cyo0X9J1.js",
       "_MediaService-B7-8h-rw.js"
     ]
   },
@@ -160,7 +160,7 @@
     ]
   },
   "src/views/pages/media/MediaFile.vue": {
-    "file": "assets/MediaFile-BM5GUFFm.js",
+    "file": "assets/MediaFile-CuXVPkBR.js",
     "name": "MediaFile",
     "src": "src/views/pages/media/MediaFile.vue",
     "isDynamicEntry": true,
@@ -173,7 +173,7 @@
     ]
   },
   "src/views/pages/plugins/PluginSettings.vue": {
-    "file": "assets/PluginSettings-1EYR55zP.js",
+    "file": "assets/PluginSettings-BGxXUch3.js",
     "name": "PluginSettings",
     "src": "src/views/pages/plugins/PluginSettings.vue",
     "isDynamicEntry": true,
@@ -181,14 +181,14 @@
       "_runtime-dom.esm-bundler-TZw0tkMS.js",
       "src/main.js",
       "_site-Bt7uiy-c.js",
-      "_FieldInput-CanOMXKm.js",
+      "_FieldInput-Cyo0X9J1.js",
       "_PluginService-BFqc7O0g.js",
       "_KSwitch-Dfgg_NGO.js",
       "_MediaService-B7-8h-rw.js"
     ]
   },
   "src/views/pages/plugins/PluginView.vue": {
-    "file": "assets/PluginView-Bf-1fiNc.js",
+    "file": "assets/PluginView-Ddj5PAsp.js",
     "name": "PluginView",
     "src": "src/views/pages/plugins/PluginView.vue",
     "isDynamicEntry": true,
@@ -211,7 +211,7 @@
     ]
   },
   "src/views/pages/settings/Settings.vue": {
-    "file": "assets/Settings-DFWrPlAi.js",
+    "file": "assets/Settings-f2FCqbez.js",
     "name": "Settings",
     "src": "src/views/pages/settings/Settings.vue",
     "isDynamicEntry": true,
@@ -225,7 +225,7 @@
     ]
   },
   "src/views/pages/structure/Structure.vue": {
-    "file": "assets/Structure-B2O6Z2mK.js",
+    "file": "assets/Structure-DtnMgIgN.js",
     "name": "Structure",
     "src": "src/views/pages/structure/Structure.vue",
     "isDynamicEntry": true,
@@ -236,7 +236,7 @@
     ]
   },
   "src/views/pages/structure/StructureType.vue": {
-    "file": "assets/StructureType-3mSucL4X.js",
+    "file": "assets/StructureType-zmsP4UPp.js",
     "name": "StructureType",
     "src": "src/views/pages/structure/StructureType.vue",
     "isDynamicEntry": true,

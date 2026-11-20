@@ -83,23 +83,23 @@ test('con pretty_urls il sito risponde ai percorsi, i vecchi indirizzi fanno 301
     file_put_contents("{$root}/config/seo.json", json_encode($seo + ['pretty_urls' => true]));
     try {
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/en/detail/0';
-        $detail = renderPage([], $root);
+        $detail = renderOnce([], $root);
         assertSame(200, $detail['status']);
         assertContains('<html lang="en"', $detail['output']);
         assertContains('rel="canonical" href="http://localhost/en/detail/0"', $detail['output']);
         assertContains('href="/assets/css/', $detail['output'], 'le risorse partono dalla radice del sito');
 
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/';
-        $home = renderPage([], $root);
+        $home = renderOnce([], $root);
         assertSame(200, $home['status']);
         assertContains('href="/detail/0"', $home['output'], 'il link della card è leggibile');
 
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/nessuna-pagina';
-        assertSame(404, renderPage([], $root)['status']);
+        assertSame(404, renderOnce([], $root)['status']);
 
         unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
-        assertSame(301, renderPage(['page' => 'detail', 'key' => 'homepage', 'id' => '0', 'path' => 'features/0'], $root)['status']);
-        assertSame(200, renderPage(['page' => 'detail', 'key' => 'homepage', 'id' => '0', 'path' => 'steps/0'], $root)['status'], 'senza rotta resta com è');
+        assertSame(301, renderOnce(['page' => 'detail', 'key' => 'homepage', 'id' => '0', 'path' => 'features/0'], $root)['status']);
+        assertSame(200, renderOnce(['page' => 'detail', 'key' => 'homepage', 'id' => '0', 'path' => 'steps/0'], $root)['status'], 'senza rotta resta com è');
     } finally {
         unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
     }
@@ -113,9 +113,9 @@ test('il cambio lingua su un percorso leggibile porta alla stessa pagina nell al
     file_put_contents("{$root}/config/seo.json", json_encode($seo + ['pretty_urls' => true]));
     try {
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/detail/0?ln=en';
-        assertSame(302, renderPage(['ln' => 'en'], $root)['status']);
+        assertSame(302, renderOnce(['ln' => 'en'], $root)['status']);
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/en/detail/0?ln=en';
-        assertSame(200, renderPage(['ln' => 'en'], $root)['status'], 'già nella lingua: nessun redirect');
+        assertSame(200, renderOnce(['ln' => 'en'], $root)['status'], 'già nella lingua: nessun redirect');
     } finally {
         unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
     }
@@ -149,10 +149,27 @@ test('i reindirizzamenti di seo.json rispondono con un 301', function () {
     file_put_contents("{$root}/config/seo.json", json_encode($seo + ['redirects' => ['/menu' => '/?ln=en', '/x' => 'javascript:alert(1)']]));
     try {
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/menu/';
-        assertSame(301, renderPage([], $root)['status']);
+        assertSame(301, renderOnce([], $root)['status']);
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/x';
-        assertTrue(renderPage([], $root)['status'] !== 301, 'solo percorsi del sito o https');
+        assertTrue(renderOnce([], $root)['status'] !== 301, 'solo percorsi del sito o https');
     } finally {
         unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
+    }
+});
+
+test('su Apache senza la regola del .htaccess di Kris restano gli indirizzi di prima', function () {
+    $root = sys_get_temp_dir() . '/kris-rw-' . bin2hex(random_bytes(3));
+    mkdir($root, 0777, true);
+    register_shutdown_function(fn() => rrmdir($root));
+    $server = $_SERVER['SERVER_SOFTWARE'] ?? null;
+    try {
+        unset($_SERVER['SERVER_SOFTWARE']);
+        assertTrue(\Kris\Template\Seo::rewriteAvailable($root), 'server di sviluppo o Nginx: si presume configurato');
+        $_SERVER['SERVER_SOFTWARE'] = 'Apache/2.4';
+        assertSame(false, \Kris\Template\Seo::rewriteAvailable($root), 'Apache senza .htaccess');
+        file_put_contents("{$root}/.htaccess", \Kris\Update\Stubs::HTACCESS);
+        assertTrue(\Kris\Template\Seo::rewriteAvailable($root . '/'), 'Apache con la regola di Kris');
+    } finally {
+        if ($server === null) unset($_SERVER['SERVER_SOFTWARE']); else $_SERVER['SERVER_SOFTWARE'] = $server;
     }
 });

@@ -23,7 +23,7 @@ const INTRO = {
   kris_site: 'Icona, nome, titolo e condivisione del sito, codici di verifica dei motori di ricerca. Kris li aggiunge a ogni pagina solo dove il template non li ha già.',
   kris_legal: 'Dati del titolare, informative e testi dell’avviso sui cookie. Il sito li mostra dove i suoi template li usano.',
   kris_notfound: 'Quello che vede chi apre un indirizzo che non esiste. Se il tema ha un suo 404.html usa questi testi, altrimenti li usa la pagina di serie di Kris.',
-  kris_wip: 'Con l’interruttore acceso i visitatori vedono solo questa pagina (stato 503: i motori di ricerca tornano più tardi). Tu, con l’editor aperto, continui a vedere il sito.',
+  kris_wip: 'Con l’interruttore acceso i visitatori vedono solo questa pagina (stato 503: i motori di ricerca tornano più tardi). Tu, con l’editor aperto, continui a vedere il sito: per vedere la pagina usa «Vedi la pagina di lavorazione», o apri il sito in una finestra anonima.',
 }
 
 const type = computed(() => String(route.params.type))
@@ -93,7 +93,7 @@ const kicker = computed(() => {
     return `${site.label(type.value)} / ${listDef ? model.fieldLabel(listDef) : path.value[path.value.length - 2]}`
   }
   if (reserved.value) return 'Sito'
-  return model.isSingle(site.schema, type.value) ? 'Pagine e blocchi' : site.label(type.value)
+  return model.isSingle(site.schema, type.value) ? (Object.values(site.schema.pages || {}).some((p) => p?.type === type.value) ? 'Pagine' : 'Componenti') : site.label(type.value)
 })
 const back = computed(() => {
   if (path.value.length) return { name: 'edit', params: { type: type.value, id: id.value, path: path.value.slice(0, -2) }, hash: `#list-${path.value[path.value.length - 2]}` }
@@ -207,6 +207,7 @@ const isChanged = (def) => JSON.stringify(valueFor(def) ?? '') !== JSON.stringif
             {{ session.languageName(l) }}<span v-if="missing[l]" class="pill pill-danger">{{ missing[l] }} {{ missing[l] === 1 ? 'vuoto' : 'vuoti' }}</span>
           </button>
         </div>
+        <a v-if="type === 'kris_wip'" class="btn btn-white btn-small" :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1&ln=${lang}`" target="_blank" rel="noopener"><KIcon name="external" />Vedi la pagina di lavorazione</a>
         <KSwitch v-if="canHide" :model-value="!node.hidden" :label="`Visibile sul sito: ${title}`" :text="node.hidden ? 'Sospeso' : 'Visibile'" :disabled="saving || session.locked" @update:model-value="setVisible" />
       </div>
     </div>

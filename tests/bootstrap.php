@@ -144,7 +144,32 @@ function runScript(string $sandbox, string $script, array $query = []): string
     return renderPage($query, $sandbox, $script)['output'];
 }
 
+/**
+ * Come renderPage, ma segue i redirect verso il sito (al massimo 5) come un
+ * browser: dalla 2.0 index.php?page=… porta con un 301 all'indirizzo leggibile.
+ * 'redirects' elenca i passaggi fatti, [stato, indirizzo].
+ */
 function renderPage(array $query, ?string $sandbox = null, string $script = 'index.php', bool $asAdmin = false, array $cookies = []): array
+{
+    $redirects = [];
+    $original = $GLOBALS['KRIS_TEST_REQUEST_URI'] ?? null;
+    $uri = $original;
+    for ($hop = 0; ; $hop++) {
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = $uri;
+        $page = renderOnce($query, $sandbox, $script, $asAdmin, $cookies);
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = $original;
+        $location = $page['location'];
+        if ($hop >= 5 || !in_array($page['status'], [301, 302], true) || $location === null || !str_starts_with($location, '/')) break;
+        $redirects[] = [$page['status'], $location];
+        $uri = $location;
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+        $script = 'index.php';
+    }
+    return $page + ['redirects' => $redirects];
+}
+
+/** Una sola richiesta, senza seguire i redirect. */
+function renderOnce(array $query, ?string $sandbox = null, string $script = 'index.php', bool $asAdmin = false, array $cookies = []): array
 {
     $sandbox ??= projectSandbox();
     $harness = KRIS_TESTS . '/harness/render.php';
@@ -184,7 +209,13 @@ function renderPage(array $query, ?string $sandbox = null, string $script = 'ind
         $stdout = substr($stdout, strlen($m[0]));
     }
 
-    return ['output' => $stdout, 'status' => $status, 'fatal' => $fatal];
+    $location = null;
+    if (preg_match('/^KRIS-LOCATION: (.*)\n/', $stdout, $m)) {
+        $location = $m[1];
+        $stdout = substr($stdout, strlen($m[0]));
+    }
+
+    return ['output' => $stdout, 'status' => $status, 'fatal' => $fatal, 'location' => $location];
 }
 
 /**

@@ -43,6 +43,7 @@ final class Operations
         'create_entity' => ['op', 'key', 'fields'],
         'register_page' => ['op', 'page', 'sitemap'],
         'set_sitemap' => ['op', 'page', 'sitemap'],
+        'set_page' => ['op', 'page', 'template', 'type', 'item', 'sitemap', 'priority', 'slug'],
     ];
 
     /** Le sezioni riservate di Kris di cui si scrivono i valori (non lo schema). */
@@ -71,7 +72,7 @@ final class Operations
             'change_type' => 'changeType', 'move_field' => 'moveField', 'set_options' => 'setOptions', 'set_posts' => 'setPosts',
             'set_post_collection' => 'setPostCollection', 'unregister_page' => 'unregisterPage',
             'set_collection_info' => 'setCollectionInfo', 'move_collection' => 'moveCollection',
-            'set_sitemap' => 'setSitemap',
+            'set_sitemap' => 'setSitemap', 'set_page' => 'setPage',
         ][$type] ?? null;
         if ($method === null) {
             throw new StagingException("Operazione sconosciuta: '{$type}'.");
@@ -125,6 +126,7 @@ final class Operations
             'set_posts' => (!empty($op['posts']) ? 'Mostra in Posts' : 'Toglie da Posts') . " l'elenco «{$op['name']}» di «{$op['collection']}»",
             'set_post_collection' => (!empty($op['enabled']) ? 'Mostra in Posts' : 'Toglie da Posts') . " la raccolta «{$op['collection']}»",
             'unregister_page' => "Toglie la pagina pubblica «{$op['page']}», anche dalla sitemap",
+            'set_page' => "Modifica la pagina pubblica «{$op['page']}»",
             'set_collection_info' => "Nome, descrizione o contenuto unico della raccolta «{$op['collection']}»",
             'move_collection' => "Sposta la raccolta «{$op['collection']}» in posizione " . ((int) ($op['to'] ?? 0) + 1),
             default => (string) ($op['op'] ?? 'operazione'),
@@ -842,6 +844,71 @@ final class Operations
     // --- pagine --------------------------------------------------------------
 
     /** Toglie una pagina dalle pagine pubbliche (e dalla sitemap). Il template resta. */
+    /**
+     * Cambia una pagina già pubblica: template, tipo che rende, contenuto fisso
+     * (item, null per una pagina per contenuto), sitemap, priorità, campo dello
+     * slug. Solo le chiavi mandate; il nome della pagina (e quindi l'indirizzo
+     * e i link dei template) resta.
+     */
+    private static function setPage(array $state, array $op, array $ctx): array
+    {
+        $page = (string) ($op['page'] ?? '');
+        $entry = $state['schema']['pages'][$page] ?? null;
+        if (!is_array($entry)) {
+            throw new StagingException(self::conflict($op, "«{$page}» non è una pagina pubblica: registrala con register_page"));
+        }
+        if (array_key_exists('template', $op)) {
+            $template = (string) $op['template'];
+            if (preg_match('/^[a-z0-9][a-z0-9_-]*$/', $template) !== 1) throw new StagingException("Nome di template non valido: '{$template}'.");
+            $entry['template'] = $template;
+        }
+        if (array_key_exists('type', $op)) {
+            $type = (string) $op['type'];
+            if (str_starts_with($type, 'plg_') || !isset($state['schema']['types'][$type])) {
+                throw new StagingException("La pagina non può rendere «{$type}»: scegli un tipo del sito.");
+            }
+            if ($type !== ($entry['type'] ?? null)) unset($entry['list'], $entry['slug']);
+            $entry['type'] = $type;
+        }
+        if (array_key_exists('item', $op)) {
+            if ($op['item'] === null) {
+                if ($page === 'homepage') throw new StagingException('La homepage rende sempre un contenuto fisso.');
+                unset($entry['item'], $entry['list']);
+            } else {
+                $entry['item'] = (int) $op['item'];
+                unset($entry['slug']);
+            }
+        }
+        if (array_key_exists('sitemap', $op)) $entry['sitemap'] = $op['sitemap'] === true;
+        if (array_key_exists('priority', $op)) {
+            if ($op['priority'] === null || $op['priority'] === '') {
+                unset($entry['priority']);
+            } elseif (!is_numeric($op['priority']) || (float) $op['priority'] < 0 || (float) $op['priority'] > 1) {
+                throw new StagingException('La priorità della sitemap va da 0 a 1.');
+            } else {
+                $entry['priority'] = round((float) $op['priority'], 1);
+            }
+        }
+        if (array_key_exists('slug', $op)) {
+            $slug = (string) ($op['slug'] ?? '');
+            if ($slug === '') {
+                unset($entry['slug']);
+            } else {
+                if (isset($entry['item'])) throw new StagingException('Lo slug vale per le pagine con un indirizzo per contenuto, non per un contenuto fisso.');
+                $def = null;
+                foreach ($state['schema']['types'][$entry['type']]['fields'] ?? [] as $field) {
+                    if (($field['name'] ?? null) === $slug) $def = $field;
+                }
+                if ($def === null || !in_array($def['type'] ?? '', ['text', 'plain'], true)) {
+                    throw new StagingException("Lo slug viene da un campo di testo del tipo: «{$slug}» non lo è.");
+                }
+                $entry['slug'] = $slug;
+            }
+        }
+        $state['schema']['pages'][$page] = self::pageOrder($entry);
+        return [$state, $op];
+    }
+
     private static function unregisterPage(array $state, array $op, array $ctx): array
     {
         $page = (string) ($op['page'] ?? '');

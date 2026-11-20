@@ -6,7 +6,10 @@ import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
 import { isNewestFirst, isSingle, typeDescription } from '@/lib/model'
 
-/** Contenuti: le pagine e i blocchi (contenuti unici) aprono la modifica, le raccolte la loro lista. */
+/**
+ * Contenuti in tre gruppi: le pagine (contenuti unici resi da una pagina del sito), i componenti
+ * (contenuti unici condivisi fra le pagine: navbar, footer…) e le raccolte. I primi due aprono la modifica.
+ */
 const session = useSessionStore()
 const site = useSiteStore()
 const search = ref('')
@@ -27,12 +30,13 @@ const tiles = computed(() =>
         count: list.length,
         hidden: list.filter((i) => i.hidden).length,
         fields: (t.fields || []).length,
-        tag: single ? (paged.value.has(t.name) ? 'Pagina' : 'Blocco') : isNewestFirst(site.schema, t.name) ? 'Articoli' : 'Raccolta',
-        icon: single ? 'page' : isNewestFirst(site.schema, t.name) ? 'posts' : 'list',
+        tag: single ? (paged.value.has(t.name) ? 'Pagina' : 'Componente') : isNewestFirst(site.schema, t.name) ? 'Articoli' : 'Raccolta',
+        icon: single ? (paged.value.has(t.name) ? 'page' : 'block') : isNewestFirst(site.schema, t.name) ? 'posts' : 'list',
       }
     })
 )
-const singles = computed(() => tiles.value.filter((t) => t.single))
+const pages = computed(() => tiles.value.filter((t) => t.single && paged.value.has(t.name)))
+const components = computed(() => tiles.value.filter((t) => t.single && !paged.value.has(t.name)))
 const widgets = computed(() => (session.data?.plugins?.active || []).filter((p) => p.dashboard && p.module))
 const collections = computed(() => tiles.value.filter((t) => !t.single))
 const target = (t) => (t.single && t.count ? { name: 'edit', params: { type: t.name, id: site.items(t.name)[0].id } } : { name: 'collection', params: { type: t.name } })
@@ -48,15 +52,17 @@ const target = (t) => (t.single && t.count ? { name: 'edit', params: { type: t.n
       <label v-if="site.userTypes.length" class="search"><KIcon name="search" /><input v-model="search" type="search" placeholder="Cerca un contenuto" aria-label="Cerca un contenuto" /></label>
     </div>
 
-    <template v-if="singles.length">
-      <div class="section-head"><h2>Pagine e blocchi</h2><span>Contenuti unici: si aprono direttamente in modifica</span></div>
-      <div class="grid">
-        <router-link v-for="t in singles" :key="t.name" class="tile" :to="target(t)">
-          <div class="tile-head"><span class="ic"><KIcon :name="t.icon" /></span><span class="tile-name">{{ t.label }}</span></div>
-          <p v-if="t.description" class="tile-text">{{ t.description }}</p>
-          <div class="tile-foot"><span>{{ t.fields }} {{ t.fields === 1 ? 'campo' : 'campi' }}</span><span class="tag">{{ t.tag }}</span></div>
-        </router-link>
-      </div>
+    <template v-for="g in [{ key: 'pages', title: 'Pagine', hint: 'Le pagine del sito: si aprono direttamente in modifica', list: pages }, { key: 'components', title: 'Componenti', hint: 'Parti condivise fra le pagine, come menu e piè di pagina', list: components }]" :key="g.key">
+      <template v-if="g.list.length">
+        <div class="section-head"><h2>{{ g.title }}</h2><span>{{ g.hint }}</span></div>
+        <div class="grid">
+          <router-link v-for="t in g.list" :key="t.name" class="tile" :to="target(t)">
+            <div class="tile-head"><span class="ic"><KIcon :name="t.icon" /></span><span class="tile-name">{{ t.label }}</span></div>
+            <p v-if="t.description" class="tile-text">{{ t.description }}</p>
+            <div class="tile-foot"><span>{{ t.fields }} {{ t.fields === 1 ? 'campo' : 'campi' }}</span><span class="tag">{{ t.tag }}</span></div>
+          </router-link>
+        </div>
+      </template>
     </template>
 
     <template v-if="collections.length">

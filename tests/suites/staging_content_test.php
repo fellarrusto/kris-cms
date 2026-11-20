@@ -653,3 +653,24 @@ test('richtext: filtrato al rendering e al salvataggio dello staging', function 
     $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'hero_description', 'lang' => 'it', 'value' => '<p>Ok<img src="x" onerror="z()"></p>'], 'agente');
     assertSame('<p>Ok<img src="x"></p>', siteValue("{$root}/data/staging/data/content.json", 'homepage', 0, 'hero_description')['it']);
 });
+
+test('set_page cambia una pagina già pubblica: template, tipo, contenuto fisso o per contenuto, sitemap, priorità, slug', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->write('template/progetto.html', '<!doctype html><html><body>{{title}}</body></html>', null, 'a');
+    $s->operate(['op' => 'register_page', 'page' => 'progetto', 'sitemap' => ['key' => 'homepage']], 'a');
+    $page = fn() => schemaOf("{$root}/data/staging/data/schema.json")['pages']['progetto'];
+
+    $s->operate(['op' => 'set_page', 'page' => 'progetto', 'type' => 'posts', 'item' => null, 'slug' => 'title', 'priority' => 0.8, 'sitemap' => false], 'a');
+    assertSame(['template' => 'progetto', 'type' => 'posts', 'sitemap' => false, 'priority' => 0.8, 'slug' => 'title'], $page());
+    $s->operate(['op' => 'set_page', 'page' => 'progetto', 'item' => 1], 'a');
+    assertSame(['template' => 'progetto', 'type' => 'posts', 'item' => 1, 'sitemap' => false, 'priority' => 0.8], $page(), 'un contenuto fisso non ha slug');
+    $s->operate(['op' => 'set_page', 'page' => 'progetto', 'priority' => null, 'template' => 'homepage'], 'a');
+    assertSame(['template' => 'homepage', 'type' => 'posts', 'item' => 1, 'sitemap' => false], $page());
+
+    expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'progetto', 'slug' => 'title'], 'a'), 'per contenuto');
+    expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'progetto', 'type' => 'plg_x_dati'], 'a'), 'non può rendere');
+    expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'progetto', 'priority' => 2], 'a'), 'da 0 a 1');
+    expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'homepage', 'item' => null], 'a'), 'contenuto fisso');
+    expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'nessuna', 'sitemap' => true], 'a'), 'non è una pagina pubblica');
+});

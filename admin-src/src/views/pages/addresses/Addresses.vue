@@ -15,7 +15,7 @@ const ui = useUiStore()
 
 const loaded = ref(false)
 const templates = ref([])
-const seo = ref({ pretty_urls: false, auto_language: false, head: true, base_url: '', robots: '' })
+const seo = ref({ auto_language: false, head: true, base_url: '', robots: '' })
 const redirects = ref([])
 const busy = ref(false)
 const readOnly = computed(() => session.isStaging || session.locked)
@@ -24,7 +24,7 @@ async function load() {
   try {
     const r = await api.get('pages')
     templates.value = r.templates
-    seo.value = { pretty_urls: !!r.seo.pretty_urls, auto_language: !!r.seo.auto_language, head: r.seo.head !== false, base_url: r.seo.base_url || '', robots: (r.seo.robots || []).join('\n') }
+    seo.value = { auto_language: !!r.seo.auto_language, head: r.seo.head !== false, base_url: r.seo.base_url || '', robots: (r.seo.robots || []).join('\n') }
     redirects.value = Object.entries(r.redirects || {}).map(([from, to]) => ({ from, to }))
   } catch (e) {
     ui.toast(e.message)
@@ -37,7 +37,7 @@ const pages = computed(() =>
   Object.entries(site.schema.pages || {}).map(([name, p]) => {
     const fixed = p.item !== undefined && p.item !== null
     const address = name === 'homepage' ? '/' : `/${name}${fixed && !p.list ? '' : '/…'}`
-    return { name, address, type: p.type, label: site.type(p.type) ? site.label(p.type) : p.type, fixed, template: p.template || name, sitemap: !!p.sitemap, slug: p.slug || '', missing: !templates.value.includes(p.template || name) }
+    return { name, address, type: p.type, label: site.type(p.type) ? site.label(p.type) : p.type, fixed, item: p.item ?? 0, template: p.template || name, sitemap: !!p.sitemap, priority: p.priority ?? '', slug: p.slug || '', missing: !templates.value.includes(p.template || name) }
   })
 )
 
@@ -75,6 +75,23 @@ function addPage() {
   }, 'Pagina pubblica aggiunta.')
 }
 
+// Modifica di una pagina già pubblica (set_page): il nome, e quindi l'indirizzo e i link dei template, resta
+const editing = ref(null)
+const textFields = (type) => (site.fieldsOf(type) || []).filter((f) => f.type === 'text')
+function edit(p) {
+  adding.value = false
+  editing.value = { name: p.name, template: p.template, type: p.type, mode: p.fixed ? 'fixed' : 'each', item: p.item, sitemap: p.sitemap, priority: p.priority === '' ? '' : String(p.priority), slug: p.slug }
+}
+function savePage() {
+  const e = editing.value
+  const op = { op: 'set_page', page: e.name, template: e.template, type: e.type, item: e.mode === 'each' ? null : Number(e.item), sitemap: e.sitemap, priority: e.priority === '' ? null : Number(e.priority) }
+  op.slug = e.mode === 'each' ? e.slug : ''
+  run(async () => {
+    await site.apply([op])
+    editing.value = null
+  }, `Pagina «${e.name}» salvata.`)
+}
+
 function saveRedirects() {
   const map = Object.fromEntries(redirects.value.filter((r) => r.from.trim()).map((r) => [r.from.trim(), r.to.trim()]))
   run(() => SiteService.saveRedirects(map), 'Reindirizzamenti salvati.')
@@ -105,15 +122,34 @@ function saveRedirects() {
             <tbody>
               <tr v-for="p in pages" :key="p.name">
                 <td><strong style="font-weight: 500">{{ p.name }}</strong></td>
-                <td class="mono">{{ seo.pretty_urls ? p.address : `?page=${p.name}` }}<template v-if="p.slug"> · per {{ p.slug }}</template></td>
+                <td class="mono">{{ p.address }}<template v-if="p.slug"> · per {{ p.slug }}</template></td>
                 <td>{{ p.label }}{{ p.fixed ? '' : ', ogni contenuto' }}</td>
                 <td class="mono">{{ p.template }}.html <span v-if="p.missing" class="pill pill-danger">Manca</span></td>
                 <td><KSwitch :model-value="p.sitemap" :label="`Nella sitemap: ${p.name}`" :disabled="readOnly || busy" @update:model-value="setSitemap(p, $event)" /></td>
-                <td><button v-if="p.name !== 'homepage'" type="button" class="icon-button danger" :aria-label="`Togli la pagina ${p.name}`" :disabled="readOnly || busy" @click="unregister(p)"><KIcon name="close" /></button></td>
+                <td>
+                  <div class="row-actions">
+                    <button type="button" class="btn btn-white btn-small" :disabled="readOnly || busy" @click="edit(p)">Modifica</button>
+                    <button v-if="p.name !== 'homepage'" type="button" class="icon-button danger" :aria-label="`Togli la pagina ${p.name}`" :disabled="readOnly || busy" @click="unregister(p)"><KIcon name="close" /></button>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
+        <form v-if="editing" class="box collection-info-form" style="background: var(--surface-2); margin-top: 12px" @submit.prevent="savePage">
+          <h2>Pagina «{{ editing.name }}»</h2>
+          <div class="form-grid">
+            <label class="field-label">Template<select v-model="editing.template" class="input" required><option v-for="t in templates" :key="t" :value="t">{{ t }}.html</option></select></label>
+            <label class="field-label">Mostra<select v-model="editing.type" class="input" required><option v-for="t in site.userTypes" :key="t.name" :value="t.name">{{ site.label(t.name) }}</option><option v-if="!site.userTypes.some((t) => t.name === editing.type)" :value="editing.type">{{ site.type(editing.type) ? site.label(editing.type) : editing.type }}</option></select></label>
+            <label class="field-label">Quale contenuto<select v-model="editing.mode" class="input" :disabled="editing.name === 'homepage'"><option value="each">Una pagina per contenuto</option><option value="fixed">Un contenuto fisso</option></select></label>
+            <label v-if="editing.mode === 'fixed'" class="field-label">Contenuto<select v-model.number="editing.item" class="input"><option v-for="i in site.items(editing.type)" :key="i.id" :value="i.id">#{{ i.id }}</option></select></label>
+            <label v-else class="field-label">Indirizzo dei contenuti<select v-model="editing.slug" class="input"><option value="">Il numero del contenuto (/{{ editing.name }}/3)</option><option v-for="f in textFields(editing.type)" :key="f.name" :value="f.name">Dal campo «{{ f.description || f.name }}»</option></select></label>
+            <label class="field-label">Priorità nella sitemap<input v-model="editing.priority" class="input" type="number" min="0" max="1" step="0.1" placeholder="Predefinita" /></label>
+          </div>
+          <label class="check-row"><input v-model="editing.sitemap" type="checkbox" /><span><strong>Nella sitemap</strong><small>Spento per pagine raggiungibili solo da chi conosce l'indirizzo.</small></span></label>
+          <p class="hint">Il nome della pagina resta: è il suo indirizzo e lo usano i link dei template. Per un indirizzo diverso crea una pagina nuova e aggiungi un reindirizzamento dal vecchio.</p>
+          <div class="bar"><button type="button" class="btn btn-white btn-small" @click="editing = null">Annulla</button><button class="btn btn-primary btn-small" :disabled="busy">Salva la pagina</button></div>
+        </form>
       </div>
 
       <div class="box">
@@ -133,7 +169,6 @@ function saveRedirects() {
 
       <form class="box collection-info-form" @submit.prevent="saveSeo">
         <h2>Opzioni</h2>
-        <label class="check-row"><input v-model="seo.pretty_urls" type="checkbox" :disabled="readOnly" /><span><strong>Indirizzi leggibili</strong><small>/menu e /progetto/casa-rossi invece di index.php?page=…; i vecchi indirizzi portano ai nuovi. Serve la regola del .htaccess di Kris.</small></span></label>
         <label class="check-row"><input v-model="seo.auto_language" type="checkbox" :disabled="readOnly" /><span><strong>Lingua automatica</strong><small>Se l'indirizzo non indica una lingua, la homepage propone quella del visitatore.</small></span></label>
         <label class="check-row"><input v-model="seo.head" type="checkbox" :disabled="readOnly" /><span><strong>Canonical e lingue alternative automatici</strong><small>Kris li aggiunge alle pagine che non li hanno già nel template.</small></span></label>
         <label class="field-label">Indirizzo del sito<input v-model="seo.base_url" class="input mono" type="url" placeholder="https://www.esempio.it" :disabled="readOnly" /></label>

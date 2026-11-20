@@ -375,7 +375,7 @@ test('l anteprima con codice nuovo mostra il popup e serve il JavaScript solo do
         assertContains('name="csrf" value="token-di-prova"', $page['output']);
         assertContains('required', $page['output'], 'serve spuntare l assunzione di responsabilita');
         assertContains('Anteprima senza script', $page['output']);
-        assertContains('src="index.php?kris_preview_asset=js/nuovo.js&kris_preview=1"', $page['output']);
+        assertContains('src="/index.php?kris_preview_asset=js/nuovo.js&kris_preview=1"', $page['output']);
         assertSame(404, renderPage(['kris_preview_asset' => 'js/nuovo.js'], null, 'index.php', true)['status'], 'prima dell approvazione il file non si serve');
 
         $s->approveCode((string) $s->codeFingerprint(), 'admin');
