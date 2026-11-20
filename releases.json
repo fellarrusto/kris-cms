@@ -2,6 +2,26 @@
     "format": 1,
     "releases": [
         {
+            "version": "2.0.0",
+            "min_from": "1.10.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.3",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Kris 2.0: un editor nuovo, indirizzi leggibili per ogni pagina, più utenti con i loro ruoli, plugin firmati (Misurazione e IndexNow), immagini ottimizzate in WebP, contenuti su file o in un database (SQLite o MySQL) e la tabella dei cookie che si compila da sola. L'aggiornamento converte i dati da solo e prima salva una copia di sicurezza. Richiede PHP 8.3; i temi della 1.x continuano a funzionare.",
+            "date": "2026-11-20",
+            "editor_upgrade": true,
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v2.0.0/kris-2.0.0.zip",
+            "sha256": "d5771c5eb92f8987f2fb40f90577e96cc48c1fcf6ca4cf1ccfa007d8fd6bc4d5",
+            "size": 377039
+        },
+        {
             "version": "1.10.0",
             "min_from": "1.0.0",
             "breaking": false,
