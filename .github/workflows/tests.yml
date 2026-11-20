@@ -1,6 +1,5 @@
 # Suite dei test a ogni push e pull request.
-# Controlla la versione minima dichiarata (8.0: ancora diffusa sugli hosting
-# condivisi) e quelle correnti,
+# Controlla la versione minima della 2.0 (8.3) e la successiva,
 # con le estensioni che servono all'updater: senza sodium e zip le suite
 # dei pacchetti verrebbero saltate.
 name: Test
@@ -15,14 +14,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.0', '8.1', '8.3']
+        php: ['8.3', '8.4']
     steps:
       - uses: actions/checkout@v4
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: dom, mbstring, json, sodium, zip, curl, gd, exif
+          extensions: dom, mbstring, json, sodium, zip, curl, gd, exif, pdo_sqlite
           coverage: none
 
       - name: Sintassi PHP
@@ -33,3 +32,65 @@ jobs:
 
       - name: Nessuna suite saltata
         run: "! php tests/run.php | grep -q '^SALTATA'"
+
+  mysql:
+    # L'archivio nel database su MySQL vero (il runner ha MySQL 8, spento finché non lo si avvia)
+    runs-on: ubuntu-latest
+    env:
+      KRIS_TEST_PDO_DSN: mysql:host=127.0.0.1;dbname=kris_test;charset=utf8mb4
+      KRIS_TEST_PDO_USER: root
+      KRIS_TEST_PDO_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: dom, mbstring, json, sodium, zip, pdo_mysql
+          coverage: none
+
+      - name: Avvia MySQL
+        run: |
+          sudo systemctl start mysql.service
+          mysql -uroot -proot -e 'CREATE DATABASE kris_test CHARACTER SET utf8mb4'
+
+      - name: Archivio su MySQL
+        run: |
+          php tests/run.php store_pdo | tee out.txt
+          grep -q ' 0 falliti' out.txt && ! grep -q '^SALTATA' out.txt
+
+      - name: Conversione di un sito e pagina resa dal database
+        run: |
+          cp -r . /tmp/sito && cd /tmp/sito
+          php tools/store.php convert --to=pdo --dsn="$KRIS_TEST_PDO_DSN" --user=root --password=root --prefix=sito_
+          grep -q "'driver' => 'pdo'" config/store.php
+          mv data/schema.json data/schema.json.off
+          php -r 'define("KRIS_ROOT", getcwd()); require "kris/bootstrap.php"; $p = \Kris\Site\PageRenderer::render([], []); if ($p["status"] !== 200 || !str_contains($p["html"], "</html>")) exit(1); echo "homepage dal database: ok\n";'
+
+  editor:
+    # kris/editor/dist/ è versionato (sugli hosting non c'è Node): deve corrispondere ai sorgenti in admin-src/
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: admin-src/package-lock.json
+
+      - name: Dipendenze
+        working-directory: admin-src
+        run: npm ci
+
+      - name: Compila l'editor
+        working-directory: admin-src
+        run: npm run build
+
+      - name: L'editor compilato è aggiornato
+        run: |
+          if [ -n "$(git status --porcelain -- kris/editor/dist)" ]; then
+            git status --short -- kris/editor/dist
+            echo "kris/editor/dist/ non corrisponde ai sorgenti: esegui npm run build in admin-src/ e versiona il risultato."
+            exit 1
+          fi

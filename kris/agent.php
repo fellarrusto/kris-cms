@@ -24,6 +24,63 @@ if ($maintenance !== null && !$maintenance['stale']) {
     exit;
 }
 
+// Indirizzo di caricamento sul dominio del sito (Kris\Agent\UploadSlots): PUT con il file
+// (curl -T), oppure il modulo del browser (GET mostra la pagina, POST multipart con «file»)
+if (is_string($_GET['upload'] ?? null)) {
+    $token = $_GET['upload'];
+    // Gli stessi colori dell'editor, chiaro e scuro; il pulsante del file è quello di sistema ridisegnato
+    $uploadCss = ':root{--bg:#EDEDEA;--surface:#fff;--text:#17171A;--muted:#6B6A66;--border:#DCDBD6;--primary:#17171A;--on-primary:#fff}'
+        . '@media (prefers-color-scheme:dark){:root{--bg:#131315;--surface:#1C1C1F;--text:#EDEDEA;--muted:#9A9993;--border:#34343A;--primary:#EDEDEA;--on-primary:#17171A}}'
+            . '*{box-sizing:border-box}body{font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0;min-height:100vh;display:grid;place-items:center;padding:16px}'
+            . '.box{background:var(--surface);border-radius:20px;padding:32px;max-width:520px;width:100%}h1{font-weight:500;font-size:22px;margin:0 0 8px}p{color:var(--muted);margin:0 0 20px}'
+            . 'form{display:flex;flex-direction:column;gap:14px;align-items:flex-start}'
+            . 'input[type=file]{font:inherit;font-size:14px;color:var(--muted);max-width:100%}'
+            . 'input[type=file]::file-selector-button{font:inherit;font-size:14px;margin-right:12px;padding:9px 16px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer}'
+            . 'button{font:inherit;font-size:14px;padding:10px 18px;border-radius:999px;border:0;background:var(--primary);color:var(--on-primary);cursor:pointer}';
+    $method = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
+    $browser = str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'text/html');
+    if ($method === 'GET') {
+        header('Content-Type: text/html; charset=utf-8');
+        header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; form-action 'self'");
+        echo '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex">'
+            . '<title>Carica un file · Kris</title><style>' . $uploadCss . '</style></head><body>'
+            . '<main class="box"><h1>Carica un file per Kris Agent</h1><p>Il file va fra le modifiche in attesa del sito: diventa pubblico solo quando l\'admin pubblica.</p>'
+            . '<form method="post" enctype="multipart/form-data"><input type="file" name="file" required aria-label="File da caricare"><button>Carica</button></form></main></body></html>';
+        exit;
+    }
+    $tmp = tempnam(sys_get_temp_dir(), 'kris-slot-');
+    $name = null;
+    try {
+        if ($method === 'POST' && isset($_FILES['file']) && is_array($_FILES['file']) && ($_FILES['file']['error'] ?? 1) === UPLOAD_ERR_OK) {
+            move_uploaded_file((string) $_FILES['file']['tmp_name'], $tmp);
+            $name = (string) $_FILES['file']['name'];
+        } elseif ($method === 'PUT' || $method === 'POST') {
+            // Il corpo così com'è, fino al limite dei video (MediaStore controlla poi il limite del tipo)
+            $in = fopen('php://input', 'rb');
+            $out = fopen($tmp, 'wb');
+            $copied = stream_copy_to_stream($in, $out, \Kris\Entity\MediaStore::videoMaxBytes() + 1);
+            fclose($in);
+            fclose($out);
+            if ($copied > \Kris\Entity\MediaStore::videoMaxBytes()) $result = ['status' => 413, 'body' => ['ok' => false, 'error' => 'Il file è troppo grande.']];
+        } else {
+            $result = ['status' => 405, 'body' => ['ok' => false, 'error' => 'Usa PUT con il file, o il modulo della pagina.']];
+        }
+        $result ??= (new Server(new AgentConfig(), new Staging()))->receiveUpload($token, $tmp, $name);
+    } finally {
+        @unlink($tmp);
+    }
+    http_response_code($result['status']);
+    if ($browser && $method === 'POST') {
+        header('Content-Type: text/html; charset=utf-8');
+        $text = $result['body']['ok'] ? 'Caricato. Torna dall\'agente: il file è ' . $result['body']['url'] . '.' : 'Non caricato: ' . $result['body']['error'];
+        echo '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Kris</title><style>' . $uploadCss . '</style></head><body>'
+            . '<main class="box"><h1>' . ($result['body']['ok'] ? 'Caricato' : 'Non caricato') . '</h1><p>' . htmlspecialchars($text, ENT_QUOTES, 'UTF-8') . '</p></main></body></html>';
+        exit;
+    }
+    echo json_encode($result['body'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    exit;
+}
+
 // Le intestazioni X-Kris-* da $_SERVER: getallheaders() non c'e con ogni SAPI
 $headers = [];
 foreach ($_SERVER as $name => $value) {

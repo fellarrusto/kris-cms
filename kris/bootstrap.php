@@ -34,7 +34,15 @@ spl_autoload_register(static function (string $class): void {
         'Kris\\Site\\'     => KRIS_DIR . '/core/site/',
         'Kris\\Staging\\'  => KRIS_DIR . '/core/staging/',
         'Kris\\Agent\\'    => KRIS_DIR . '/core/agent/',
+        'Kris\\Store\\'    => KRIS_DIR . '/core/store/',
+        'Kris\\Plugin\\'   => KRIS_DIR . '/core/plugin/',
     ];
+    // Le classi di un plugin: Kris\Plugins\<Nome>\Classe in plugins/<nome>/src/Classe.php
+    if (preg_match('/^Kris\\\\Plugins\\\\([A-Za-z0-9_]+)\\\\(.+)$/', $class, $m) === 1) {
+        $file = KRIS_ROOT . '/plugins/' . strtolower($m[1]) . '/src/' . str_replace('\\', '/', $m[2]) . '.php';
+        if (is_file($file)) require $file;
+        return;
+    }
     foreach ($namespaces as $prefix => $dir) {
         if (strncmp($class, $prefix, strlen($prefix)) !== 0) {
             continue;

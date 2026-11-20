@@ -25,7 +25,7 @@ use Kris\Entity\StorageException;
  *    alla pubblicazione.
  *
  * L'anteprima legge data/staging/ sovrapposta al sito (Kris\Site\Paths): per
- * i contenuti ci sono copie di k_data, k_model e delle pagine con le
+ * i contenuti ci sono copie di schema, contenuti e impostazioni con le
  * operazioni gia applicate, ricostruite da rebuild().
  *
  * La pubblicazione salva prima le versioni attuali in data/staging-backups/:
@@ -35,17 +35,12 @@ final class Staging
 {
     public const BACKUP_DAYS = 14;
 
+    /** I documenti del formato 2 e i loro file nella copia dell'anteprima. */
     private const STATE_FILES = [
-        'data' => 'data/k_data.json',
-        'model' => 'data/k_model.json',
-        'pages' => 'config/allowed_pages.json',
-        'seo' => 'config/seo.json',
-        'settings' => 'data/cms_settings.json',
+        'schema' => 'data/schema.json',
+        'content' => 'data/content.json',
+        'settings' => 'data/settings.json',
     ];
-
-    /** Operazioni che cambiano pagine e sitemap, e quelle che cambiano cms_settings. */
-    private const PAGE_OPS = ['register_page', 'unregister_page', 'set_sitemap', 'remove_collection', 'rename_collection'];
-    private const SETTINGS_OPS = ['set_post_collection', 'remove_collection', 'rename_collection', 'set_collection_info', 'move_collection'];
 
     private string $root;
     private string $dir;
@@ -190,7 +185,7 @@ final class Staging
         if ($current['hash'] !== $expectedHash) {
             throw new StagingException("Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo prima di eliminarlo.", ['current_hash' => $current['hash']]);
         }
-        if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1 && in_array($m[1], $this->state()['pages'], true)) {
+        if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1 && isset($this->state()['schema']['pages'][$m[1]])) {
             throw new StagingException("template/{$m[1]}.html è il template della pagina pubblica «{$m[1]}»: toglila prima con unregister_page.");
         }
         $manifest = $this->startManifest($by);
@@ -408,15 +403,7 @@ final class Staging
             @unlink("{$this->dir}/{$relative}");
         }
         if (!$ops) return;
-        self::writeJson("{$this->dir}/data/k_data.json", $state['data']);
-        self::writeJson("{$this->dir}/data/k_model.json", $state['model']);
-        if (self::touches($ops, self::PAGE_OPS)) {
-            self::writeJson("{$this->dir}/config/allowed_pages.json", ['allowed_pages' => array_values($state['pages'])]);
-            self::writeJson("{$this->dir}/config/seo.json", $state['seo']);
-        }
-        if (self::touches($ops, self::SETTINGS_OPS)) {
-            self::writeJson("{$this->dir}/data/cms_settings.json", $state['settings']);
-        }
+        foreach (self::STATE_FILES as $doc => $relative) self::writeJson("{$this->dir}/{$relative}", $state[$doc]);
     }
 
     /**
@@ -430,14 +417,15 @@ final class Staging
     public function previewPages(?array $state = null): array
     {
         $state ??= $this->state();
-        $pages = array_values(array_filter((array) ($state['pages'] ?? []), 'is_string'));
+        $pages = array_keys(array_filter((array) ($state['schema']['pages'] ?? []), 'is_array'));
         $templates = [];
         foreach ($this->templateSources() as $relative => $html) $templates[substr(basename($relative), 0, -5)] = $html;
-        $contexts = TemplateUsage::contexts($templates, [$this->siteState()['model'], $state['model'] ?? []], (array) ($state['seo']['sitemap'] ?? []));
+        $contexts = TemplateUsage::contexts($templates, [$this->siteState()['schema'], $state['schema'] ?? []]);
         $roots = function (string $page) use ($contexts, $state): array {
             $roots = array_values(array_filter($contexts[$page] ?? [], fn($c) => !str_contains($c, '/')));
-            // Una pagina che nessun link raggiunge: di solito rende la raccolta con il suo nome
-            if (!$roots && isset($state['model'][$page])) $roots = [$page];
+            // Il tipo che la pagina rende
+            $type = $state['schema']['pages'][$page]['type'] ?? null;
+            if (is_string($type) && !in_array($type, $roots, true)) array_unshift($roots, $type);
             return $roots;
         };
 
@@ -531,11 +519,7 @@ final class Staging
             $preview = $this->state();
             $byName = [];
             foreach ($templates as $relative => $html) $byName[substr(basename($relative), 0, -5)] = $html;
-            $usage = TemplateUsage::contexts(
-                $byName,
-                [$site['model'], $preview['model']],
-                array_merge((array) ($site['seo']['sitemap'] ?? []), (array) ($preview['seo']['sitemap'] ?? []))
-            );
+            $usage = TemplateUsage::contexts($byName, [$site['schema'], $preview['schema']]);
         }
         $problems = [];
         foreach ($templates as $relative => $html) {
@@ -590,9 +574,10 @@ final class Staging
         $templates = implode("\n", $read('template/*.html'));
         $out = [];
 
-        foreach ($state['model'] as $collection => $schema) {
-            if (!is_array($schema) || str_starts_with((string) $collection, 'kris_')) continue;
-            foreach (self::schemaLevels($schema, (string) $collection) as $where => $defs) {
+        foreach ((array) ($state['schema']['types'] ?? []) as $collection => $type) {
+            // kris_ e plg_ sono del framework e dei plugin: i loro campi non passano dai template
+            if (!is_array($type['fields'] ?? null) || preg_match('/^(kris|plg)_/', (string) $collection) === 1) continue;
+            foreach (self::schemaLevels($type['fields'], (string) $collection) as $where => $defs) {
                 $withSection = array_filter($defs, fn($d) => ($d['section'] ?? '') !== '');
                 $loose = array_column(array_filter($defs, fn($d) => ($d['section'] ?? '') === ''), 'name');
                 if ($withSection && $loose) {
@@ -600,6 +585,8 @@ final class Staging
                 }
                 $unused = [];
                 foreach ($defs as $def) {
+                    // seo_title, seo_description e seo_image li usa Kris per il <head> (PageRenderer)
+                    if (in_array($def['name'] ?? '', ['seo_title', 'seo_description', 'seo_image'], true)) continue;
                     $q = preg_quote((string) ($def['name'] ?? ''), '/');
                     if (preg_match('/\{\{[^}]*\b' . $q . '\b[^}]*\}\}|k-[a-z-]+=["\']' . $q . '["\']/', $templates) !== 1) $unused[] = $def['name'];
                 }
@@ -628,7 +615,7 @@ final class Staging
         $defs = array_values(array_filter($schema, fn($d) => is_array($d) && isset($d['name'])));
         $levels = [$where => $defs];
         foreach ($defs as $def) {
-            if (($def['type'] ?? '') === 'array' && is_array($def['of'] ?? null) && $def['of']) {
+            if (($def['type'] ?? '') === 'list' && is_array($def['of'] ?? null) && $def['of']) {
                 $levels += self::schemaLevels($def['of'], "{$where} › {$def['name']}");
             }
         }
@@ -672,7 +659,7 @@ final class Staging
         $state = $this->siteState();
         $languages = $this->languages();
         foreach ($ops as $op) {
-            foreach (Operations::richtextValues($state['model'], $op) as $html) {
+            foreach (Operations::richtextValues($state['schema'], $op) as $html) {
                 if (FilePolicy::hasCodeSignal(FilePolicy::sensitive($html))) {
                     $label = 'contenuto: ' . Operations::describe($op);
                     $items[$label] = self::hash(($items[$label] ?? '') . "\n" . $html);
@@ -797,6 +784,34 @@ final class Staging
         return $files;
     }
 
+    /**
+     * I file caricati (sul sito e in attesa) che nessun contenuto, template,
+     * foglio di stile o script usa, contando anche le modifiche in attesa. Le
+     * misure ridotte (-480w.webp…) seguono l'originale e non si elencano.
+     *
+     * @return list<array{url: string, staged: bool, size: int}>
+     */
+    public function unusedUploads(): array
+    {
+        [$state] = $this->replay($this->operations(), false);
+        $corpus = json_encode([$state['content'], $state['settings']], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        foreach ($this->templateSources() as $html) $corpus .= "\n" . $html;
+        foreach ([$this->root, $this->dir] as $base) {
+            foreach ([...(glob("{$base}/assets/css/*.css") ?: []), ...(glob("{$base}/assets/js/*.js") ?: [])] as $file) $corpus .= "\n" . file_get_contents($file);
+        }
+        $files = [];
+        foreach (glob("{$this->root}/assets/uploads/*") ?: [] as $file) $files[basename($file)] = [$file, false];
+        foreach ($this->uploadFiles() as $file) $files[basename($file)] ??= [$file, true];
+        $extensions = [...\Kris\Entity\MediaStore::allowedExtensions(), 'svg'];
+        $out = [];
+        foreach ($files as $name => [$path, $staged]) {
+            if (!is_file($path) || !in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), $extensions, true) || \Kris\Entity\MediaStore::isVariant($name)) continue;
+            if (str_contains((string) $corpus, 'uploads/' . $name)) continue;
+            $out[] = ['url' => "assets/uploads/{$name}", 'staged' => $staged, 'size' => (int) filesize($path)];
+        }
+        return $out;
+    }
+
     /** Vero se il file e stato caricato nello staging e non esiste ancora nel sito. */
     public function isStagedUpload(string $url): bool
     {
@@ -888,18 +903,8 @@ final class Staging
                 $writes[$change['file']] = $change['staged'];
             }
         }
-        if ($ops) {
-            [$state] = $this->replay($ops, true);
-            $writes[self::STATE_FILES['data']] = self::encode($state['data']);
-            $writes[self::STATE_FILES['model']] = self::encode($state['model']);
-            if (self::touches($ops, self::PAGE_OPS)) {
-                $writes[self::STATE_FILES['pages']] = self::encode(['allowed_pages' => array_values($state['pages'])]);
-                $writes[self::STATE_FILES['seo']] = self::encode($state['seo']);
-            }
-            if (self::touches($ops, self::SETTINGS_OPS)) {
-                $writes[self::STATE_FILES['settings']] = self::encode($state['settings']);
-            }
-        }
+        // Contenuti, schema e pagine: documenti dell'archivio, scritti in una transazione
+        $docs = $ops ? array_keys(self::STATE_FILES) : [];
         $uploads = array_keys($this->manifest()['uploads']);
         $fonts = array_values(array_filter(array_keys($this->manifest()['fonts']), fn($n) => is_file("{$this->dir}/assets/fonts/{$n}")));
         foreach ($uploads as $name) {
@@ -917,10 +922,28 @@ final class Staging
             $files[$relative] = ['existed' => is_file($target)];
             if (is_file($target)) self::writeFile("{$backup}/files/{$relative}", (string) file_get_contents($target));
         }
-        $meta = ['id' => $id, 'promoted_at' => gmdate('c'), 'promoted_by' => $by, 'files' => $files];
-        (new JsonStore("{$backup}/meta.json"))->write($meta);
+        $meta = ['id' => $id, 'promoted_at' => gmdate('c'), 'promoted_by' => $by, 'files' => $files, 'documents' => []];
 
         try {
+            if ($docs) {
+                // Sotto il lock dell'archivio: le operazioni si riapplicano ai dati di questo momento
+                $store = \Kris\Store\Stores::site($this->root);
+                $store->transaction($docs, function (array $current) use ($ops, $docs, $backup, &$meta, $store, &$docs2): array {
+                    // Un sito ancora nel formato 1 riceve tutti e tre i documenti del formato 2
+                    $legacy = $store->read('schema')->rev === '' || $current['schema'] === [];
+                    [$state] = $this->replay($ops, true);
+                    $docs2 = array_values(array_filter($docs, fn($doc) => $legacy || $state[$doc] !== $current[$doc]));
+                    foreach ($docs2 as $doc) {
+                        $meta['documents'][$doc] = ['existed' => $current[$doc] !== []];
+                        (new JsonStore("{$backup}/documents/{$doc}.json"))->write($current[$doc]);
+                    }
+                    (new JsonStore("{$backup}/meta.json"))->write($meta);
+                    return array_intersect_key($state, array_flip($docs2));
+                });
+                $docs = $docs2 ?? [];
+            } else {
+                (new JsonStore("{$backup}/meta.json"))->write($meta);
+            }
             foreach ($writes as $relative => $content) {
                 self::writeFile("{$this->root}/{$relative}", $content);
             }
@@ -940,15 +963,21 @@ final class Staging
                 if (!@copy("{$this->dir}/uploads/{$name}", "{$this->root}/assets/uploads/{$name}")) {
                     throw new StagingException("Non riesco a copiare l'immagine {$name} in assets/uploads/.");
                 }
+                // Le varianti per gli schermi diversi si creano sul sito, una volta pubblicata
+                \Kris\Entity\MediaStore::makeVariants("{$this->root}/assets/uploads/", $name);
             }
         } catch (StagingException $e) {
             $this->restore($meta);
             throw new StagingException('La pubblicazione non è riuscita e il sito è tornato com\'era: ' . $e->getMessage());
         }
 
+        $touched = $this->previewPages();
         $this->discard();
         $this->pruneBackups();
-        return ['backup' => $id, 'files' => array_keys($files)];
+        $published = array_merge(array_keys($files), array_map([\Kris\Store\FileStore::class, 'relativePath'], $docs));
+        // I plugin (IndexNow) sanno cosa è stato pubblicato, dopo la risposta all'admin
+        \Kris\Plugin\Plugins::event('published', \Kris\Plugin\Plugins::publishedPayload($published, $ops, $touched));
+        return ['backup' => $id, 'files' => $published];
     }
 
     /** L'ultima pubblicazione che si puo ancora annullare, o null. */
@@ -1008,16 +1037,8 @@ final class Staging
 
     private function siteState(): array
     {
-        $read = fn(string $relative, array $default): array => is_file("{$this->root}/{$relative}")
-            ? (new JsonStore("{$this->root}/{$relative}"))->read($default) : $default;
-        $pages = $read(self::STATE_FILES['pages'], ['allowed_pages' => ['homepage']]);
-        return [
-            'data' => $read(self::STATE_FILES['data'], []),
-            'model' => $read(self::STATE_FILES['model'], []),
-            'pages' => is_array($pages['allowed_pages'] ?? null) ? array_values($pages['allowed_pages']) : ['homepage'],
-            'seo' => $read(self::STATE_FILES['seo'], []),
-            'settings' => $read(self::STATE_FILES['settings'], []),
-        ];
+        // Il sito com'è nell'archivio in questo momento, mai la sovrapposizione dell'anteprima
+        return \Kris\Store\Site::current($this->root);
     }
 
     private static function touches(array $ops, array $types): bool
@@ -1028,9 +1049,7 @@ final class Staging
     /** Le lingue attive del sito, come le legge il sito pubblico. */
     private function languages(): array
     {
-        $file = "{$this->root}/data/cms_settings.json";
-        $settings = is_file($file) ? (new JsonStore($file))->read([]) : [];
-        return !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+        return \Kris\Store\Site::languages($this->root);
     }
 
     private function templateExists(string $page): bool
@@ -1056,6 +1075,18 @@ final class Staging
 
     private function restore(array $meta): void
     {
+        // Documenti dell'archivio (pubblicazioni dalla 2.0): tornano tutti insieme
+        $documents = is_array($meta['documents'] ?? null) ? $meta['documents'] : [];
+        if ($documents) {
+            \Kris\Store\Stores::site($this->root)->transaction(array_keys($documents), function () use ($documents, $meta): array {
+                $values = [];
+                foreach ($documents as $doc => $info) {
+                    $file = "{$this->backups}/{$meta['id']}/documents/{$doc}.json";
+                    $values[$doc] = !empty($info['existed']) && is_file($file) ? (new JsonStore($file))->read([]) : [];
+                }
+                return $values;
+            });
+        }
         foreach ($meta['files'] as $relative => $info) {
             FilePolicy::assertRestorable((string) $relative);
             $target = "{$this->root}/{$relative}";

@@ -12,7 +12,7 @@ namespace Kris\Update;
  * interrogare al server indirizzi interni dell'hosting o file locali.
  * L'integrita di cio che arriva la garantisce la firma, non questo controllo.
  */
-final class Http
+class Http
 {
     /** Host da cui si scarica: la repository su GitHub e i suoi file delle release. */
     public const ALLOWED_HOSTS = [

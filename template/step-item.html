@@ -1,5 +1,19 @@
 <li class="step">
-    <span class="step-number" aria-hidden="true"></span>
+  <div class="step-text">
     <h3>{{title}}</h3>
-    <p>{{description}}</p>
+    <p>{{text}}</p>
+  </div>
+  {{#if image}}
+  <figure class="step-shot">
+    <div class="frame">
+      <div class="frame-bar" aria-hidden="true"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url mono">/kris-admin/</span></div>
+      <img src="{{image}}" alt="{{image_alt}}" loading="lazy" sizes="(min-width: 960px) 700px, 100vw">
+    </div>
+  </figure>
+  {{#else}}
+  <div class="code">
+    <div class="code-bar mono">{{file}}</div>
+    <pre><code>{{code}}</code></pre>
+  </div>
+  {{/if}}
 </li>

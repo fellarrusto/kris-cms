@@ -47,9 +47,9 @@ test('un file assente dalla sovrapposizione resta quello del sito', function () 
 });
 
 test('il rendering legge template e contenuti dalla sovrapposizione', function () {
-    $data = [['name' => 'riquadro', 'id' => 0, 'data' => [fieldPlain('titolo', 'Titolo in staging')]]];
+    $content = [['type' => 'riquadro', 'id' => 0, 'values' => ['titolo' => 'Titolo in staging']]];
     withOverlay([
-        'data/k_data.json' => json_encode($data),
+        'data/content.json' => json_encode($content),
         'template/riquadro.html' => '<section class="riquadro"><h2>{{titolo}}</h2></section>',
     ], function () {
         $html = renderTemplate('<main><div k-component="riquadro" k-template="riquadro" k-index="0"></div></main>', makeEntity([]));

@@ -1,4 +1,5 @@
 /config/auth.php
+/config/users.php
 /data/backups/
 /data/updates/
 /data/snapshots/
@@ -15,3 +16,14 @@
 /data/agent_nonces.json
 /config/auth_attempts.json
 /config/setup_code.php
+/config/store.php
+/data/*.sqlite
+/data/format1/
+/config/plugins.php
+/config/plugin_key.php
+/data/kris_plugins.json
+/data/kris_plugin_logs/
+/data/kris_plugin_rate.json
+/plugins/
+/assets/plugins/
+/data/agent_upload_slots.json

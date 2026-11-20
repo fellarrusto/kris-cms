@@ -1,0 +1,1009 @@
+[
+    {
+        "type": "homepage",
+        "id": 0,
+        "values": {
+            "seo_title": {
+                "it": "Il CMS per i siti che fai ai tuoi clienti",
+                "en": "The CMS for the sites you build for clients"
+            },
+            "seo_description": {
+                "it": "Scrivi il tema in HTML, segna i contenuti con {{campo}}: il cliente li aggiorna dall'editor e il sito va su qualunque hosting PHP.",
+                "en": "Write the theme in HTML, mark content with {{field}}: your client updates it from the editor and the site runs on any PHP hosting."
+            },
+            "hero_title": {
+                "it": "Il CMS per i siti che fai ai tuoi clienti.",
+                "en": "The CMS for the sites you build for clients."
+            },
+            "hero_text": {
+                "it": "Scrivi il tema in HTML e segna i contenuti con {{campo}}. Il cliente li aggiorna dall'editor, il sito va su qualunque hosting PHP.",
+                "en": "Write the theme in HTML and mark the content with {{field}}. Your client updates it from the editor, the site runs on any PHP hosting."
+            },
+            "cta_primary": {
+                "it": "Scarica Kris 2",
+                "en": "Download Kris 2"
+            },
+            "cta_secondary": {
+                "it": "Codice su GitHub",
+                "en": "Code on GitHub"
+            },
+            "requirements": {
+                "it": "PHP 8.3 · nessuna build · nessun database obbligatorio · FTP",
+                "en": "PHP 8.3 · no build step · no database required · FTP"
+            },
+            "hero_image": "assets/uploads/kris-editor-home.png",
+            "hero_image_alt": {
+                "it": "L'editor di Kris 2 con i contenuti di questo sito",
+                "en": "The Kris 2 editor showing the contents of this site"
+            },
+            "steps_title": {
+                "it": "Come funziona",
+                "en": "How it works"
+            },
+            "steps_text": {
+                "it": "Tre file e un editor. Questa pagina è fatta così.",
+                "en": "Three files and an editor. This page is built exactly like this."
+            },
+            "steps": [
+                {
+                    "id": 0,
+                    "values": {
+                        "title": {
+                            "it": "Scrivi il tema",
+                            "en": "Write the theme"
+                        },
+                        "text": {
+                            "it": "HTML, CSS e JS normali. Dove va un contenuto metti un segnaposto; gli elenchi diventano frammenti.",
+                            "en": "Plain HTML, CSS and JS. Put a placeholder where content goes; lists become fragments."
+                        },
+                        "file": "template/homepage.html",
+                        "code": "<h1>{{hero_title}}</h1>\n<p>{{hero_text}}</p>\n<ol k-array=\"steps\" k-template=\"step-item\"></ol>"
+                    }
+                },
+                {
+                    "id": 1,
+                    "values": {
+                        "title": {
+                            "it": "Descrivi i campi",
+                            "en": "Describe the fields"
+                        },
+                        "text": {
+                            "it": "In Struttura dici che campi ha ogni contenuto, di che tipo e con quale descrizione per il cliente.",
+                            "en": "In Structure you say which fields each content has, their type and the description your client reads."
+                        },
+                        "file": "data/schema.json",
+                        "code": "{ \"name\": \"hero_title\", \"type\": \"text\",\n  \"localized\": true,\n  \"description\": \"Titolo grande in apertura\" }"
+                    }
+                },
+                {
+                    "id": 2,
+                    "values": {
+                        "title": {
+                            "it": "Il cliente aggiorna",
+                            "en": "Your client updates"
+                        },
+                        "text": {
+                            "it": "Dall'editor in /kris-admin/ cambia testi, immagini e ordine, subito o in attesa di pubblicazione.",
+                            "en": "From the editor at /kris-admin/ they change texts, images and order, live or pending publication."
+                        },
+                        "file": "data/content.json",
+                        "image": "assets/uploads/kris-editor-campo.png",
+                        "image_alt": {
+                            "it": "Il campo «Titolo grande in apertura» di questa pagina nell'editor di Kris",
+                            "en": "The \"Titolo grande in apertura\" field of this page in the Kris editor"
+                        },
+                        "code": "\"hero_title\": {\n  \"it\": \"Il CMS per i siti che fai…\",\n  \"en\": \"The CMS for the sites you build…\" }"
+                    }
+                }
+            ],
+            "features_title": {
+                "it": "Tutto quello che fa",
+                "en": "Everything it does"
+            },
+            "features_text": {
+                "it": "Ogni funzione ha la sua pagina, scritta con Kris. Le etichette indicano le novità della 2.0.",
+                "en": "Every feature has its own page, written with Kris. Labels mark what is new in 2.0."
+            },
+            "filter_label": {
+                "it": "Filtra per categoria",
+                "en": "Filter by category"
+            },
+            "filter_all": {
+                "it": "Tutte",
+                "en": "All"
+            },
+            "cat_contenuti": {
+                "it": "Contenuti",
+                "en": "Content"
+            },
+            "cat_indirizzi": {
+                "it": "Indirizzi e SEO",
+                "en": "Addresses and SEO"
+            },
+            "cat_pubblicazione": {
+                "it": "Pubblicazione",
+                "en": "Publishing"
+            },
+            "cat_privacy": {
+                "it": "Privacy e pagine di sistema",
+                "en": "Privacy and system pages"
+            },
+            "cat_estensioni": {
+                "it": "Estensioni",
+                "en": "Extensions"
+            },
+            "new_label": {
+                "it": "Nuovo nella 2.0",
+                "en": "New in 2.0"
+            },
+            "more_label": {
+                "it": "Tutte le funzioni",
+                "en": "All features"
+            },
+            "posts_title": {
+                "it": "Novità",
+                "en": "News"
+            },
+            "faq_title": {
+                "it": "Domande",
+                "en": "Questions"
+            },
+            "faq": [
+                {
+                    "id": 0,
+                    "values": {
+                        "question": {
+                            "it": "Serve un database?",
+                            "en": "Do I need a database?"
+                        },
+                        "answer": {
+                            "it": "<p>No. I contenuti stanno in tre file JSON in <code>data/</code>. Se un sito scrive molto puoi passare a SQLite o MySQL.</p>",
+                            "en": "<p>No. Content lives in three JSON files in <code>data/</code>. If a site writes a lot you can switch to SQLite or MySQL.</p>"
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "values": {
+                        "question": {
+                            "it": "Servono Node o una build?",
+                            "en": "Do I need Node or a build step?"
+                        },
+                        "answer": {
+                            "it": "<p>No. Il tema è HTML, CSS e JS che scrivi tu; l'editor arriva già compilato.</p>",
+                            "en": "<p>No. The theme is HTML, CSS and JS you write; the editor ships already built.</p>"
+                        }
+                    }
+                },
+                {
+                    "id": 2,
+                    "values": {
+                        "question": {
+                            "it": "Che hosting serve?",
+                            "en": "What hosting do I need?"
+                        },
+                        "answer": {
+                            "it": "<p>Un hosting con PHP 8.3, DOM e mbstring. Per aggiornare dall'editor anche <code>sodium</code> e <code>zip</code>. Il sito si carica via FTP con lo zip di <code>tools/package.php</code>.</p>",
+                            "en": "<p>Any hosting with PHP 8.3, DOM and mbstring. Updating from the editor also needs <code>sodium</code> and <code>zip</code>. The site uploads over FTP with the zip from <code>tools/package.php</code>.</p>"
+                        }
+                    }
+                },
+                {
+                    "id": 3,
+                    "values": {
+                        "question": {
+                            "it": "Il cliente può rompere il sito?",
+                            "en": "Can my client break the site?"
+                        },
+                        "answer": {
+                            "it": "<p>Il cliente cambia contenuti, non codice: il testo formattato viene filtrato e le modifiche alla struttura che cancellerebbero testi chiedono conferma.</p>",
+                            "en": "<p>Your client changes content, not code: rich text is filtered and structure changes that would delete text ask for confirmation.</p>"
+                        }
+                    }
+                },
+                {
+                    "id": 4,
+                    "values": {
+                        "question": {
+                            "it": "Ho un sito sulla 1.x: cosa succede?",
+                            "en": "I have a 1.x site: what happens?"
+                        },
+                        "answer": {
+                            "it": "<p>Dalla 1.10 l'editor propone il passaggio alla 2.0: converte i dati da solo, con una copia di sicurezza prima, e i template restano validi.</p>",
+                            "en": "<p>From 1.10 the editor offers the move to 2.0: it converts the data by itself, with a backup first, and templates stay valid.</p>"
+                        }
+                    }
+                }
+            ],
+            "close_title": {
+                "it": "Il prossimo sito, con Kris.",
+                "en": "Your next site, with Kris."
+            },
+            "close_text": {
+                "it": "Il codice è pubblico su GitHub. La guida per chi converte un design è in AGENTS.md.",
+                "en": "The code is public on GitHub. The guide for converting a design is in AGENTS.md."
+            }
+        }
+    },
+    {
+        "type": "site",
+        "id": 0,
+        "values": {
+            "nav_features": {
+                "it": "Funzioni",
+                "en": "Features"
+            },
+            "nav_posts": {
+                "it": "Novità",
+                "en": "News"
+            },
+            "nav_docs": {
+                "it": "Documentazione",
+                "en": "Docs"
+            },
+            "download_label": {
+                "it": "Scarica",
+                "en": "Download"
+            },
+            "version": "2.0.0",
+            "repo_url": "https://github.com/fellarrusto/kris-cms",
+            "download_url": "https://github.com/fellarrusto/kris-cms/releases",
+            "docs_url": "https://github.com/fellarrusto/kris-cms/blob/main/AGENTS.md",
+            "footer_text": {
+                "it": "Questo sito è il tema di partenza di Kris: tutto quello che vedi si modifica dall'editor.",
+                "en": "This site is Kris's starter theme: everything you see is edited from the editor."
+            },
+            "footer_legal": {
+                "it": "Legale",
+                "en": "Legal"
+            },
+            "cookie_prefs": {
+                "it": "Preferenze cookie",
+                "en": "Cookie preferences"
+            },
+            "back_home": {
+                "it": "Torna alla home",
+                "en": "Back to home"
+            }
+        }
+    },
+    {
+        "type": "features",
+        "id": 0,
+        "values": {
+            "title": {
+                "it": "Campi per ogni contenuto",
+                "en": "Fields for every kind of content"
+            },
+            "category": "contenuti",
+            "new_in_2": true,
+            "summary": {
+                "it": "Testo, testo formattato, immagini e video, scelte, interruttori ed elenchi, per lingua o condivisi.",
+                "en": "Text, rich text, images and video, choices, switches and lists, per language or shared."
+            },
+            "body": {
+                "it": "<p>Ogni tipo di contenuto ha i suoi campi, decisi in Struttura: <strong>text</strong>, <strong>richtext</strong>, <strong>media</strong>, <strong>select</strong>, <strong>boolean</strong> e <strong>list</strong>. Ognuno può avere un valore per lingua o uno solo per tutte.</p><p>Il cliente li compila in un modulo ordinato in sezioni, con le descrizioni che scrivi tu. Nel template li usi per nome.</p>",
+                "en": "<p>Every content type has its own fields, set in Structure: <strong>text</strong>, <strong>richtext</strong>, <strong>media</strong>, <strong>select</strong>, <strong>boolean</strong> and <strong>list</strong>. Each one can hold a value per language or one shared value.</p><p>Your client fills them in a form grouped into sections, with the descriptions you write. In the template you use them by name.</p>"
+            },
+            "code": "<h1>{{title}}</h1>\n<p>{{summary}}</p>\n{{#if new_in_2}}<span class=\"badge\">Nuovo</span>{{/if}}",
+            "code_file": "template/funzione.html",
+            "image": "assets/uploads/kris-editor-modifica.png",
+            "image_alt": {
+                "it": "La modifica di una funzione nell'editor di Kris, con i campi divisi in sezioni",
+                "en": "Editing a feature in the Kris editor, with fields grouped into sections"
+            },
+            "highlights": [
+                {
+                    "id": 0,
+                    "values": {
+                        "label": {
+                            "it": "Per lingua o condiviso",
+                            "en": "Per language or shared"
+                        },
+                        "text": {
+                            "it": "Un campo «localized» ha un valore per lingua; gli altri uno solo.",
+                            "en": "A localized field has a value per language; the others have one."
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "values": {
+                        "label": {
+                            "it": "Scelte e interruttori",
+                            "en": "Choices and switches"
+                        },
+                        "text": {
+                            "it": "Le scelte multiple si controllano nei template con «has».",
+                            "en": "Multiple choices are checked in templates with \"has\"."
+                        }
+                    }
+                },
+                {
+                    "id": 2,
+                    "values": {
+                        "label": {
+                            "it": "Testo formattato filtrato",
+                            "en": "Filtered rich text"
+                        },
+                        "text": {
+                            "it": "Il richtext esce ripulito: niente script né stili incollati.",
+                            "en": "Rich text comes out clean: no pasted scripts or styles."
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "features",
+        "id": 1,
+        "values": {
+            "title": {
+                "it": "Raccolte e articoli",
+                "en": "Collections and posts"
+            },
+            "category": "contenuti",
+            "new_in_2": false,
+            "summary": {
+                "it": "Raccolte ordinabili, contenuti unici e una sezione Posts dove i nuovi vanno in cima.",
+                "en": "Sortable collections, single contents and a Posts section where new items go on top."
+            },
+            "body": {
+                "it": "<p>Una raccolta è un elenco di contenuti dello stesso tipo, come questi articoli o queste funzioni. Il cliente aggiunge, riordina trascinando e sospende senza cancellare.</p><p>Un tipo a contenuto unico, come la homepage, apre direttamente la modifica. Le raccolte segnate «nuovi in cima» diventano articoli.</p>",
+                "en": "<p>A collection is a list of contents of the same type, like these posts or these features. Your client adds, reorders by dragging and suspends without deleting.</p><p>A single-content type, like the homepage, opens straight into editing. Collections marked \"newest first\" become posts.</p>"
+            },
+            "code": "<div class=\"posts\" k-array=\"posts\" k-template=\"post-card\"></div>",
+            "code_file": "template/homepage.html",
+            "highlights": [
+                {
+                    "id": 0,
+                    "values": {
+                        "label": {
+                            "it": "Ordine vero",
+                            "en": "Real order"
+                        },
+                        "text": {
+                            "it": "L'ordine è quello che decide il cliente, non quello degli id.",
+                            "en": "The order is the one your client sets, not the order of ids."
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "values": {
+                        "label": {
+                            "it": "Sospendere",
+                            "en": "Suspend"
+                        },
+                        "text": {
+                            "it": "Un contenuto sospeso sparisce dal sito e dalla sitemap ma resta nell'editor.",
+                            "en": "A suspended item leaves the site and the sitemap but stays in the editor."
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "features",
+        "id": 2,
+        "values": {
+            "title": {
+                "it": "Elenchi annidati e componenti",
+                "en": "Nested lists and components"
+            },
+            "category": "contenuti",
+            "new_in_2": false,
+            "summary": {
+                "it": "Elenchi dentro i contenuti, a più livelli, e parti condivise come menu e piè di pagina.",
+                "en": "Lists inside contents, several levels deep, and shared parts like menus and footers."
+            },
+            "body": {
+                "it": "<p>Un campo <strong>list</strong> ha i suoi campi e può contenere altri elenchi: i passi di «Come funziona» e le domande frequenti di questa pagina sono elenchi della homepage.</p><p>Menu e piè di pagina sono un componente: si scrivono una volta e si includono in ogni pagina con <code>k-component</code>.</p>",
+                "en": "<p>A <strong>list</strong> field has its own fields and can hold more lists: the steps of \"How it works\" and the FAQ on this page are lists of the homepage.</p><p>The menu and the footer are a component: written once and included in every page with <code>k-component</code>.</p>"
+            },
+            "code": "<ol k-array=\"steps\" k-template=\"step-item\"></ol>\n<div k-component=\"site\" k-template=\"site-footer\" k-index=\"0\"></div>",
+            "code_file": "template/homepage.html",
+            "highlights": [
+                {
+                    "id": 0,
+                    "values": {
+                        "label": {
+                            "it": "Frammenti",
+                            "en": "Fragments"
+                        },
+                        "text": {
+                            "it": "Ogni elemento si rende con il suo frammento HTML, con i suoi campi.",
+                            "en": "Each item renders with its own HTML fragment and its own fields."
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "values": {
+                        "label": {
+                            "it": "Una volta sola",
+                            "en": "Written once"
+                        },
+                        "text": {
+                            "it": "Cambi il menu in un punto e cambia in tutte le pagine.",
+                            "en": "Change the menu in one place and it changes everywhere."
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "features",
+        "id": 3,
+        "values": {
+            "title": {
+                "it": "Condizioni e riferimenti",
+                "en": "Conditions and references"
+            },
+            "category": "contenuti",
+            "new_in_2": true,
+            "summary": {
+                "it": "Mostra o nascondi parti del tema con {{#if}} e leggi un contenuto da qualunque pagina.",
+                "en": "Show or hide parts of the theme with {{#if}} and read any content from any page."
+            },
+            "body": {
+                "it": "<p>Le condizioni confrontano i valori (<code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>has</code>) o controllano un interruttore. L'etichetta «Nuovo nella 2.0» su queste funzioni è un <code>{{#if}}</code> su un campo boolean.</p><p>Con <code>{{tipo.campo}}</code> leggi il primo contenuto di un altro tipo: la versione mostrata in apertura viene dagli elementi comuni.</p>",
+                "en": "<p>Conditions compare values (<code>==</code>, <code>!=</code>, <code>&gt;</code>, <code>has</code>) or check a switch. The \"New in 2.0\" label on these features is an <code>{{#if}}</code> on a boolean field.</p><p>With <code>{{type.field}}</code> you read the first content of another type: the version shown at the top comes from the shared elements.</p>"
+            },
+            "code": "{{#if category == \"privacy\"}}\n  <p>{{site.footer_text}}</p>\n{{#elif new_in_2}}\n  <span>Nuovo</span>\n{{/if}}",
+            "code_file": "template/feature-row.html",
+            "highlights": [
+                {
+                    "id": 0,
+                    "values": {
+                        "label": {
+                            "it": "Senza codice",
+                            "en": "No code"
+                        },
+                        "text": {
+                            "it": "Niente PHP nel tema: solo HTML e segnaposto.",
+                            "en": "No PHP in the theme: only HTML and placeholders."
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "features",
+        "id": 4,
+        "values": {
+            "title": {
+                "it": "Indirizzi leggibili",
+                "en": "Readable addresses"
+            },
+            "category": "indirizzi",
+            "new_in_2": true,
+            "summary": {
+                "it": "/funzione/indirizzi-leggibili invece di index.php?page=…, e i vecchi indirizzi portano ai nuovi.",
+                "en": "/en/funzione/readable-addresses instead of index.php?page=…, and old addresses lead to the new ones."
+            },
+            "body": {
+                "it": "<p>Ogni pagina ha un indirizzo pulito, nella sua lingua: questa è <code>/funzione/indirizzi-leggibili</code>, la stessa in inglese è sotto <code>/en/</code>. Lo slug viene dal titolo, scelto in Indirizzi.</p><p>I link <code>index.php?page=…</code> dei template si riscrivono da soli, e gli indirizzi della 1.x rispondono con un 301. I reindirizzamenti per i vecchi siti si aggiungono dall'editor.</p>",
+                "en": "<p>Every page has a clean address in its own language: this one is <code>/en/funzione/readable-addresses</code>, the Italian one has no prefix. The slug comes from the title, chosen in Addresses.</p><p>Template links like <code>index.php?page=…</code> are rewritten by themselves, and 1.x addresses answer with a 301. Redirects for old sites are added from the editor.</p>"
+            },
+            "code": "<a href=\"index.php?page=funzione&amp;key=features&amp;id={{id}}&amp;ln={{language}}\">\n  {{title}}\n</a>",
+            "code_file": "template/feature-row.html",
+            "highlights": [
+                {
+                    "id": 0,
+                    "values": {
+                        "label": {
+                            "it": "Link come prima",
+                            "en": "Links as before"
+                        },
+                        "text": {
+                            "it": "Scrivi i link come nella 1.x: Kris li trasforma.",
+                            "en": "Write links as in 1.x: Kris turns them into paths."
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "values": {
+                        "label": {
+                            "it": "Niente 404",
+                            "en": "No broken links"
+                        },
+                        "text": {
+                            "it": "Vecchi indirizzi e QR già stampati portano alla pagina nuova.",
+                            "en": "Old addresses and printed QR codes lead to the new page."
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "features",
+        "id": 5,
+        "values": {
+            "title": {
+                "it": "Più lingue",
+                "en": "Multiple languages"
+            },
+            "category": "indirizzi",
+            "new_in_2": false,
+            "summary": {
+                "it": "Ogni contenuto in ogni lingua del sito, con hreflang e lingua automatica.",
+                "en": "Every content in every site language, with hreflang and automatic language."
+            },
+            "body": {
+                "it": "<p>Le lingue si scelgono in Impostazioni; i campi per lingua si compilano con le linguette in cima al modulo, e l'editor segnala quelli rimasti vuoti.</p><p>Kris aggiunge i collegamenti <code>hreflang</code> a ogni pagina e, se vuoi, porta il visitatore nella lingua del suo browser. Prova IT / EN qui in alto.</p>",
+                "en": "<p>Languages are chosen in Settings; per-language fields are filled with the tabs at the top of the form, and the editor flags the empty ones.</p><p>Kris adds <code>hreflang</code> links to every page and, if you want, takes the visitor to their browser language. Try IT / EN at the top.</p>"
+            },
+            "code": "<html lang=\"{{language}}\">\n<a href=\"#\" onclick=\"setLanguage('en')\">EN</a>",
+            "code_file": "template/site-header.html"
+        }
+    },
+    {
+        "type": "features",
+        "id": 6,
+        "values": {
+            "title": {
+                "it": "SEO senza pensarci",
+                "en": "SEO without thinking about it"
+            },
+            "category": "indirizzi",
+            "new_in_2": true,
+            "summary": {
+                "it": "Nella 2.0 le proprietà del sito, Open Graph e kris_head; canonical e sitemap come sempre.",
+                "en": "New in 2.0: site properties, Open Graph and kris_head; canonical and sitemap as always."
+            },
+            "body": {
+                "it": "<p>Dalle Proprietà del sito il cliente sceglie nome, modello del titolo, descrizione, immagine di condivisione e codici di verifica. Kris li mette nel <code>&lt;head&gt;</code> di ogni pagina, solo dove il template non li ha già.</p><p>La sitemap si genera a ogni richiesta e include gli articoli appena pubblicati. Meta e dati strutturati comuni vanno in <code>kris_head.html</code>, una volta sola.</p>",
+                "en": "<p>From Site properties your client sets the name, title template, description, sharing image and verification codes. Kris puts them in the <code>&lt;head&gt;</code> of every page, only where the template does not have them.</p><p>The sitemap is generated on every request and includes posts the moment they are published. Shared meta and structured data go in <code>kris_head.html</code>, once.</p>"
+            },
+            "code": "<!-- template/kris_head.html -->\n<script type=\"application/ld+json\">{ \"@type\": \"SoftwareApplication\", \"name\": \"Kris\" }</script>",
+            "code_file": "template/kris_head.html"
+        }
+    },
+    {
+        "type": "features",
+        "id": 7,
+        "values": {
+            "title": {
+                "it": "In attesa e anteprima",
+                "en": "Pending changes and preview"
+            },
+            "category": "pubblicazione",
+            "new_in_2": false,
+            "summary": {
+                "it": "Prepara le modifiche senza toccare il sito, guardale in anteprima e pubblica quando sono pronte.",
+                "en": "Prepare changes without touching the site, preview them and publish when they are ready."
+            },
+            "body": {
+                "it": "<p>In modalità «In attesa» ogni salvataggio resta da parte: il sito pubblico non cambia. L'anteprima mostra il sito con le modifiche, con una barra sottile in cima.</p><p>«Da pubblicare» riassume tutto con le differenze, segnala gli script nuovi da approvare e pubblica in un colpo. L'ultima pubblicazione si annulla per 14 giorni.</p>",
+                "en": "<p>In \"Pending\" mode every save is set aside: the public site does not change. The preview shows the site with the changes, with a thin bar at the top.</p><p>\"To publish\" sums everything up with diffs, flags new scripts to approve and publishes in one go. The last publication can be undone for 14 days.</p>"
+            },
+            "image": "assets/uploads/kris-editor-da-pubblicare.png",
+            "image_alt": {
+                "it": "La schermata Da pubblicare dell'editor di Kris, con il riepilogo delle modifiche in attesa",
+                "en": "The To publish screen of the Kris editor, with the summary of pending changes"
+            },
+            "highlights": [
+                {
+                    "id": 0,
+                    "values": {
+                        "label": {
+                            "it": "Conflitti",
+                            "en": "Conflicts"
+                        },
+                        "text": {
+                            "it": "Se intanto qualcuno ha cambiato lo stesso valore, Kris lo dice prima di pubblicare.",
+                            "en": "If someone changed the same value meanwhile, Kris says so before publishing."
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "values": {
+                        "label": {
+                            "it": "Annullabile",
+                            "en": "Undoable"
+                        },
+                        "text": {
+                            "it": "Prima di scrivere si salvano le versioni attuali.",
+                            "en": "Current versions are saved before writing."
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    {
+        "type": "features",
+        "id": 8,
+        "values": {
+            "title": {
+                "it": "Utenti e ruoli",
+                "en": "Users and roles"
+            },
+            "category": "pubblicazione",
+            "new_in_2": true,
+            "summary": {
+                "it": "Più utenti nell'editor: l'amministratore li crea, li blocca o li elimina.",
+                "en": "Several users in the editor: the administrator creates, blocks or deletes them."
+            },
+            "body": {
+                "it": "<p>Due ruoli, <strong>admin</strong> e <strong>base</strong>: l'unico potere in più dell'admin è gestire gli utenti. Bloccare un utente o cambiargli la password chiude subito le sue sessioni.</p><p>Ognuno sceglie l'email su cui ricevere il link di recupero della password, valido 30 minuti.</p>",
+                "en": "<p>Two roles, <strong>admin</strong> and <strong>base</strong>: the admin's only extra power is managing users. Blocking a user or changing their password closes their sessions at once.</p><p>Everyone picks the email where their password recovery link arrives, valid for 30 minutes.</p>"
+            }
+        }
+    },
+    {
+        "type": "features",
+        "id": 9,
+        "values": {
+            "title": {
+                "it": "Immagini ottimizzate",
+                "en": "Optimised images"
+            },
+            "category": "pubblicazione",
+            "new_in_2": true,
+            "summary": {
+                "it": "Foto ridotte, ripulite dalla posizione GPS e servite in WebP alla misura giusta.",
+                "en": "Photos resized, stripped of GPS location and served as WebP at the right size."
+            },
+            "body": {
+                "it": "<p>Al caricamento Kris raddrizza e riduce le foto, toglie i metadati e crea le misure WebP per schermi diversi. Al rendering ogni <code>&lt;img&gt;</code> riceve <code>srcset</code>, <code>width</code> e <code>height</code>: le schermate di questa pagina passano da lì.</p><p>Il tema non deve fare niente: scrive <code>&lt;img src=\"{{image}}\"&gt;</code> come sempre.</p>",
+                "en": "<p>On upload Kris straightens and resizes photos, removes metadata and creates WebP sizes for different screens. At render time every <code>&lt;img&gt;</code> gets <code>srcset</code>, <code>width</code> and <code>height</code>: the screenshots on this page go through it.</p><p>The theme does nothing: it writes <code>&lt;img src=\"{{image}}\"&gt;</code> as always.</p>"
+            },
+            "code": "<img src=\"{{image}}\" alt=\"{{image_alt}}\">\n<!-- diventa: srcset=\"…-480w.webp 480w, …-960w.webp 960w, …\" -->",
+            "code_file": "template/funzione.html"
+        }
+    },
+    {
+        "type": "features",
+        "id": 10,
+        "values": {
+            "title": {
+                "it": "File o database",
+                "en": "Files or database"
+            },
+            "category": "pubblicazione",
+            "new_in_2": true,
+            "summary": {
+                "it": "I contenuti stanno in tre file JSON, oppure in SQLite o MySQL quando servono.",
+                "en": "Content lives in three JSON files, or in SQLite or MySQL when you need it."
+            },
+            "body": {
+                "it": "<p>Di serie i dati sono <code>schema.json</code>, <code>content.json</code> e <code>settings.json</code>: si leggono, si copiano, si versionano. Per un sito che scrive spesso si passa a un database con <code>tools/store.php convert</code>, che copia, rilegge e confronta prima di cambiare.</p>",
+                "en": "<p>Out of the box the data is <code>schema.json</code>, <code>content.json</code> and <code>settings.json</code>: easy to read, copy and version. For a site that writes often you switch to a database with <code>tools/store.php convert</code>, which copies, rereads and compares before switching.</p>"
+            },
+            "code": "php tools/store.php convert --to=pdo \\\n  --dsn=\"mysql:host=localhost;dbname=sito\"",
+            "code_file": "terminale"
+        }
+    },
+    {
+        "type": "features",
+        "id": 11,
+        "values": {
+            "title": {
+                "it": "Aggiornamenti firmati",
+                "en": "Signed updates"
+            },
+            "category": "pubblicazione",
+            "new_in_2": false,
+            "summary": {
+                "it": "Kris si aggiorna dall'editor con pacchetti firmati, e torna indietro da solo se qualcosa va storto.",
+                "en": "Kris updates from the editor with signed packages, and rolls back by itself if anything fails."
+            },
+            "body": {
+                "it": "<p>L'editor avvisa quando esce una versione nuova. Il pacchetto è firmato con Ed25519 e verificato file per file; prima di installare si salva una copia di sicurezza.</p><p>Per caricarlo a mano via FTP basta sostituire la cartella <code>kris/</code>: al primo accesso l'editor applica le migrazioni dei dati.</p>",
+                "en": "<p>The editor tells you when a new version is out. The package is signed with Ed25519 and checked file by file; a backup is taken before installing.</p><p>To upload it by hand over FTP, replace the <code>kris/</code> folder: on the next login the editor applies the data migrations.</p>"
+            }
+        }
+    },
+    {
+        "type": "features",
+        "id": 12,
+        "values": {
+            "title": {
+                "it": "Privacy e cookie",
+                "en": "Privacy and cookies"
+            },
+            "category": "privacy",
+            "new_in_2": true,
+            "summary": {
+                "it": "Informative e banner con le categorie; nella 2.0 la tabella dei cookie che si compila da sola.",
+                "en": "Policies and a banner with categories; in 2.0, a cookie table that fills itself in."
+            },
+            "body": {
+                "it": "<p>Il cliente compila titolare, informative e testi del banner da Impostazioni. Il banner chiede il consenso per categoria; gli script non tecnici restano bloccati finché il visitatore non lo dà.</p><p>Nella pagina dei cookie <code>k-cookie-table</code> diventa la tabella dei cookie di Kris e dei plugin accesi.</p>",
+                "en": "<p>Your client fills in the data controller, policies and banner texts from Settings. The banner asks for consent by category; non-technical scripts stay blocked until the visitor gives it.</p><p>On the cookie page <code>k-cookie-table</code> becomes the table of the cookies used by Kris and by the active plugins.</p>"
+            },
+            "code": "<script type=\"text/plain\" data-kris-consent-script=\"statistics\" src=\"…\"></script>\n<div k-cookie-table data-class=\"cookie-table\"></div>",
+            "code_file": "template/cookie.html"
+        }
+    },
+    {
+        "type": "features",
+        "id": 13,
+        "values": {
+            "title": {
+                "it": "Pagina 404 e lavori in corso",
+                "en": "404 page and maintenance"
+            },
+            "category": "privacy",
+            "new_in_2": false,
+            "summary": {
+                "it": "Una 404 del tema con i testi dell'editor, e un interruttore per chiudere il sito durante i lavori.",
+                "en": "A themed 404 with texts from the editor, and a switch that closes the site during works."
+            },
+            "body": {
+                "it": "<p>La 404 usa il template del tema, con i testi scritti dal cliente in Pagine di sistema; prova un indirizzo che non esiste. «Lavori in corso» mostra ai visitatori una pagina di lavorazione con lo stato 503, mentre chi ha l'editor aperto continua a vedere il sito.</p>",
+                "en": "<p>The 404 uses the theme's template with texts written by your client in System pages; try an address that does not exist. \"Maintenance\" shows visitors a work-in-progress page with a 503 status, while whoever has the editor open keeps seeing the site.</p>"
+            }
+        }
+    },
+    {
+        "type": "features",
+        "id": 14,
+        "values": {
+            "title": {
+                "it": "Plugin",
+                "en": "Plugins"
+            },
+            "category": "estensioni",
+            "new_in_2": true,
+            "summary": {
+                "it": "Funzioni in più dal catalogo ufficiale, firmate: Misurazione e IndexNow.",
+                "en": "Extra features from the official catalogue, signed: Measurement and IndexNow."
+            },
+            "body": {
+                "it": "<p>Un plugin aggiunge al sito tag, blocchi nei template ed endpoint, e all'editor impostazioni e schermate intere in Vue. Si installa da Impostazioni › Plugin con la password, ed è spento finché non lo accendi.</p><p><strong>Misurazione</strong> porta GA4 e Pixel di Meta con Consent Mode v2; <strong>IndexNow</strong> avvisa i motori di ricerca delle pagine pubblicate. Un plugin che si rompe finisce nel suo registro e il sito resta su.</p>",
+                "en": "<p>A plugin adds tags, template blocks and endpoints to the site, and settings and full Vue screens to the editor. It installs from Settings › Plugins with your password, and stays off until you turn it on.</p><p><strong>Measurement</strong> brings GA4 and the Meta Pixel with Consent Mode v2; <strong>IndexNow</strong> tells search engines about published pages. A plugin that breaks ends up in its log and the site stays up.</p>"
+            },
+            "code": "<div k-plugin=\"prenotazioni:modulo\"></div>",
+            "code_file": "template/contatti.html",
+            "image": "assets/uploads/kris-editor-plugin.png",
+            "image_alt": {
+                "it": "La scheda Plugin delle impostazioni di Kris",
+                "en": "The Plugins tab of the Kris settings"
+            }
+        }
+    },
+    {
+        "type": "features",
+        "id": 15,
+        "values": {
+            "title": {
+                "it": "Kris Agent",
+                "en": "Kris Agent"
+            },
+            "category": "estensioni",
+            "new_in_2": false,
+            "summary": {
+                "it": "Un assistente AI prepara modifiche al tema e ai contenuti; pubblica sempre una persona.",
+                "en": "An AI assistant prepares theme and content changes; a person always publishes."
+            },
+            "body": {
+                "it": "<p>Kris Agent lavora via MCP con richieste firmate: legge il tema, modifica template e contenuti, carica immagini. Tutto va «In attesa»: l'agente non può pubblicare né toccare il framework o la configurazione.</p><p>Chi gestisce il sito decide chi può usarlo, guarda l'anteprima e pubblica.</p>",
+                "en": "<p>Kris Agent works over MCP with signed requests: it reads the theme, edits templates and content, uploads images. Everything goes to \"Pending\": the agent cannot publish or touch the framework or the configuration.</p><p>Whoever runs the site decides who may use it, checks the preview and publishes.</p>"
+            }
+        }
+    },
+    {
+        "type": "features",
+        "id": 16,
+        "hidden": true,
+        "values": {
+            "title": {
+                "it": "Esempio di contenuto sospeso",
+                "en": "Example of a suspended item"
+            },
+            "category": "contenuti",
+            "new_in_2": false,
+            "summary": {
+                "it": "Questo contenuto è sospeso: lo vedi solo nell'editor.",
+                "en": "This item is suspended: you only see it in the editor."
+            },
+            "body": {
+                "it": "<p>Accendilo da Contenuti › Funzioni e comparirà nell'elenco.</p>",
+                "en": "<p>Turn it on from Contents › Features and it will appear in the list.</p>"
+            }
+        }
+    },
+    {
+        "type": "posts",
+        "id": 0,
+        "values": {
+            "title": {
+                "it": "Kris 2.0: dentro è un CMS nuovo, fuori lavori come prima",
+                "en": "Kris 2.0: a new CMS inside, the same way of working outside"
+            },
+            "date": "2026-11-20",
+            "excerpt": {
+                "it": "Formato dei dati nuovo, editor rifatto, indirizzi leggibili, più utenti e plugin. I temi della 1.x continuano a funzionare.",
+                "en": "A new data format, a rebuilt editor, readable addresses, several users and plugins. 1.x themes keep working."
+            },
+            "cover": "assets/uploads/kris-editor-home.png",
+            "cover_alt": {
+                "it": "La home dell'editor di Kris 2",
+                "en": "The home of the Kris 2 editor"
+            },
+            "body": {
+                "it": "<p>La 2.0 cambia quasi tutto quello che sta sotto: i contenuti passano a tre documenti con i valori per nome, l'editor è un'app nuova e ogni scrittura è un'operazione, la stessa sul sito pubblico e in attesa.</p><h2>Cosa resta uguale</h2><p>Il tema è HTML con i segnaposto, il sito va su qualunque hosting PHP via FTP, e l'aggiornamento converte i dati della 1.x da solo, con una copia di sicurezza prima.</p><h2>Cosa serve</h2><p>PHP 8.3. Per aggiornare dall'editor servono anche le estensioni <code>sodium</code> e <code>zip</code>.</p>",
+                "en": "<p>2.0 changes almost everything underneath: content moves to three documents with values by name, the editor is a new app and every write is an operation, the same on the public site and in pending mode.</p><h2>What stays the same</h2><p>The theme is HTML with placeholders, the site goes on any PHP hosting over FTP, and the update converts 1.x data by itself, with a backup first.</p><h2>What you need</h2><p>PHP 8.3. Updating from the editor also needs the <code>sodium</code> and <code>zip</code> extensions.</p>"
+            }
+        }
+    },
+    {
+        "type": "posts",
+        "id": 1,
+        "values": {
+            "title": {
+                "it": "Perché ogni indirizzo ora è leggibile",
+                "en": "Why every address is now readable"
+            },
+            "date": "2026-11-19",
+            "excerpt": {
+                "it": "Nella 2.0 gli indirizzi leggibili non sono più un'opzione, e i link della 1.x continuano a funzionare.",
+                "en": "In 2.0 readable addresses are no longer an option, and 1.x links keep working."
+            },
+            "body": {
+                "it": "<p>Un indirizzo come <code>/funzione/indirizzi-leggibili</code> si legge, si condivide e piace ai motori di ricerca. Nella 2.0 è il comportamento di sempre: niente interruttore.</p><p>I link <code>index.php?page=…</code> continuano a funzionare con un 301. Se un hosting Apache non ha la regola del <code>.htaccess</code> di Kris, il sito resta sugli indirizzi di prima e l'editor lo segnala.</p>",
+                "en": "<p>An address like <code>/en/funzione/readable-addresses</code> is easy to read, share and rank. In 2.0 it is simply how Kris works: no switch.</p><p><code>index.php?page=…</code> links keep working with a 301. If an Apache host lacks Kris's <code>.htaccess</code> rule, the site stays on the old addresses and the editor says so.</p>"
+            }
+        }
+    },
+    {
+        "type": "posts",
+        "id": 2,
+        "values": {
+            "title": {
+                "it": "Plugin firmati: Misurazione e IndexNow",
+                "en": "Signed plugins: Measurement and IndexNow"
+            },
+            "date": "2026-11-18",
+            "excerpt": {
+                "it": "I primi due plugin ufficiali si installano dall'editor. La tabella dei cookie invece è nel core.",
+                "en": "The first two official plugins install from the editor. The cookie table lives in the core instead."
+            },
+            "body": {
+                "it": "<p>Le funzioni che non servono a tutti i siti diventano plugin: si installano dal catalogo ufficiale, firmato come gli aggiornamenti.</p><p><strong>Misurazione</strong> carica GA4 e il Pixel di Meta solo dopo il consenso; <strong>IndexNow</strong> avvisa Bing e gli altri motori quando pubblichi. La tabella dei cookie, che serve a tutti, è nel core: <code>k-cookie-table</code>.</p>",
+                "en": "<p>Features not every site needs become plugins: they install from the official catalogue, signed like updates.</p><p><strong>Measurement</strong> loads GA4 and the Meta Pixel only after consent; <strong>IndexNow</strong> tells Bing and other engines when you publish. The cookie table, which every site needs, lives in the core: <code>k-cookie-table</code>.</p>"
+            }
+        }
+    },
+    {
+        "type": "kris_legal",
+        "id": 0,
+        "values": {
+            "owner_name": "Kris Demo S.r.l. (dati di esempio)",
+            "owner_address": "Via dell'Esempio 1, 00100 Roma (RM)",
+            "owner_vat": "P.IVA IT00000000000",
+            "privacy_email": "privacy@esempio.it",
+            "updated_at": "2 ottobre 2026",
+            "privacy_policy": {
+                "it": "<p><strong>Testo di esempio: va sostituito con l’informativa reale del sito.</strong></p><h2>Dati trattati</h2><p>Questo sito non raccoglie dati personali tramite moduli. Il server registra dati tecnici di navigazione, come indirizzo IP, data e ora delle richieste, necessari al funzionamento e alla sicurezza del sito.</p><h2>Finalità e base giuridica</h2><p>I dati tecnici sono trattati per garantire il funzionamento e la sicurezza del sito, sulla base del legittimo interesse del titolare.</p><h2>Conservazione</h2><p>I dati tecnici sono conservati per il tempo strettamente necessario e poi cancellati, salvo obblighi di legge.</p><h2>I tuoi diritti</h2><p>Puoi chiedere accesso, rettifica, cancellazione, limitazione e portabilità dei dati, o opporti al trattamento, scrivendo all’indirizzo indicato qui sotto. Puoi anche proporre reclamo al Garante per la protezione dei dati personali.</p>",
+                "en": "<p><strong>Sample text: replace it with the real privacy policy of the site.</strong></p><h2>Data we process</h2><p>This site does not collect personal data through forms. The server logs technical browsing data, such as IP address, date and time of requests, needed to run and secure the site.</p><h2>Purpose and legal basis</h2><p>Technical data is processed to keep the site working and secure, based on the legitimate interest of the controller.</p><h2>Retention</h2><p>Technical data is kept only as long as strictly necessary and then deleted, unless the law requires otherwise.</p><h2>Your rights</h2><p>You can ask for access, rectification, erasure, restriction and portability of your data, or object to the processing, by writing to the address below. You can also lodge a complaint with the Italian Data Protection Authority.</p>"
+            },
+            "cookie_policy": {
+                "it": "<p><strong>Testo di esempio: va sostituito con la cookie policy reale del sito.</strong></p><h2>Cookie tecnici</h2><p><code>kris_consent</code> ricorda la scelta fatta nel banner per 180 giorni. È necessario al funzionamento del sito e non richiede consenso.</p><h2>Cookie di statistica e di terze parti</h2><p>Questo sito dimostrativo non ne usa. Un sito che li usa li elenca qui, con fornitore, finalità e durata, e li attiva solo dopo il consenso.</p><h2>Come cambiare la tua scelta</h2><p>Usa il link “Preferenze cookie” in fondo alla homepage.</p>",
+                "en": "<p><strong>Sample text: replace it with the real cookie policy of the site.</strong></p><h2>Technical cookies</h2><p><code>kris_consent</code> remembers the choice made in the banner for 180 days. It is needed for the site to work and does not require consent.</p><h2>Analytics and third-party cookies</h2><p>This demo site does not use any. A site that does lists them here, with provider, purpose and duration, and enables them only after consent.</p><h2>How to change your choice</h2><p>Use the “Cookie settings” link at the bottom of the home page.</p>"
+            },
+            "banner_title": {
+                "it": "Questo sito usa i cookie",
+                "en": "This site uses cookies"
+            },
+            "banner_text": {
+                "it": "Usiamo cookie tecnici, necessari al funzionamento del sito. Altri cookie, per esempio di statistica, si attivano solo se accetti.",
+                "en": "We use technical cookies, needed for the site to work. Other cookies, such as analytics, are enabled only if you accept."
+            },
+            "banner_accept": {
+                "it": "Accetta",
+                "en": "Accept"
+            },
+            "banner_reject": {
+                "it": "Rifiuta",
+                "en": "Reject"
+            },
+            "banner_more": {
+                "it": "Cookie policy",
+                "en": "Cookie policy"
+            },
+            "banner_customize": {
+                "it": "Personalizza",
+                "en": "Customize"
+            },
+            "banner_save": {
+                "it": "Salva le scelte",
+                "en": "Save choices"
+            },
+            "category_thirdparty": {
+                "it": "Contenuti di terze parti",
+                "en": "Third-party content"
+            },
+            "category_thirdparty_text": {
+                "it": "Mappe, video e contenuti social incorporati nelle pagine.",
+                "en": "Maps, videos and social content embedded in the pages."
+            },
+            "category_statistics": {
+                "it": "Statistiche",
+                "en": "Statistics"
+            },
+            "category_statistics_text": {
+                "it": "Ci aiutano a capire come viene usato il sito.",
+                "en": "They help us understand how the site is used."
+            },
+            "category_marketing": {
+                "it": "Marketing",
+                "en": "Marketing"
+            },
+            "category_marketing_text": {
+                "it": "Servono a mostrarti annunci pertinenti su altri siti.",
+                "en": "They are used to show you relevant ads on other sites."
+            }
+        }
+    },
+    {
+        "type": "kris_site",
+        "id": 0,
+        "values": {
+            "favicon": "assets/uploads/kris-favicon.png",
+            "site_name": {
+                "it": "Kris",
+                "en": "Kris"
+            },
+            "title_template": "{title} · {site}",
+            "description": {
+                "it": "Kris 2 è il CMS per i siti che fai ai tuoi clienti: tema in HTML, contenuti dall'editor, pubblicazione su qualunque hosting PHP.",
+                "en": "Kris 2 is the CMS for the sites you build for clients: an HTML theme, content from the editor, publishing on any PHP hosting."
+            },
+            "share_image": {
+                "it": "assets/uploads/kris-editor-home.png",
+                "en": "assets/uploads/kris-editor-home.png"
+            },
+            "google_verification": "",
+            "bing_verification": ""
+        }
+    },
+    {
+        "type": "kris_notfound",
+        "id": 0,
+        "values": {
+            "title": {
+                "it": "Pagina non trovata",
+                "en": "Page not found"
+            },
+            "text": {
+                "it": "La pagina che cerchi non esiste o è stata spostata.",
+                "en": "The page you're looking for doesn't exist or has been moved."
+            },
+            "button_label": {
+                "it": "Torna alla home",
+                "en": "Back to home"
+            },
+            "button_url": "index.php",
+            "image": {
+                "it": "",
+                "en": ""
+            }
+        }
+    },
+    {
+        "type": "kris_wip",
+        "id": 0,
+        "values": {
+            "enabled": false,
+            "title": {
+                "it": "Sito in lavorazione",
+                "en": "Under construction"
+            },
+            "text": {
+                "it": "Stiamo preparando qualcosa di nuovo: torna a trovarci presto.",
+                "en": "We're working on something new: please come back soon."
+            }
+        }
+    }
+]

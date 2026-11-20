@@ -24,17 +24,17 @@ test('getData su campo inesistente restituisce null', function () {
     assertSame(null, makeEntity([])->getData('boh'));
 });
 
-test('getArray restituisce i figli di un campo array', function () {
+test('children restituisce gli elementi di un elenco', function () {
     $e = makeEntity([[
         'name' => 'figli',
         'type' => 'array',
         'value' => [['id' => 0, 'data' => []], ['id' => 1, 'data' => []]],
     ]]);
-    assertSame(2, count($e->getArray('figli')));
+    assertSame(2, count($e->children('figli')));
 });
 
-test('getArray su campo non-array restituisce null', function () {
-    assertSame(null, makeEntity([fieldPlain('x', 'y')])->getArray('x'));
+test('children su un campo che non è un elenco restituisce null', function () {
+    assertSame(null, makeEntity([fieldPlain('x', 'y')])->children('x'));
 });
 
 test("l'id dell'entita e leggibile come campo", function () {
@@ -126,3 +126,33 @@ function expectStorage(callable $fn, string $contains): void
     }
     fail('era attesa una StorageException');
 }
+
+test('immagini ottimizzate: varianti WebP piu strette dell originale, srcset sul tag, eliminazione insieme', function () {
+    if (!\Kris\Entity\MediaStore::canWriteWebp()) {
+        echo "   (GD senza WebP: niente varianti da provare)\n";
+        return;
+    }
+    $dir = sys_get_temp_dir() . '/kris-varianti-' . bin2hex(random_bytes(4)) . '/assets/uploads/';
+    mkdir($dir, 0777, true);
+    register_shutdown_function(fn() => rrmdir(dirname($dir, 2)));
+    $img = imagecreatetruecolor(1200, 800);
+    imagejpeg($img, $dir . 'foto.jpg');
+
+    assertSame(2, \Kris\Entity\MediaStore::makeVariants($dir, 'foto.jpg'), '480 e 960: 1600 è più larga dell originale');
+    assertSame(0, \Kris\Entity\MediaStore::makeVariants($dir, 'foto.jpg'), 'già fatte');
+    assertSame([480 => 'foto-480w.webp', 960 => 'foto-960w.webp'], \Kris\Entity\MediaStore::variants($dir, 'foto.jpg'));
+    assertSame(true, \Kris\Entity\MediaStore::isVariant('foto-480w.webp'));
+    assertSame(0, \Kris\Entity\MediaStore::makeVariants($dir, 'foto-480w.webp'), 'una variante non ha varianti');
+
+    $root = dirname($dir, 2);
+    $html = \Kris\Entity\MediaStore::srcset('<p><img src="assets/uploads/foto.jpg" alt="x"><img src="assets/uploads/foto.jpg" srcset="a.jpg 1x"><img src="assets/uploads/altra.jpg"></p>', $root);
+    assertContains('<img src="assets/uploads/foto.jpg" alt="x" srcset="assets/uploads/foto-480w.webp 480w, assets/uploads/foto-960w.webp 960w, assets/uploads/foto.jpg 1200w" sizes="100vw" width="1200" height="800">', $html);
+    assertContains('srcset="a.jpg 1x"', $html, 'un srcset del tema resta');
+    assertContains('<img src="assets/uploads/altra.jpg">', $html, 'senza varianti il tag resta com è');
+
+    $pretty = \Kris\Site\Router::rewriteLinks($html, [], '/sito', 'it');
+    assertContains('srcset="/sito/assets/uploads/foto-480w.webp 480w, /sito/assets/uploads/foto-960w.webp 960w, /sito/assets/uploads/foto.jpg 1200w"', $pretty);
+
+    assertTrue(\Kris\Entity\MediaStore::deleteWithVariants($dir, 'foto.jpg'));
+    assertSame([], glob($dir . '*') ?: []);
+});

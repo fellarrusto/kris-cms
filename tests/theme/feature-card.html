@@ -1,0 +1,20 @@
+<div class="feature-item" data-tags="{{tags}}">
+    <a class="card-link" href="?page=detail&amp;key=features&amp;id={{id}}&amp;ln={{language}}">
+        <div class="card">
+            <div class="card-icon">{{icon}}</div>
+            <h3 class="card-title">{{title}}</h3>
+
+            {{#if category == "feature_a"}}
+                <p class="card-description" style="font-style: italic;">{{description}}</p>
+            {{#elif category == "feature_b"}}
+                <p class="card-description" style="text-decoration: overline;">{{description}}</p>
+            {{#elif category == "feature_c"}}
+                <p class="card-description" style="text-decoration: underline;">{{description}}</p>
+            {{#else}}
+                <p class="card-description">{{description}}</p>
+            {{/if}}
+
+            {{#if tags has "tech"}}<span class="badge bg-primary">Tech</span>{{/if}}
+        </div>
+    </a>
+</div>

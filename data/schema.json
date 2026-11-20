@@ -1,0 +1,770 @@
+{
+    "format": 2,
+    "types": {
+        "homepage": {
+            "label": "Homepage",
+            "description": "La pagina principale della demo",
+            "single": true,
+            "fields": [
+                {
+                    "name": "seo_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo per i motori di ricerca (vuoto: quello del sito)",
+                    "section": "SEO"
+                },
+                {
+                    "name": "seo_description",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Descrizione per i motori di ricerca e la condivisione",
+                    "section": "SEO"
+                },
+                {
+                    "name": "hero_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo grande in apertura",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "hero_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo sotto il titolo",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "cta_primary",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Pulsante principale",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "cta_secondary",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Pulsante secondario",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "requirements",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Riga dei requisiti sotto i pulsanti",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "hero_image",
+                    "type": "media",
+                    "localized": false,
+                    "description": "Schermata dell'editor accanto al titolo",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "hero_image_alt",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Descrizione della schermata (testo alternativo)",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "steps_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo di «Come funziona»",
+                    "section": "Come funziona"
+                },
+                {
+                    "name": "steps_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo di «Come funziona»",
+                    "section": "Come funziona"
+                },
+                {
+                    "name": "steps",
+                    "type": "list",
+                    "description": "I passi, nell'ordine",
+                    "section": "Come funziona",
+                    "of": [
+                        {
+                            "name": "title",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Titolo del passo"
+                        },
+                        {
+                            "name": "text",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Spiegazione"
+                        },
+                        {
+                            "name": "file",
+                            "type": "text",
+                            "localized": false,
+                            "description": "Nome del file mostrato"
+                        },
+                        {
+                            "name": "code",
+                            "type": "text",
+                            "localized": false,
+                            "description": "Codice d'esempio"
+                        },
+                        {
+                            "name": "image",
+                            "type": "media",
+                            "localized": false,
+                            "description": "Schermata al posto del codice (facoltativa)"
+                        },
+                        {
+                            "name": "image_alt",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Descrizione della schermata"
+                        }
+                    ]
+                },
+                {
+                    "name": "features_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della sezione funzioni",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "features_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo della sezione funzioni",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "filter_label",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Nome del filtro (per i lettori di schermo)",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "filter_all",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Filtro: tutte",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "cat_contenuti",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria: contenuti",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "cat_indirizzi",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria: indirizzi",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "cat_pubblicazione",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria: pubblicazione",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "cat_privacy",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria: privacy",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "cat_estensioni",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria: estensioni",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "new_label",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Etichetta delle novità della 2.0",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "more_label",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo dell'elenco delle altre funzioni, nella pagina di una funzione",
+                    "section": "Funzioni"
+                },
+                {
+                    "name": "posts_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della sezione novità",
+                    "section": "Novità"
+                },
+                {
+                    "name": "faq_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo delle domande frequenti",
+                    "section": "Domande"
+                },
+                {
+                    "name": "faq",
+                    "type": "list",
+                    "description": "Domande frequenti",
+                    "section": "Domande",
+                    "of": [
+                        {
+                            "name": "question",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Domanda"
+                        },
+                        {
+                            "name": "answer",
+                            "type": "richtext",
+                            "localized": true,
+                            "description": "Risposta"
+                        }
+                    ]
+                },
+                {
+                    "name": "close_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della chiusura",
+                    "section": "Chiusura"
+                },
+                {
+                    "name": "close_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo della chiusura",
+                    "section": "Chiusura"
+                }
+            ]
+        },
+        "site": {
+            "label": "Elementi comuni",
+            "description": "Menu, piè di pagina e collegamenti usati in tutte le pagine",
+            "single": true,
+            "fields": [
+                {
+                    "name": "nav_features",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu: funzioni",
+                    "section": "Menu"
+                },
+                {
+                    "name": "nav_posts",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu: novità",
+                    "section": "Menu"
+                },
+                {
+                    "name": "nav_docs",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu: documentazione",
+                    "section": "Menu"
+                },
+                {
+                    "name": "download_label",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Pulsante di scaricamento nel menu",
+                    "section": "Menu"
+                },
+                {
+                    "name": "version",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Versione di Kris mostrata nel sito",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "repo_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo della repository GitHub",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "download_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo per scaricare Kris",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "docs_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo della documentazione",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "footer_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo del piè di pagina",
+                    "section": "Piè di pagina"
+                },
+                {
+                    "name": "footer_legal",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della colonna legale",
+                    "section": "Piè di pagina"
+                },
+                {
+                    "name": "cookie_prefs",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Collegamento per riaprire le preferenze dei cookie",
+                    "section": "Piè di pagina"
+                },
+                {
+                    "name": "back_home",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Collegamento per tornare alla home",
+                    "section": "Piè di pagina"
+                }
+            ]
+        },
+        "features": {
+            "label": "Funzioni",
+            "description": "Le funzioni di Kris, ognuna con la sua pagina",
+            "fields": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Nome della funzione",
+                    "section": "Contenuto"
+                },
+                {
+                    "name": "category",
+                    "type": "select",
+                    "localized": false,
+                    "description": "Categoria (filtra l'elenco)",
+                    "section": "Contenuto",
+                    "options": [
+                        "contenuti",
+                        "indirizzi",
+                        "pubblicazione",
+                        "privacy",
+                        "estensioni"
+                    ]
+                },
+                {
+                    "name": "new_in_2",
+                    "type": "boolean",
+                    "localized": false,
+                    "description": "Nuova nella 2.0 (mostra l'etichetta)",
+                    "section": "Contenuto"
+                },
+                {
+                    "name": "summary",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Riassunto di una riga",
+                    "section": "Contenuto"
+                },
+                {
+                    "name": "body",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Descrizione completa",
+                    "section": "Contenuto"
+                },
+                {
+                    "name": "code",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Codice d'esempio (facoltativo)",
+                    "section": "Esempio"
+                },
+                {
+                    "name": "code_file",
+                    "type": "text",
+                    "localized": false,
+                    "description": "File dell'esempio",
+                    "section": "Esempio"
+                },
+                {
+                    "name": "image",
+                    "type": "media",
+                    "localized": false,
+                    "description": "Schermata (facoltativa)",
+                    "section": "Esempio"
+                },
+                {
+                    "name": "image_alt",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Descrizione della schermata",
+                    "section": "Esempio"
+                },
+                {
+                    "name": "highlights",
+                    "type": "list",
+                    "description": "Punti in evidenza",
+                    "section": "Dettagli",
+                    "of": [
+                        {
+                            "name": "label",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Titolo del punto"
+                        },
+                        {
+                            "name": "text",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Spiegazione"
+                        }
+                    ]
+                }
+            ]
+        },
+        "posts": {
+            "label": "Novità",
+            "description": "Articoli sulle novità di Kris",
+            "newest_first": true,
+            "fields": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo",
+                    "section": "Articolo"
+                },
+                {
+                    "name": "date",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Data (AAAA-MM-GG)",
+                    "section": "Articolo"
+                },
+                {
+                    "name": "excerpt",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Riassunto per l'elenco",
+                    "section": "Articolo"
+                },
+                {
+                    "name": "cover",
+                    "type": "media",
+                    "localized": false,
+                    "description": "Immagine di copertina (facoltativa)",
+                    "section": "Articolo"
+                },
+                {
+                    "name": "cover_alt",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Descrizione della copertina",
+                    "section": "Articolo"
+                },
+                {
+                    "name": "body",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Testo dell'articolo",
+                    "section": "Articolo"
+                }
+            ]
+        },
+        "kris_legal": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "owner_name",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Titolare del trattamento (ragione sociale o nome)"
+                },
+                {
+                    "name": "owner_address",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo del titolare"
+                },
+                {
+                    "name": "owner_vat",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Partita IVA o codice fiscale"
+                },
+                {
+                    "name": "privacy_email",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Email per le richieste sulla privacy"
+                },
+                {
+                    "name": "updated_at",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Data di ultimo aggiornamento delle informative"
+                },
+                {
+                    "name": "privacy_policy",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Informativa privacy"
+                },
+                {
+                    "name": "cookie_policy",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Cookie policy"
+                },
+                {
+                    "name": "banner_title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: titolo"
+                },
+                {
+                    "name": "banner_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: testo"
+                },
+                {
+                    "name": "banner_accept",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per accettare"
+                },
+                {
+                    "name": "banner_reject",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per rifiutare"
+                },
+                {
+                    "name": "banner_more",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: link all'informativa"
+                },
+                {
+                    "name": "banner_customize",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per scegliere le categorie"
+                },
+                {
+                    "name": "banner_save",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Banner cookie: pulsante per salvare le scelte"
+                },
+                {
+                    "name": "category_thirdparty",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria contenuti di terze parti: nome"
+                },
+                {
+                    "name": "category_thirdparty_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria contenuti di terze parti: descrizione (mappe, video, social incorporati)"
+                },
+                {
+                    "name": "category_statistics",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria statistiche: nome"
+                },
+                {
+                    "name": "category_statistics_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria statistiche: descrizione (per esempio Google Analytics)"
+                },
+                {
+                    "name": "category_marketing",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria marketing: nome"
+                },
+                {
+                    "name": "category_marketing_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Categoria marketing: descrizione (per esempio Pixel di Meta)"
+                }
+            ]
+        },
+        "kris_site": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "favicon",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Favicon: l'icona del sito nella scheda del browser (PNG quadrato, almeno 48×48 px)"
+                },
+                {
+                    "name": "site_name",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Nome del sito",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "title_template",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Modello del titolo delle pagine: {title} è il titolo della pagina, {site} il nome del sito",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "description",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Descrizione predefinita, per le pagine senza la loro",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "share_image",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Immagine di condivisione predefinita (1200×630 px)",
+                    "section": "Motori di ricerca e condivisione"
+                },
+                {
+                    "name": "google_verification",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Codice di verifica di Google Search Console (solo il valore di content)",
+                    "section": "Verifiche"
+                },
+                {
+                    "name": "bing_verification",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Codice di verifica di Bing Webmaster Tools (solo il valore di content)",
+                    "section": "Verifiche"
+                }
+            ]
+        },
+        "kris_notfound": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della pagina 404"
+                },
+                {
+                    "name": "text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo sotto il titolo"
+                },
+                {
+                    "name": "button_label",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Pulsante: testo"
+                },
+                {
+                    "name": "button_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Pulsante: link (di solito la homepage)"
+                },
+                {
+                    "name": "image",
+                    "type": "media",
+                    "localized": true,
+                    "description": "Immagine (facoltativa)"
+                }
+            ]
+        },
+        "kris_wip": {
+            "reserved": true,
+            "fields": [
+                {
+                    "name": "enabled",
+                    "type": "boolean",
+                    "localized": false,
+                    "description": "Sito in lavorazione: i visitatori vedono questa pagina"
+                },
+                {
+                    "name": "title",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo"
+                },
+                {
+                    "name": "text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo"
+                }
+            ]
+        }
+    },
+    "pages": {
+        "homepage": {
+            "template": "homepage",
+            "type": "homepage",
+            "item": 0,
+            "sitemap": true,
+            "priority": 1
+        },
+        "funzione": {
+            "template": "funzione",
+            "type": "features",
+            "sitemap": true,
+            "priority": 0.8,
+            "slug": "title"
+        },
+        "post": {
+            "template": "post",
+            "type": "posts",
+            "sitemap": true,
+            "priority": 0.6,
+            "slug": "title"
+        },
+        "privacy": {
+            "template": "privacy",
+            "type": "kris_legal",
+            "item": 0,
+            "sitemap": true,
+            "priority": 0.2
+        },
+        "cookie": {
+            "template": "cookie",
+            "type": "kris_legal",
+            "item": 0,
+            "sitemap": true,
+            "priority": 0.2
+        }
+    },
+    "redirects": {
+        "/detail": "/#funzioni"
+    }
+}

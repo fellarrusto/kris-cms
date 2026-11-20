@@ -13,15 +13,55 @@ declare(strict_types=1);
 define('KRIS_ROOT', dirname(__DIR__));
 define('KRIS_TESTS', __DIR__);
 
+/** Cartella da copiare in un sito di prova: i template vengono da tests/theme (il tema della 1.x, legato alle fixture), non dal sito demo. */
+function siteSource(string $folder): string
+{
+    return $folder === 'template' ? KRIS_TESTS . '/theme' : KRIS_ROOT . '/' . $folder;
+}
+
 require_once KRIS_ROOT . '/kris/bootstrap.php';
 
 use Kris\Entity\Entity;
 use Kris\Template\TemplateEngine;
 
 /** Entita costruita al volo, senza toccare il filesystem. */
+/**
+ * Un contenuto del formato 2 costruito a mano da campi scritti come nel
+ * formato 1 ({name, type, value}): plain è un testo condiviso, un valore per
+ * lingua un campo localizzato, array un elenco.
+ */
 function makeEntity(array $fields, int $id = 0, string $name = 'test'): Entity
 {
-    return Entity::fromArray(['id' => $id, 'data' => $fields], $name);
+    [$values, $defs] = entityParts($fields);
+    return new Entity($name, $id, $values, $defs);
+}
+
+/** @return array{0: array, 1: array} valori e definizioni per nome */
+function entityParts(array $fields): array
+{
+    $values = [];
+    $defs = [];
+    foreach ($fields as $f) {
+        $name = $f['name'];
+        if ($f['type'] === 'array') {
+            $of = [];
+            $items = [];
+            foreach ($f['value'] as $child) {
+                [$v, $d] = entityParts($child['data'] ?? []);
+                $of += $d;
+                $items[] = ['id' => $child['id']] + (!empty($child['hidden']) ? ['hidden' => true] : []) + ['values' => $v];
+            }
+            $defs[$name] = ['name' => $name, 'type' => 'list', 'of' => array_values($of)];
+            $values[$name] = $items;
+            continue;
+        }
+        $localized = is_array($f['value']);
+        $type = ['plain' => 'text', 'image' => 'media'][$f['type']] ?? $f['type'];
+        $defs[$name] = ['name' => $name, 'type' => $type, 'localized' => $localized];
+        $one = fn($v) => $type === 'boolean' ? $v === '1' : $v;
+        $values[$name] = $localized ? array_map($one, $f['value']) : $one($f['value']);
+    }
+    return [$values, $defs];
 }
 
 function fieldPlain(string $name, string $value): array
@@ -41,6 +81,37 @@ function renderTemplate(string $html, Entity $entity, string $lang = 'it'): stri
 }
 
 /**
+ * I documenti del formato 1 delle fixture (contenuti, schema, due lingue,
+ * pagine della repo) convertiti nel formato 2 dalla migrazione 0009.
+ * $prepare cambia i documenti del formato 1 prima della conversione.
+ *
+ * @return array{schema: array, content: array, settings: array}
+ */
+function format2Fixture(?callable $prepare = null, array $templates = []): array
+{
+    $files = [
+        'k_data' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/k_data.json'), true),
+        'k_model' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/k_model.json'), true),
+        'cms_settings' => ['languages' => ['it', 'en']],
+        'allowed_pages' => json_decode((string) file_get_contents(KRIS_TESTS . '/fixtures/allowed_pages.json'), true),
+        'seo' => null,
+    ];
+    if ($prepare !== null) $files = $prepare($files);
+    $files['templates'] = $templates;
+    return ((require KRIS_ROOT . '/kris/migrations/0009_formato_2.php')['up'])($files);
+}
+
+/** Scrive nel sito i documenti del formato 2 (data/schema.json, content.json, settings.json). */
+function writeFormat2(string $root, array $docs): void
+{
+    if (!is_dir("{$root}/data")) mkdir("{$root}/data", 0777, true);
+    foreach (['schema', 'content', 'settings'] as $doc) {
+        file_put_contents("{$root}/data/{$doc}.json", json_encode($docs[$doc], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+    \Kris\Store\Site::forget();
+}
+
+/**
  * Copia isolata del progetto con le fixture al posto di data/.
  * Creata una volta per esecuzione e riusata da tutti i test di pagina.
  */
@@ -57,9 +128,11 @@ function projectSandbox(): string
         copy(KRIS_ROOT . '/' . $stub, $dir . '/' . $stub);
     }
     foreach (['kris', 'template', 'config'] as $folder) {
-        rcopy(KRIS_ROOT . '/' . $folder, $dir . '/' . $folder);
+        rcopy(siteSource($folder), $dir . '/' . $folder);
     }
     rcopy(KRIS_TESTS . '/fixtures', $dir . '/data');
+    // Le fixture sono un sito della 1.x: pagine e SEO stanno in config/
+    foreach (['allowed_pages', 'seo'] as $name) rename("{$dir}/data/{$name}.json", "{$dir}/config/{$name}.json");
 
     register_shutdown_function(fn() => rrmdir($dir));
     return $dir;
@@ -77,7 +150,32 @@ function runScript(string $sandbox, string $script, array $query = []): string
     return renderPage($query, $sandbox, $script)['output'];
 }
 
+/**
+ * Come renderPage, ma segue i redirect verso il sito (al massimo 5) come un
+ * browser: dalla 2.0 index.php?page=… porta con un 301 all'indirizzo leggibile.
+ * 'redirects' elenca i passaggi fatti, [stato, indirizzo].
+ */
 function renderPage(array $query, ?string $sandbox = null, string $script = 'index.php', bool $asAdmin = false, array $cookies = []): array
+{
+    $redirects = [];
+    $original = $GLOBALS['KRIS_TEST_REQUEST_URI'] ?? null;
+    $uri = $original;
+    for ($hop = 0; ; $hop++) {
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = $uri;
+        $page = renderOnce($query, $sandbox, $script, $asAdmin, $cookies);
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = $original;
+        $location = $page['location'];
+        if ($hop >= 5 || !in_array($page['status'], [301, 302], true) || $location === null || !str_starts_with($location, '/')) break;
+        $redirects[] = [$page['status'], $location];
+        $uri = $location;
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+        $script = 'index.php';
+    }
+    return $page + ['redirects' => $redirects];
+}
+
+/** Una sola richiesta, senza seguire i redirect. */
+function renderOnce(array $query, ?string $sandbox = null, string $script = 'index.php', bool $asAdmin = false, array $cookies = []): array
 {
     $sandbox ??= projectSandbox();
     $harness = KRIS_TESTS . '/harness/render.php';
@@ -89,6 +187,9 @@ function renderPage(array $query, ?string $sandbox = null, string $script = 'ind
     $env = getenv();
     $env['KRIS_QUERY'] = http_build_query($query);
     $env['KRIS_SCRIPT'] = $script;
+    $env['KRIS_REQUEST_URI'] = $GLOBALS['KRIS_TEST_REQUEST_URI'] ?? '';
+    $env['KRIS_ACCEPT_LANGUAGE'] = $GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'] ?? '';
+    $env['KRIS_USER_AGENT'] = $GLOBALS['KRIS_TEST_USER_AGENT'] ?? '';
     $env['KRIS_TEST_ADMIN'] = $asAdmin ? '1' : '0';
     $env['KRIS_COOKIES'] = http_build_query($cookies);
 
@@ -114,7 +215,13 @@ function renderPage(array $query, ?string $sandbox = null, string $script = 'ind
         $stdout = substr($stdout, strlen($m[0]));
     }
 
-    return ['output' => $stdout, 'status' => $status, 'fatal' => $fatal];
+    $location = null;
+    if (preg_match('/^KRIS-LOCATION: (.*)\n/', $stdout, $m)) {
+        $location = $m[1];
+        $stdout = substr($stdout, strlen($m[0]));
+    }
+
+    return ['output' => $stdout, 'status' => $status, 'fatal' => $fatal, 'location' => $location];
 }
 
 /**

@@ -1,0 +1,8 @@
+<li class="feature-row" data-category="{{category}}">
+  <a href="index.php?page=funzione&amp;key=features&amp;id={{id}}&amp;ln={{language}}">
+    <span class="feature-cat">{{#if category == "contenuti"}}{{homepage.cat_contenuti}}{{#elif category == "indirizzi"}}{{homepage.cat_indirizzi}}{{#elif category == "pubblicazione"}}{{homepage.cat_pubblicazione}}{{#elif category == "privacy"}}{{homepage.cat_privacy}}{{#else}}{{homepage.cat_estensioni}}{{/if}}</span>
+    <span class="feature-name">{{title}}{{#if new_in_2}} <span class="tag">{{homepage.new_label}}</span>{{/if}}</span>
+    <span class="feature-summary">{{summary}}</span>
+    <svg class="feature-arrow" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+  </a>
+</li>

@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Va eseguito con la working directory impostata sulla copia del progetto:
  * index.php la include come root del sito, e da li kris/bootstrap.php ricava KRIS_ROOT.
  *
- * Stampa:  KRIS-STATUS: <codice>\n<html>
+ * Stampa:  KRIS-STATUS: <codice>\n[KRIS-LOCATION: <indirizzo>\n]<html>
  */
 
 // La query arriva dall'environment, non da argv: su Windows escapeshellarg()
@@ -24,7 +24,8 @@ register_shutdown_function(function (): void {
     if ($output === false) $output = '';
     $code = http_response_code();
     if (!is_int($code)) $code = 200;
-    echo "KRIS-STATUS: {$code}\n" . $output;
+    $location = is_string($GLOBALS['kris_location'] ?? null) ? "KRIS-LOCATION: {$GLOBALS['kris_location']}\n" : '';
+    echo "KRIS-STATUS: {$code}\n" . $location . $output;
 });
 
 // Sessione dell'editor simulata (per l'anteprima dello staging): la pagina la trova gia aperta.
@@ -40,5 +41,9 @@ $script = getenv('KRIS_SCRIPT') ?: 'index.php';
 $script = in_array($script, ['index.php', 'sitemap.php'], true) ? $script : 'index.php';
 // Come una richiesta web alla root di http://localhost.
 $_SERVER['SCRIPT_NAME'] = '/' . $script;
+// Il percorso richiesto, per gli indirizzi leggibili: senza, la richiesta va a index.php con la query
+$_SERVER['REQUEST_URI'] = getenv('KRIS_REQUEST_URI') ?: '/' . $script . ($query ? '?' . http_build_query($query) : '');
 $_SERVER['HTTP_HOST'] = 'localhost';
+$_SERVER['HTTP_ACCEPT_LANGUAGE'] = getenv('KRIS_ACCEPT_LANGUAGE') ?: '';
+$_SERVER['HTTP_USER_AGENT'] = getenv('KRIS_USER_AGENT') ?: 'Mozilla/5.0';
 include $script;

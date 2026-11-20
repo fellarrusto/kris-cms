@@ -6,12 +6,13 @@ namespace Kris\Staging;
 /**
  * Quali contenuti rende ogni template, ricavato dai template stessi.
  *
- * Un contesto e il nome di una raccolta ("torte") oppure una raccolta
- * seguita dagli elenchi attraversati ("homepage/features/highlights"): e lo
- * schema da cui il template legge i suoi {{campi}}. Le fonti sono:
- *  - le regole della sitemap e i link "page=…&key=…" (path=elenco/ID) per i
- *    template delle pagine; la pagina homepage senza altre indicazioni rende
- *    la raccolta homepage, come l'indirizzo predefinito;
+ * Un contesto e il nome di un tipo ("torte") oppure un tipo seguito dagli
+ * elenchi attraversati ("features/highlights"): e lo schema da cui il
+ * template legge i suoi {{campi}}. Le fonti sono:
+ *  - le pagine dello schema (il tipo che rendono, con l'elenco se c'è) e i
+ *    link "page=…&key=…" (path=elenco/ID) per i template delle pagine; un
+ *    link a un elenco promosso a tipo vale il tipo nuovo; la pagina homepage
+ *    senza altre indicazioni rende il tipo homepage;
  *  - k-component="raccolta" k-template="frammento";
  *  - k-array="elenco" k-template="frammento", dal contesto del template che
  *    lo contiene: un elenco del contesto, altrimenti la raccolta omonima.
@@ -24,11 +25,10 @@ final class TemplateUsage
 {
     /**
      * @param array<string, string> $templates nome del template (senza .html) => HTML
-     * @param list<array> $models schemi (k_model) in cui cercare gli elenchi: sito e anteprima
-     * @param list<array> $sitemap regole della sitemap (config/seo.json)
+     * @param list<array> $schemas schemi del formato 2 (tipi, pagine, elenchi promossi): sito e anteprima
      * @return array<string, ?list<string>> nome del template => contesti, null se sconosciuti
      */
-    public static function contexts(array $templates, array $models, array $sitemap): array
+    public static function contexts(array $templates, array $schemas): array
     {
         $found = [];
         $add = function (string $template, string $context) use (&$found, $templates): bool {
@@ -37,13 +37,26 @@ final class TemplateUsage
             return true;
         };
 
-        foreach ($sitemap as $rule) {
-            if (!is_array($rule) || !is_string($rule['page'] ?? null)) continue;
-            $key = is_string($rule['key'] ?? null) ? $rule['key'] : 'homepage';
-            $add($rule['page'], is_string($rule['children'] ?? null) && $rule['children'] !== '' ? "{$key}/{$rule['children']}" : $key);
+        $promoted = [];
+        foreach ($schemas as $schema) {
+            foreach (is_array($schema['pages'] ?? null) ? $schema['pages'] : [] as $page => $p) {
+                if (!is_array($p) || !is_string($p['type'] ?? null)) continue;
+                $template = is_string($p['template'] ?? null) ? $p['template'] : (string) $page;
+                $add($template, is_string($p['list'] ?? null) && $p['list'] !== '' ? "{$p['type']}/{$p['list']}" : $p['type']);
+            }
+            foreach (is_array($schema['promoted'] ?? null) ? $schema['promoted'] : [] as $p) {
+                if (is_array($p)) $promoted["{$p['from']}/{$p['list']}"] = (string) $p['to'];
+            }
         }
         foreach ($templates as $html) {
-            foreach (self::pageLinks($html) as [$page, $context]) $add($page, $context);
+            foreach (self::pageLinks($html) as [$page, $context]) {
+                // Un vecchio link a un elenco promosso: il contesto è il tipo nuovo
+                $parts = explode('/', $context);
+                if (count($parts) >= 2 && isset($promoted["{$parts[0]}/{$parts[1]}"])) {
+                    $context = implode('/', array_merge([$promoted["{$parts[0]}/{$parts[1]}"]], array_slice($parts, 2)));
+                }
+                $add($page, $context);
+            }
         }
         if (isset($templates['homepage']) && !isset($found['homepage'])) $add('homepage', 'homepage');
 
@@ -57,7 +70,7 @@ final class TemplateUsage
                         continue;
                     }
                     foreach (array_keys($found[$name] ?? []) as $context) {
-                        $inner = self::hasList($models, "{$context}/{$target}") ? "{$context}/{$target}" : $target;
+                        $inner = self::hasList($schemas, "{$context}/{$target}") ? "{$context}/{$target}" : $target;
                         $changed = $add($fragment, (string) $inner) || $changed;
                     }
                 }
@@ -117,19 +130,19 @@ final class TemplateUsage
     }
 
     /** Vero se in uno degli schemi il contesto indicato e un elenco. */
-    private static function hasList(array $models, string $context): bool
+    private static function hasList(array $schemas, string $context): bool
     {
         $parts = explode('/', $context);
-        foreach ($models as $model) {
-            $schema = $model[$parts[0]] ?? null;
-            for ($i = 1; is_array($schema) && $i < count($parts); $i++) {
+        foreach ($schemas as $schema) {
+            $fields = $schema['types'][$parts[0]]['fields'] ?? null;
+            for ($i = 1; is_array($fields) && $i < count($parts); $i++) {
                 $def = null;
-                foreach ($schema as $field) {
+                foreach ($fields as $field) {
                     if (is_array($field) && ($field['name'] ?? null) === $parts[$i]) $def = $field;
                 }
-                $schema = is_array($def) && ($def['type'] ?? null) === 'array' ? ($def['of'] ?? []) : null;
+                $fields = is_array($def) && ($def['type'] ?? null) === 'list' ? ($def['of'] ?? []) : null;
             }
-            if (is_array($schema)) return true;
+            if (is_array($fields)) return true;
         }
         return false;
     }

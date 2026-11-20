@@ -23,15 +23,13 @@ final class Package
     public const MAX_ZIP_BYTES = 20 * 1024 * 1024;
     private const MAX_ENTRIES = 3000;
     private const MAX_UNPACKED_BYTES = 80 * 1024 * 1024;
-    private const MANIFEST = 'kris/MANIFEST.json';
-    private const SIGNATURE = 'kris/MANIFEST.sig';
 
     /**
      * Estrae lo zip in $destDir (che non deve esistere), rifiutando qualunque
      * voce fuori da kris/, percorsi con .. o assoluti, link simbolici e
      * pacchetti troppo grandi.
      */
-    public static function extract(string $zipFile, string $destDir): void
+    public static function extract(string $zipFile, string $destDir, string $root = 'kris'): void
     {
         if (!class_exists(ZipArchive::class)) {
             throw new UpdateException("Su questo hosting manca l'estensione PHP zip: senza, non si possono aprire i pacchetti. Chiedi all'hosting di attivarla.");
@@ -57,7 +55,7 @@ final class Package
             for ($i = 0; $i < $zip->numFiles; $i++) {
                 $stat = $zip->statIndex($i);
                 $name = (string) ($stat['name'] ?? '');
-                self::assertSafeEntry($name);
+                self::assertSafeEntry($name, $root);
 
                 if ($zip->getExternalAttributesIndex($i, $opsys, $attr)
                     && $opsys === ZipArchive::OPSYS_UNIX
@@ -103,42 +101,7 @@ final class Package
      */
     public static function verify(string $krisDir, array $publicKeys): array
     {
-        $base = dirname($krisDir);
-        $manifestRaw = @file_get_contents($base . '/' . self::MANIFEST);
-        $signature = @file_get_contents($base . '/' . self::SIGNATURE);
-        if ($manifestRaw === false || $signature === false) {
-            throw new UpdateException('Il pacchetto non è firmato: manca il manifest o la firma.');
-        }
-        if (!Signature::verify($manifestRaw, $signature, $publicKeys)) {
-            throw new UpdateException('La firma del pacchetto non è valida: il pacchetto non viene da Kris o è stato modificato.');
-        }
-
-        $manifest = json_decode($manifestRaw, true);
-        if (!is_array($manifest) || !is_array($manifest['files'] ?? null) || !is_string($manifest['version'] ?? null)) {
-            throw new UpdateException('Il manifest del pacchetto è illeggibile.');
-        }
-
-        $found = [];
-        foreach (self::listFiles($krisDir) as $relative) {
-            $name = 'kris/' . $relative;
-            if ($name === self::MANIFEST || $name === self::SIGNATURE) {
-                continue;
-            }
-            $found[$name] = true;
-            $expected = $manifest['files'][$name] ?? null;
-            if (!is_string($expected)) {
-                throw new UpdateException("Il pacchetto contiene un file non previsto: {$name}.");
-            }
-            if (!hash_equals($expected, hash_file('sha256', $krisDir . '/' . $relative))) {
-                throw new UpdateException("Un file del pacchetto è stato modificato: {$name}.");
-            }
-        }
-        foreach (array_keys($manifest['files']) as $name) {
-            if (!isset($found[$name])) {
-                throw new UpdateException("Nel pacchetto manca un file: {$name}.");
-            }
-        }
-
+        $manifest = self::verifyFiles($krisDir, $publicKeys);
         $release = json_decode((string) @file_get_contents($krisDir . '/RELEASE.json'), true);
         $version = trim((string) @file_get_contents($krisDir . '/VERSION'));
         if (!is_array($release) || !is_string($release['version'] ?? null)) {
@@ -148,6 +111,51 @@ final class Package
             throw new UpdateException('Il pacchetto dichiara versioni diverse in punti diversi: rifiutato.');
         }
         return $release;
+    }
+
+    /**
+     * Firma del manifest e hash di ogni file di una cartella estratta (kris/ o
+     * plugin/): nessun file in più, nessuno in meno, nessuno cambiato.
+     *
+     * @return array il manifest ({version, files})
+     */
+    public static function verifyFiles(string $dir, array $publicKeys): array
+    {
+        $root = basename($dir);
+        $manifestRaw = @file_get_contents($dir . '/MANIFEST.json');
+        $signature = @file_get_contents($dir . '/MANIFEST.sig');
+        if ($manifestRaw === false || $signature === false) {
+            throw new UpdateException('Il pacchetto non è firmato: manca il manifest o la firma.');
+        }
+        if (!Signature::verify($manifestRaw, $signature, $publicKeys)) {
+            throw new UpdateException('La firma del pacchetto non è valida: il pacchetto non viene da Kris o è stato modificato.');
+        }
+        $manifest = json_decode($manifestRaw, true);
+        if (!is_array($manifest) || !is_array($manifest['files'] ?? null) || !is_string($manifest['version'] ?? null)) {
+            throw new UpdateException('Il manifest del pacchetto è illeggibile.');
+        }
+
+        $found = [];
+        foreach (self::listFiles($dir) as $relative) {
+            if ($relative === 'MANIFEST.json' || $relative === 'MANIFEST.sig') {
+                continue;
+            }
+            $name = $root . '/' . $relative;
+            $found[$name] = true;
+            $expected = $manifest['files'][$name] ?? null;
+            if (!is_string($expected)) {
+                throw new UpdateException("Il pacchetto contiene un file non previsto: {$name}.");
+            }
+            if (!hash_equals($expected, hash_file('sha256', $dir . '/' . $relative))) {
+                throw new UpdateException("Un file del pacchetto è stato modificato: {$name}.");
+            }
+        }
+        foreach (array_keys($manifest['files']) as $name) {
+            if (!isset($found[$name])) {
+                throw new UpdateException("Nel pacchetto manca un file: {$name}.");
+            }
+        }
+        return $manifest;
     }
 
     /** Percorsi relativi di tutti i file sotto $dir, con separatore /. */
@@ -166,10 +174,10 @@ final class Package
         return $files;
     }
 
-    private static function assertSafeEntry(string $name): void
+    private static function assertSafeEntry(string $name, string $root): void
     {
         $bad = $name === ''
-            || !str_starts_with($name, 'kris/')
+            || !str_starts_with($name, $root . '/')
             || str_contains($name, '\\')
             || str_contains($name, ':')
             || str_contains($name, "\0");

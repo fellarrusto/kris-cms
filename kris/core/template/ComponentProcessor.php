@@ -26,7 +26,7 @@ class ComponentProcessor {
             $templateName = $component->getAttribute('k-template');
             $index = (int)($component->getAttribute('k-index') ?: 0);
 
-            $entity = new Entity('k_data', $entityName, $index);
+            $entity = Entity::load($entityName, $index);
             $template = file_get_contents(Paths::template($templateName));
 
             $engine = new TemplateEngine($this->lang);

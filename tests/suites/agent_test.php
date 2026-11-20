@@ -24,10 +24,10 @@ function agentSite(bool $enabled = true): array
     $root = sys_get_temp_dir() . '/kris-agent-' . bin2hex(random_bytes(4));
     mkdir("{$root}/data", 0777, true);
     mkdir("{$root}/config", 0777, true);
-    rcopy(KRIS_ROOT . '/template', "{$root}/template");
+    rcopy(siteSource('template'), "{$root}/template");
     copy(KRIS_TESTS . '/fixtures/k_data.json', "{$root}/data/k_data.json");
     copy(KRIS_TESTS . '/fixtures/k_model.json', "{$root}/data/k_model.json");
-    copy(KRIS_ROOT . '/config/allowed_pages.json', "{$root}/config/allowed_pages.json");
+    copy(KRIS_TESTS . '/fixtures/allowed_pages.json', "{$root}/config/allowed_pages.json");
     register_shutdown_function(fn() => rrmdir($root));
 
     $worker = sodium_crypto_sign_keypair();
@@ -182,8 +182,8 @@ test('la panoramica descrive lingue, pagine, schema, contenuti e file del tema',
     [$root, $worker] = agentSite();
     $overview = agentCall($root, $worker, ['action' => 'overview'])['body'];
     assertSame(['it', 'en'], $overview['languages']);
-    assertTrue(in_array('homepage', $overview['pages'], true));
-    assertTrue(isset($overview['model']['homepage']));
+    assertSame('homepage', $overview['pages']['homepage']['type']);
+    assertSame('list', array_column($overview['types']['homepage']['fields'], 'type', 'name')['steps']);
     assertSame(0, $overview['entities']['homepage'][0]['id']);
     assertTrue(in_array('homepage.html', $overview['templates'], true));
 });
@@ -322,7 +322,7 @@ test('site_config mostra pagine, seo, robots e sitemap con le modifiche in attes
     agentCall($root, $worker, ['action' => 'write_file', 'file' => 'template/lavagna.html', 'content' => '<p>{{page_title}}</p>']);
     agentCall($root, $worker, ['action' => 'operate', 'operation' => ['op' => 'register_page', 'page' => 'lavagna', 'sitemap' => false]]);
     $c = agentCall($root, $worker, ['action' => 'site_config'])['body'];
-    assertTrue(in_array('lavagna', $c['pages'], true));
+    assertSame(false, $c['pages']['lavagna']['sitemap']);
     assertContains('Disallow: /editor/', (string) $c['robots_txt']);
     assertContains('<urlset', $c['sitemap_xml']);
     assertNotContains('page=lavagna', $c['sitemap_xml']);
@@ -353,4 +353,62 @@ test('render_page restituisce l HTML finito di una pagina con le modifiche in at
     } finally {
         $s->discard();
     }
+});
+
+test('indirizzo di caricamento sul dominio del sito: monouso, nello staging, stato per il Worker', function () {
+    [$root, $worker] = agentSite();
+    $_SERVER['HTTP_HOST'] = 'www.sito.it';
+    $slot = agentCall($root, $worker, ['action' => 'upload_slot', 'name' => 'squadra.png', 'by' => 'mario'])['body'];
+    assertTrue(str_starts_with($slot['upload_url'], 'http://www.sito.it/kris-agent.php?upload=kss_'), $slot['upload_url']);
+    $token = substr($slot['upload_url'], strpos($slot['upload_url'], '=') + 1);
+    assertSame('waiting', agentCall($root, $worker, ['action' => 'upload_slot_status', 'slot_id' => $slot['slot_id']])['body']['status']);
+
+    $server = new Server(new AgentConfig($root), new Staging($root), $root);
+    $bad = tempnam(sys_get_temp_dir(), 'k');
+    file_put_contents($bad, 'non un\'immagine');
+    assertSame(422, $server->receiveUpload($token, $bad, null)['status'], 'un file rifiutato');
+    assertSame('waiting', agentCall($root, $worker, ['action' => 'upload_slot_status', 'slot_id' => $slot['slot_id']])['body']['status'], 'resta libero dopo un rifiuto');
+
+    $png = tempnam(sys_get_temp_dir(), 'k');
+    file_put_contents($png, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='));
+    $ok = $server->receiveUpload($token, $png, null);
+    assertSame(200, $ok['status']);
+    assertTrue(str_starts_with($ok['body']['url'], 'assets/uploads/') && str_ends_with($ok['body']['url'], '.png'));
+    $done = agentCall($root, $worker, ['action' => 'upload_slot_status', 'slot_id' => $slot['slot_id']])['body'];
+    assertSame(['done', $ok['body']['url']], [$done['status'], $done['url']]);
+    assertSame(404, $server->receiveUpload($token, $png, null)['status'], 'monouso');
+    assertSame(404, $server->receiveUpload('kss_' . str_repeat('0', 48), $png, null)['status']);
+    assertSame([$ok['body']['url']], agentCall($root, $worker, ['action' => 'status'])['body']['uploads']);
+
+    // Nessun contenuto lo usa ancora: è fra i file non usati, finché un campo non lo prende
+    assertSame([$ok['body']['url']], array_column(agentCall($root, $worker, ['action' => 'unused_uploads'])['body']['files'], 'url'));
+    agentCall($root, $worker, ['action' => 'operate', 'operation' => ['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'logo', 'value' => $ok['body']['url']]]);
+    assertSame([], agentCall($root, $worker, ['action' => 'unused_uploads'])['body']['files']);
+    @unlink($bad);
+    @unlink($png);
+    unset($_SERVER['HTTP_HOST']);
+});
+
+test('con Kris Agent spento l indirizzo di caricamento non accetta file', function () {
+    [$root, $worker] = agentSite();
+    $slot = agentCall($root, $worker, ['action' => 'upload_slot', 'name' => 'x.png'])['body'];
+    $config = new AgentConfig($root);
+    $config->save(['enabled' => false] + $config->load());
+    $token = substr($slot['upload_url'], strpos($slot['upload_url'], '=') + 1);
+    assertSame(403, (new Server($config, new Staging($root), $root))->receiveUpload($token, __FILE__, 'x.png')['status']);
+});
+
+test('i dati dei plugin non arrivano all agente: né in overview né con get_entity', function () {
+    [$root, $worker] = agentSite();
+    $docs = format2Fixture();
+    $docs['schema']['types']['plg_prenota_richieste'] = ['reserved' => true, 'fields' => [['name' => 'nome', 'type' => 'text', 'localized' => false]]];
+    $docs['content'][] = ['type' => 'plg_prenota_richieste', 'id' => 0, 'values' => ['nome' => 'Mario Rossi']];
+    writeFormat2($root, $docs);
+    \Kris\Store\Stores::reset();
+    $overview = agentCall($root, $worker, ['action' => 'overview'])['body'];
+    assertTrue(!isset($overview['types']['plg_prenota_richieste']) && !isset($overview['entities']['plg_prenota_richieste']));
+    assertNotContains('Mario Rossi', json_encode($overview));
+    $get = agentCall($root, $worker, ['action' => 'get_entity', 'key' => 'plg_prenota_richieste', 'id' => 0]);
+    assertSame(403, $get['status']);
+    \Kris\Store\Stores::reset();
 });

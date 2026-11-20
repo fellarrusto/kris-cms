@@ -2,30 +2,31 @@
 declare(strict_types=1);
 
 /**
- * Accesso al pannello: credenziali, sessione, token CSRF, recupero password.
+ * Accesso al pannello: utenti, sessione, token CSRF, recupero password.
  *
  * Questo file definisce solo funzioni: chi lo include decide quando far
- * partire la sessione. Le credenziali NON stanno nel codice ma in
- * config/auth.php, che e escluso da git; al primo avvio il pannello chiede
- * di crearle. La logica sta in Kris\Auth (core/auth/).
+ * partire la sessione. Gli utenti stanno in config/users.php (escluso da git,
+ * vedi Kris\Auth\Users); al primo avvio il pannello crea l'amministratore.
  */
 
-use Kris\Auth\Credentials;
 use Kris\Auth\PasswordReset;
+use Kris\Auth\Users;
 
-const KRIS_AUTH_FILE = KRIS_ROOT . '/config/auth.php';
+const KRIS_USERS_FILE = KRIS_ROOT . '/config/users.php';
+const KRIS_LEGACY_AUTH_FILE = KRIS_ROOT . '/config/auth.php';
 const KRIS_RESET_FILE = KRIS_ROOT . '/config/auth_reset.json';
 
 /**
  * Messaggio per chi non riesce a recuperare l'accesso con l'email. Le pagine
- * di accesso sono pubbliche: si rimanda all'hosting senza spiegare come si
- * reimposta l'accesso.
+ * di accesso sono pubbliche: si rimanda a chi gestisce il sito senza
+ * spiegare come si reimposta l'accesso.
  */
-const KRIS_HOSTING_HELP = "Per ripristinare l'accesso contatta l'amministratore dell'hosting.";
+const KRIS_HOSTING_HELP = "Per ripristinare l'accesso chiedi a un amministratore del sito o all'amministratore dell'hosting.";
 
-function kris_credentials(): Credentials
+function kris_users(): Users
 {
-    return new Credentials(KRIS_AUTH_FILE);
+    static $users = null;
+    return $users ??= new Users(KRIS_USERS_FILE, KRIS_LEGACY_AUTH_FILE);
 }
 
 const KRIS_SETUP_CODE_FILE = KRIS_ROOT . '/config/setup_code.php';
@@ -40,14 +41,32 @@ function kris_password_reset(): PasswordReset
     return new PasswordReset(KRIS_RESET_FILE);
 }
 
-function kris_auth_config(): ?array
-{
-    return kris_credentials()->load();
-}
-
+/**
+ * Vero se la sessione è di un utente che esiste, non è bloccato e non ha
+ * cambiato password nel frattempo: altrimenti la sessione si chiude.
+ */
 function kris_is_logged_in(): bool
 {
-    return ($_SESSION['kris_auth'] ?? false) === true;
+    if (($_SESSION['kris_auth'] ?? false) !== true) return false;
+    $name = (string) ($_SESSION['kris_user'] ?? '');
+    $valid = kris_users()->session($name);
+    if ($valid === null || $valid !== (int) ($_SESSION['kris_session'] ?? 0)) {
+        unset($_SESSION['kris_auth'], $_SESSION['kris_user'], $_SESSION['kris_session'], $_SESSION['kris_role']);
+        return false;
+    }
+    return true;
+}
+
+/** L'utente della sessione, o null. */
+function kris_current_user(): ?array
+{
+    return kris_is_logged_in() ? kris_users()->get((string) $_SESSION['kris_user']) : null;
+}
+
+/** L'unico potere in più dell'admin: gestire gli utenti. */
+function kris_is_admin(): bool
+{
+    return (kris_current_user()['role'] ?? '') === 'admin';
 }
 
 const KRIS_ATTEMPTS_FILE = KRIS_ROOT . '/config/auth_attempts.json';
@@ -63,21 +82,28 @@ function kris_login_wait(): int
     return kris_login_throttle()->waitSeconds((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
 }
 
-function kris_login(string $user, string $pass): bool
+/** Accede: 'ok', 'invalid' o 'blocked' (solo con la password giusta). */
+function kris_login(string $user, string $pass): string
 {
     $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-    if (!kris_credentials()->verify($user, $pass)) {
-        kris_login_throttle()->fail($ip);
-        return false;
+    $user = strtolower(trim($user));
+    $result = kris_users()->check($user, $pass);
+    if ($result !== 'ok') {
+        if ($result === 'invalid') kris_login_throttle()->fail($ip);
+        return $result;
     }
     kris_login_throttle()->succeed($ip);
+    kris_start_session($user);
+    return 'ok';
+}
 
-    // Nuovo id di sessione al login: impedisce il riuso di un id noto
-    // impostato prima dell'autenticazione (session fixation).
+/** Sessione nuova per l'utente (nuovo id: niente session fixation). */
+function kris_start_session(string $user): void
+{
     session_regenerate_id(true);
     $_SESSION['kris_auth'] = true;
-    $_SESSION['kris_user'] = kris_auth_config()['user'];
-    return true;
+    $_SESSION['kris_user'] = $user;
+    $_SESSION['kris_session'] = (int) kris_users()->session($user);
 }
 
 function kris_logout(): void
@@ -90,13 +116,11 @@ function kris_logout(): void
     session_destroy();
 }
 
-function kris_save_credentials(string $user, string $pass, string $email = ''): bool
+/** Primo avvio: crea l'amministratore. @throws \Kris\Auth\UserException */
+function kris_create_first_admin(string $user, string $pass, string $email): void
 {
-    $changes = ['user' => $user, 'password' => $pass];
-    if ($email !== '') {
-        $changes += ['email' => $email, 'editor_url' => kris_current_editor_url()];
-    }
-    return kris_credentials()->save($changes);
+    kris_users()->create($user, $pass, $email, 'admin');
+    kris_users()->setEditorUrl(kris_current_editor_url());
 }
 
 /** La richiesta arriva in https, anche attraverso il proxy dell'hosting. */
@@ -112,7 +136,7 @@ function kris_current_editor_url(): string
     $https = kris_is_https();
     $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
     if (!preg_match('/^[a-z0-9.-]+(:\d+)?$/', $host)) $host = 'localhost';
-    return ($https ? 'https' : 'http') . '://' . $host . (string) ($_SERVER['SCRIPT_NAME'] ?? '/editor/index.php');
+    return ($https ? 'https' : 'http') . '://' . $host . (string) ($_SERVER['SCRIPT_NAME'] ?? '/kris-admin/index.php');
 }
 
 /**
@@ -121,9 +145,8 @@ function kris_current_editor_url(): string
  */
 function kris_send_mail(string $to, string $subject, string $body): bool
 {
-    if (!Credentials::validEmail($to) || !function_exists('mail')) return false;
-    $config = kris_auth_config() ?? [];
-    $host = (string) (parse_url((string) ($config['editor_url'] ?? ''), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost'));
+    if (!Users::validAddress($to) || !function_exists('mail')) return false;
+    $host = (string) (parse_url(kris_users()->editorUrl(), PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? 'localhost'));
     $host = preg_replace('/^www\./', '', preg_replace('/[^a-z0-9.-]/', '', strtolower($host)));
     $headers = [
         'From: Kris <noreply@' . ($host !== '' ? $host : 'localhost') . '>',
@@ -135,18 +158,26 @@ function kris_send_mail(string $to, string $subject, string $body): bool
     return @mail($to, $subject, $body, implode("\r\n", $headers));
 }
 
-/** Email con il link di reset; false se non c'e un'email o l'invio fallisce. */
-function kris_send_reset_link(): bool
+/**
+ * Link di reset all'utente con questa email. 'sent', 'unknown' (nessun utente
+ * con quell'email, o bloccato), 'limit' (troppe richieste) o 'failed'. Chi
+ * chiede vede la stessa risposta per sent e unknown: non si scopre quali
+ * email esistono.
+ */
+function kris_send_reset_link(string $email): string
 {
-    $config = kris_auth_config();
-    if ($config === null || !Credentials::validEmail((string) $config['email']) || $config['editor_url'] === '') return false;
-    $token = kris_password_reset()->create();
-    $link = $config['editor_url'] . '?reset=' . $token;
+    $users = kris_users();
+    $name = $users->byEmail($email);
+    if ($name === null || $users->session($name) === null || $users->editorUrl() === '') return 'unknown';
+    if (!kris_password_reset()->canRequest($name)) return 'limit';
+    $token = kris_password_reset()->create($name);
+    // Indirizzo salvato prima della 2.0: l'editor ora è in /kris-admin/
+    $link = preg_replace('#/editor/index\.php$#', '/kris-admin/index.php', $users->editorUrl()) . '?reset=' . $token;
     $body = "Ciao,\n\nqualcuno ha chiesto di reimpostare la password dell'editor del sito.\n"
         . "Per sceglierne una nuova apri questo link entro 30 minuti:\n\n{$link}\n\n"
         . "Se non sei stato tu, ignora questa email: la password attuale resta valida.\n\n"
-        . "Nome utente: {$config['user']}\n";
-    return kris_send_mail((string) $config['email'], 'Reimposta la password dell\'editor', $body);
+        . "Nome utente: {$name}\n";
+    return kris_send_mail((string) $users->get($name)['email'], 'Reimposta la password dell\'editor', $body) ? 'sent' : 'failed';
 }
 
 /**
@@ -204,56 +235,38 @@ function kris_auth_page(string $title, string $body): void // termina sempre con
     <!DOCTYPE html>
     <html lang="it"><head><meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{$title} - Kris CMS</title>
+    <title>{$title} · Kris</title>
     <script>try{var t=localStorage.getItem('kris-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-               background:#f3f4f6; display:flex; align-items:center; justify-content:center;
-               height:100vh; margin:0; }
-        .login-card { background:#fff; padding:40px; border-radius:12px; width:100%; max-width:380px;
-                      box-shadow:0 4px 6px rgba(0,0,0,.1); text-align:center; }
-        h2 { margin:0 0 20px; color:#111827; font-size:1.5rem; }
-        label { display:block; text-align:left; font-size:.85rem; color:#4b5563; margin-bottom:4px; }
-        input { width:100%; padding:12px; margin-bottom:15px; border:1px solid #e5e7eb;
-                border-radius:6px; box-sizing:border-box; font-size:1rem; }
-        button { width:100%; padding:12px; background:#3b82f6; color:#fff; border:none;
-                 border-radius:6px; font-size:1rem; font-weight:600; cursor:pointer; }
-        button:hover { background:#2563eb; }
-        .error { background:#fee2e2; color:#b91c1c; padding:10px; border-radius:6px;
-                 margin-bottom:15px; font-size:.9rem; text-align:left; }
-        .hint { color:#6b7280; font-size:.85rem; line-height:1.5; text-align:left; margin:0 0 18px; }
-        .ok { background:#dcfce7; color:#166534; padding:10px; border-radius:6px;
-              margin-bottom:15px; font-size:.9rem; text-align:left; }
-        .help { color:#6b7280; font-size:.8rem; line-height:1.5; text-align:left; margin:18px 0 0;
-                padding-top:14px; border-top:1px solid #e5e7eb; }
-        .alt { display:block; margin-top:16px; font-size:.85rem; color:#2563eb; }
-        .brand { font-weight:800; color:#3b82f6; margin-bottom:10px; display:inline-block;
-                 letter-spacing:-1px; font-size:1.2rem; }
-        /* Tema scuro: come nell'editor, segue il sistema salvo una scelta esplicita */
-        @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) { color-scheme:dark; }
-            :root:not([data-theme="light"]) body { background:#111513; }
-            :root:not([data-theme="light"]) .login-card { background:#191f1c; box-shadow:none; border:1px solid #2d3732; }
-            :root:not([data-theme="light"]) h2 { color:#e3eae6; }
-            :root:not([data-theme="light"]) label, :root:not([data-theme="light"]) .hint, :root:not([data-theme="light"]) .help { color:#9aa9a1; }
-            :root:not([data-theme="light"]) .help { border-color:#2d3732; }
-            :root:not([data-theme="light"]) input { background:#1e2521; color:#e3eae6; border-color:#3e4b45; }
-            :root:not([data-theme="light"]) .error { background:#3a1e21; color:#ff8f95; }
-            :root:not([data-theme="light"]) .ok { background:#1d3027; color:#8fdcbb; }
-            :root:not([data-theme="light"]) .alt, :root:not([data-theme="light"]) .brand { color:#7fb2ff; }
-        }
-        :root[data-theme="dark"] { color-scheme:dark; }
-        :root[data-theme="dark"] body { background:#111513; }
-        :root[data-theme="dark"] .login-card { background:#191f1c; box-shadow:none; border:1px solid #2d3732; }
-        :root[data-theme="dark"] h2 { color:#e3eae6; }
-        :root[data-theme="dark"] label, :root[data-theme="dark"] .hint, :root[data-theme="dark"] .help { color:#9aa9a1; }
-        :root[data-theme="dark"] .help { border-color:#2d3732; }
-        :root[data-theme="dark"] input { background:#1e2521; color:#e3eae6; border-color:#3e4b45; }
-        :root[data-theme="dark"] .error { background:#3a1e21; color:#ff8f95; }
-        :root[data-theme="dark"] .ok { background:#1d3027; color:#8fdcbb; }
-        :root[data-theme="dark"] .alt, :root[data-theme="dark"] .brand { color:#7fb2ff; }
+        :root { color-scheme:light; --ground:#EDEDEA; --surface:#fff; --text:#17171A; --muted:#6B6A66; --border:#DCDBD6; --line:#EEEDE9;
+                --primary:#17171A; --on-primary:#fff; --danger-soft:#FDECEC; --danger-ink:#7F1D1D; --ok-soft:#E7F5EC; --ok-ink:#14532D; --focus:#2563EB; }
+        @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { color-scheme:dark; --ground:#0F0F0E; --surface:#1A1A19; --text:#EDEDEA; --muted:#A3A29C;
+                --border:#3A3936; --line:#2A2A28; --primary:#EDEDEA; --on-primary:#17171A; --danger-soft:#3A1616; --danger-ink:#FFB4B4; --ok-soft:#16301F; --ok-ink:#A7E8C1; --focus:#7AA7FF; } }
+        :root[data-theme="dark"] { color-scheme:dark; --ground:#0F0F0E; --surface:#1A1A19; --text:#EDEDEA; --muted:#A3A29C;
+                --border:#3A3936; --line:#2A2A28; --primary:#EDEDEA; --on-primary:#17171A; --danger-soft:#3A1616; --danger-ink:#FFB4B4; --ok-soft:#16301F; --ok-ink:#A7E8C1; --focus:#7AA7FF; }
+        * { box-sizing:border-box; }
+        body { font:15px/1.5 Geist, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--ground); color:var(--text);
+               display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:16px; -webkit-font-smoothing:antialiased; }
+        .login-card { background:var(--surface); padding:32px; border-radius:22px; width:100%; max-width:400px; }
+        .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:17px; margin-bottom:24px; }
+        .brand::before { content:"K"; width:28px; height:28px; border-radius:8px; background:var(--primary); color:var(--on-primary); display:grid; place-items:center; font-size:14px; }
+        h2 { margin:0 0 16px; font-size:24px; font-weight:500; letter-spacing:-.02em; }
+        label { display:block; font-size:14px; font-weight:500; margin-bottom:6px; }
+        input { width:100%; min-height:44px; padding:0 14px; margin-bottom:14px; border:1px solid var(--border); border-radius:12px;
+                font:inherit; background:var(--surface); color:var(--text); }
+        input:focus, button:focus-visible, a:focus-visible { outline:2px solid var(--focus); outline-offset:1px; border-color:transparent; }
+        button { width:100%; min-height:44px; padding:0 18px; background:var(--primary); color:var(--on-primary); border:none;
+                 border-radius:999px; font:inherit; font-weight:500; cursor:pointer; margin-top:4px; }
+        button:hover { opacity:.9; }
+        .error, .ok { padding:10px 14px; border-radius:12px; margin-bottom:14px; font-size:14px; }
+        .error { background:var(--danger-soft); color:var(--danger-ink); }
+        .ok { background:var(--ok-soft); color:var(--ok-ink); }
+        .hint { color:var(--muted); font-size:14px; line-height:1.5; margin:0 0 16px; }
+        .help { color:var(--muted); font-size:13px; line-height:1.5; margin:18px 0 0; padding-top:14px; border-top:1px solid var(--line); }
+        .alt { display:block; margin-top:16px; font-size:14px; color:var(--text); text-underline-offset:3px; }
+        code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13px; }
     </style></head><body><div class="login-card">
-        <div class="brand">KRIS CMS</div>
+        <div class="brand">Kris</div>
         {$body}
     </div></body></html>
     HTML;
@@ -266,12 +279,12 @@ function kris_render_login(string $error = '', string $notice = ''): void // ter
     $err .= $notice !== '' ? '<div class="ok">' . htmlspecialchars($notice) . '</div>' : '';
     $csrf = kris_csrf_field();
     kris_auth_page('Accesso', <<<HTML
-        <h2>Accesso Riservato</h2>
+        <h2>Accedi all'editor</h2>
         {$err}
         <form method="POST">
             {$csrf}
             <input type="hidden" name="do_login" value="1">
-            <label for="user">Username</label>
+            <label for="user">Nome utente</label>
             <input id="user" type="text" name="user" autocomplete="username" required autofocus>
             <label for="pass">Password</label>
             <input id="pass" type="password" name="pass" autocomplete="current-password" required>
@@ -281,44 +294,33 @@ function kris_render_login(string $error = '', string $notice = ''): void // ter
     HTML);
 }
 
-/** Recupero: invia il link all'email dell'admin, o spiega a chi rivolgersi. */
+/** Recupero: chi ha un'email associata riceve il link per scegliere una password nuova. */
 function kris_render_forgot(string $error = '', string $notice = ''): void // termina sempre con exit
 {
-    $config = kris_auth_config() ?? [];
     $help = htmlspecialchars(KRIS_HOSTING_HELP);
     $err = $error !== '' ? '<div class="error">' . htmlspecialchars($error) . '</div>' : '';
     $err .= $notice !== '' ? '<div class="ok">' . htmlspecialchars($notice) . '</div>' : '';
     $csrf = kris_csrf_field();
-    // Se l'errore lo dice gia, l'indicazione per l'hosting non si ripete.
-    $footer = $error === '' ? '<p class="help">Non arriva nessuna email? Controlla anche lo spam. ' . $help . '</p>' : '';
-    if (!Kris\Auth\Credentials::validEmail((string) ($config['email'] ?? '')) || ($config['editor_url'] ?? '') === '') {
-        $body = <<<HTML
-            <h2>Password dimenticata</h2>
-            <p class="hint">Su questo sito non è configurata un'email per il recupero della password.</p>
-            <p class="hint">{$help}</p>
-            <a class="alt" href="?">Torna all'accesso</a>
-        HTML;
-    } else {
-        $body = <<<HTML
-            <h2>Password dimenticata</h2>
-            {$err}
-            <p class="hint">Invieremo un link per scegliere una nuova password all'email dell'amministratore del sito. Il link vale 30 minuti.</p>
-            <form method="POST">
-                {$csrf}
-                <input type="hidden" name="do_forgot" value="1">
-                <button type="submit">Invia il link</button>
-            </form>
-            {$footer}
-            <a class="alt" href="?">Torna all'accesso</a>
-        HTML;
-    }
-    kris_auth_page('Password dimenticata', $body);
+    kris_auth_page('Password dimenticata', <<<HTML
+        <h2>Password dimenticata</h2>
+        {$err}
+        <p class="hint">Scrivi l'email associata al tuo utente: ti mandiamo un link per scegliere una nuova password, valido 30 minuti.</p>
+        <form method="POST">
+            {$csrf}
+            <input type="hidden" name="do_forgot" value="1">
+            <label for="email">Email</label>
+            <input id="email" type="email" name="email" autocomplete="email" required autofocus>
+            <button type="submit">Invia il link</button>
+        </form>
+        <p class="help">Non arriva nessuna email? Controlla anche lo spam. {$help}</p>
+        <a class="alt" href="?">Torna all'accesso</a>
+    HTML);
 }
 
 /** Nuova password da un link di reset. */
 function kris_render_reset(string $token, string $error = ''): void // termina sempre con exit
 {
-    if (!kris_password_reset()->isValid($token)) {
+    if (kris_password_reset()->userOf($token) === null) {
         kris_auth_page('Link non valido', <<<HTML
             <h2>Link scaduto</h2>
             <p class="hint">Il link non è più valido: è già stato usato oppure sono passati più di 30 minuti.</p>
@@ -328,7 +330,7 @@ function kris_render_reset(string $token, string $error = ''): void // termina s
     $err = $error !== '' ? '<div class="error">' . htmlspecialchars($error) . '</div>' : '';
     $csrf = kris_csrf_field();
     $t = htmlspecialchars($token);
-    $min = Kris\Auth\Credentials::MIN_PASSWORD;
+    $min = Kris\Auth\Users::MIN_PASSWORD;
     kris_auth_page('Nuova password', <<<HTML
         <h2>Scegli una nuova password</h2>
         {$err}
@@ -351,8 +353,8 @@ function kris_render_setup(string $error = ''): void // termina sempre con exit
     $csrf = kris_csrf_field();
     kris_auth_page('Primo accesso', <<<HTML
         <h2>Crea l'accesso</h2>
-        <p class="hint">Non ci sono ancora credenziali configurate: scegli adesso quelle
-        dell'amministratore del sito.</p>
+        <p class="hint">Non ci sono ancora utenti: crea adesso l'amministratore del sito.
+        Gli altri utenti li crea lui dall'editor.</p>
         <p class="hint">Per dimostrare che il sito è tuo, apri con l'FTP o il pannello dell'hosting il file
         <strong>config/setup_code.php</strong> e copia qui il codice che contiene.</p>
         {$err}
@@ -361,7 +363,7 @@ function kris_render_setup(string $error = ''): void // termina sempre con exit
             <input type="hidden" name="do_setup" value="1">
             <label for="setup_code">Codice di primo avvio</label>
             <input id="setup_code" type="text" name="setup_code" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX" required autofocus>
-            <label for="user">Username</label>
+            <label for="user">Nome utente</label>
             <input id="user" type="text" name="user" autocomplete="username" required>
             <label for="email">Email (per recuperare la password)</label>
             <input id="email" type="email" name="email" autocomplete="email" required>

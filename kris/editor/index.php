@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 /**
- * KRIS 2 CMS - Professional UI Edition (Secured)
- * File: kris/editor/index.php (servito dallo stub editor/index.php)
+ * L'editor di Kris: accesso, stato del framework, modalità, azioni e viste.
+ * Servito dallo stub kris-admin/index.php.
  */
 
 require_once __DIR__ . '/../bootstrap.php';
@@ -14,6 +14,7 @@ require_once __DIR__ . '/auth.php';
 define('KRIS_EDITOR', true);
 
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/model.php';
 
 use Kris\Entity\StorageException;
 use Kris\Update\Migrator;
@@ -62,8 +63,8 @@ if (isset($_GET['logout'])) {
 $login_error = '';
 $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
 
-// Primo avvio: nessuna credenziale configurata, la si crea adesso.
-if (kris_auth_config() === null) {
+// Primo avvio: nessun utente, si crea l'amministratore.
+if (!kris_users()->exists()) {
     // Chi crea l'accesso deve dimostrare di avere i file del sito: il codice sta in config/setup_code.php
     if (kris_setup_code()->ensure() === null) {
         kris_render_setup('Non riesco a scrivere config/setup_code.php: controlla i permessi della cartella config/.');
@@ -80,15 +81,16 @@ if (kris_auth_config() === null) {
         } elseif (!kris_setup_code()->verify((string) ($_POST['setup_code'] ?? ''))) {
             kris_login_throttle()->fail((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
             kris_render_setup('Il codice non corrisponde a quello in config/setup_code.php.');
-        } elseif ($user === '' || strlen($pass) < Kris\Auth\Credentials::MIN_PASSWORD) {
-            kris_render_setup('Serve uno username e una password di almeno 10 caratteri.');
-        } elseif (!Kris\Auth\Credentials::validEmail($email)) {
+        } elseif (!Kris\Auth\Users::validAddress($email)) {
             kris_render_setup('Serve un indirizzo email valido: lo userai per recuperare la password.');
         } elseif ($pass !== (string) ($_POST['pass2'] ?? '')) {
             kris_render_setup('Le due password non coincidono.');
-        } elseif (!kris_save_credentials($user, $pass, $email)) {
-            kris_render_setup('Non riesco a scrivere config/auth.php: controlla i permessi della cartella.');
         } else {
+            try {
+                kris_create_first_admin($user, $pass, $email);
+            } catch (Kris\Auth\UserException $e) {
+                kris_render_setup($e->getMessage());
+            }
             kris_setup_code()->remove();
             header("Location: $BASE");
             exit;
@@ -104,16 +106,18 @@ if (!kris_is_logged_in()) {
             kris_render_forgot('Sessione scaduta: riprova.');
         }
         try {
-            if (!kris_password_reset()->canRequest()) {
-                kris_render_forgot('Hai già chiesto diversi link nell\'ultima ora. Controlla la posta (anche lo spam) o riprova più tardi.');
-            }
-            if (!kris_send_reset_link()) {
-                kris_render_forgot('L\'hosting non è riuscito a inviare l\'email. ' . KRIS_HOSTING_HELP);
-            }
+            $sent = kris_send_reset_link((string) ($_POST['email'] ?? ''));
         } catch (RuntimeException $e) {
             kris_render_forgot($e->getMessage());
         }
-        kris_render_forgot('', 'Email inviata all\'amministratore del sito: contiene un link valido 30 minuti. Controlla anche lo spam.');
+        if ($sent === 'limit') {
+            kris_render_forgot('Hai già chiesto diversi link nell\'ultima ora. Controlla la posta (anche lo spam) o riprova più tardi.');
+        }
+        if ($sent === 'failed') {
+            kris_render_forgot('L\'hosting non è riuscito a inviare l\'email. ' . KRIS_HOSTING_HELP);
+        }
+        // Stessa risposta se l'email non è di nessuno: non si scopre quali esistono
+        kris_render_forgot('', 'Se l\'email è di un utente del sito, riceverà un link valido 30 minuti. Controlla anche lo spam.');
     }
     if (isset($_GET['forgot'])) {
         kris_render_forgot();
@@ -123,14 +127,18 @@ if (!kris_is_logged_in()) {
         $pass = (string) ($_POST['pass'] ?? '');
         if (!kris_csrf_valid($_POST['csrf'] ?? null)) {
             kris_render_reset($token, 'Sessione scaduta: riprova.');
-        } elseif (strlen($pass) < Kris\Auth\Credentials::MIN_PASSWORD) {
-            kris_render_reset($token, 'La password deve avere almeno 10 caratteri.');
+        } elseif (strlen($pass) < Kris\Auth\Users::MIN_PASSWORD) {
+            kris_render_reset($token, 'La password deve avere almeno ' . Kris\Auth\Users::MIN_PASSWORD . ' caratteri.');
         } elseif ($pass !== (string) ($_POST['pass2'] ?? '')) {
             kris_render_reset($token, 'Le due password non coincidono.');
-        } elseif (!kris_password_reset()->consume($token)) {
+        } elseif (($resetUser = kris_password_reset()->consume($token)) === null) {
             kris_render_reset($token);
-        } elseif (!kris_credentials()->save(['password' => $pass])) {
-            kris_render_reset($token, 'Non è stato possibile salvare la nuova password. ' . KRIS_HOSTING_HELP);
+        } else {
+            try {
+                kris_users()->setPassword($resetUser, $pass);
+            } catch (Kris\Auth\UserException $e) {
+                kris_render_login($e->getMessage() . ' ' . KRIS_HOSTING_HELP);
+            }
         }
         kris_render_login('', 'Password aggiornata: accedi con quella nuova.');
     }
@@ -147,12 +155,25 @@ if ($isPost && isset($_POST['do_login'])) {
     } elseif ($wait > 0) {
         // La password non viene nemmeno verificata: niente tentativi in più
         $login_error = 'Troppi tentativi sbagliati. Riprova tra ' . max(1, (int) ceil($wait / 60)) . ' minuti.';
-    } elseif (kris_login((string) ($_POST['user'] ?? ''), (string) ($_POST['pass'] ?? ''))) {
-        header("Location: $BASE");
-        exit;
     } else {
-        $login_error = "Credenziali non valide.";
+        $result = kris_login((string) ($_POST['user'] ?? ''), (string) ($_POST['pass'] ?? ''));
+        if ($result === 'ok') {
+            header("Location: $BASE");
+            exit;
+        }
+        $login_error = $result === 'blocked'
+            ? 'Il tuo accesso è sospeso: chiedi a un amministratore del sito.'
+            : 'Nome utente o password non validi.';
     }
+}
+
+// L API risponde in JSON anche a chi non ha la sessione: l app torna all accesso
+if (isset($_GET['api']) && !kris_is_logged_in()) {
+    while (ob_get_level() > 0) ob_end_clean();
+    http_response_code(401);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok' => false, 'error' => 'Sessione scaduta: accedi di nuovo.']);
+    exit;
 }
 
 // Gatekeeper: la pagina di login vive in auth.php
@@ -163,9 +184,6 @@ if (!kris_is_logged_in()) {
 // --- FINE LOGIN --- (Il CMS inizia qui sotto)
 
 // --- CONFIGURAZIONE ---
-$dataFile = KRIS_ROOT . '/data/k_data.json';
-$modelFile = KRIS_ROOT . '/data/k_model.json';
-$settingsFile = KRIS_ROOT . '/data/cms_settings.json';
 $uploadDir = KRIS_ROOT . '/assets/uploads/';
 $uploadUrl = 'assets/uploads/';
 
@@ -180,10 +198,6 @@ $DEFAULT_LANGS = [
 // Init Files/Dir
 if (!is_dir($uploadDir))
     mkdir($uploadDir, 0777, true);
-if (!file_exists($modelFile))
-    file_put_contents($modelFile, '{}');
-if (!file_exists($dataFile))
-    file_put_contents($dataFile, '[]');
 
 // --- STATO DEL FRAMEWORK ---
 // Prima di leggere i contenuti: una migrazione puo cambiarli. Se
@@ -242,239 +256,82 @@ if ($maintenance !== null) {
     }
 }
 
-// --- MODALITA: SITO PUBBLICO O MODIFICHE IN ATTESA ---
-// Con le modifiche in attesa l'editor mostra lo staging e ogni salvataggio
-// diventa un'operazione dello staging: il sito cambia solo alla pubblicazione.
-if ($isPost && isset($_POST['editing_mode']) && kris_csrf_valid($_POST['csrf'] ?? null)) {
-    $_SESSION['kris_editing'] = $_POST['editing_mode'] === 'staging' ? 'staging' : 'live';
-    $back = is_string($_POST['return_to'] ?? null) && preg_match('/^\?action=[a-z_]+(&[A-Za-z0-9_=%.\/-]*)*$/', $_POST['return_to'])
-        ? $_POST['return_to'] : '?action=dashboard';
-    header("Location: $BASE$back");
-    exit;
+// Aggiornamenti suggeriti: il canale si legge al massimo una volta al giorno, dal browser dopo il caricamento;
+// nel frattempo vale l'esito dell'ultimo controllo. Mai durante un blocco o nella scheda della versione.
+$updateHint = null;
+if ($editorLock === '' && ($_GET['action'] ?? '') !== 'settings' && isset($siteState) && \Kris\Update\Updater::loadConfig(KRIS_ROOT)['enabled']) {
+    $lastCheck = is_array($siteState['last_check'] ?? null) ? $siteState['last_check'] : [];
+    $latest = is_string($lastCheck['latest'] ?? null) && version_compare($lastCheck['latest'], $krisVersion, '>') ? $lastCheck['latest'] : '';
+    $updateHint = ['latest' => $latest, 'check' => (int) strtotime((string) ($lastCheck['at'] ?? '')) < time() - 86400];
 }
+
+
+// --- MODALITÀ: SITO PUBBLICO O IN ATTESA ---
+// In «In attesa» l'editor mostra lo staging e ogni salvataggio diventa
+// un'operazione dello staging: il sito cambia solo alla pubblicazione.
 $stagingMode = ($_SESSION['kris_editing'] ?? '') === 'staging';
 $stagingNav = new \Kris\Staging\Staging();
 
 // --- DATI ---
 try {
-    $data = getJson($dataFile, []);
-    $models = getJson($modelFile, []);
-    $settings = getJson($settingsFile, ['languages' => ['it', 'en']]);
-    if ($stagingMode) {
-        $stagingState = $stagingNav->state();
-        $data = $stagingState['data'];
-        $models = $stagingState['model'];
-        // Le raccolte in Posts possono cambiare in attesa; le lingue si cambiano solo sul sito pubblico
-        // Raccolte in Posts, nomi, descrizioni e ordine possono cambiare in attesa; le lingue solo sul sito pubblico
-        foreach (['post_collections', 'collections', 'collection_order'] as $key) {
-            if (array_key_exists($key, $stagingState['settings'])) $settings[$key] = $stagingState['settings'][$key];
-        }
-    }
-    // Le immagini caricate e non ancora pubblicate si vedono attraverso l'anteprima, in entrambe le modalita
+    editorReload($stagingMode);
+    // I file caricati in attesa si vedono attraverso l'anteprima, in entrambe le modalità
     editorStagedUploads(array_map('basename', array_filter($stagingNav->uploadFiles(), fn($f) => !is_file($uploadDir . basename($f)))));
-} catch (StorageException $e) {
+} catch (StorageException | \Kris\Store\StoreException $e) {
     renderStorageError($e->getMessage());
 }
-$activeLangs = $settings['languages'];
-editorCollectionInfo($settings);
 
-$action = $_GET['action'] ?? 'dashboard';
-$group = $_GET['group'] ?? null;
-$msg = '';
-$error = '';
+// --- API JSON (app Vue) ---
+if (isset($_GET['api'])) require __DIR__ . '/api.php';
 
-// Path assoluto a questo file (es. "/editor/index.php"), per redirect e form action
-// indipendenti dall'URL corrente (con o senza trailing slash, con o senza index.php).
-$BASE = $_SERVER['SCRIPT_NAME'];
-
-
-
-// --- AZIONI POST ---
-require __DIR__ . '/actions.php';
-// View Data
-// Le raccolte del framework non compaiono tra quelle del sito.
-// Le azioni possono aver cambiato nomi e ordine delle raccolte
-editorCollectionInfo($settings);
-$userModels = orderCollections(array_filter($models, fn($name) => !isReservedCollection($name), ARRAY_FILTER_USE_KEY));
-$counts = [];
-foreach ($models as $k => $v)
-    $counts[$k] = 0;
-foreach ($data as $d) {
-    if (isset($counts[$d['name']]))
-        $counts[$d['name']]++;
-}
-$images = editorMediaFiles($uploadDir);
-if ($stagingMode) {
-    // I file in attesa vengono prima: sono quelli appena caricati
-    $images = array_merge($stagingNav->uploadFiles(), $images);
-}
-$postCollections = editorPostCollections($settings, $models);
-$postSources = editorPostSources($models, $data, $postCollections);
-// Un elemento di un elenco posts si apre dalla sezione Posts e vi ritorna.
-$editPath = parsePath(is_string($_GET['path'] ?? null) ? $_GET['path'] : '');
-$inPosts = $action === 'posts' || ($action === 'edit' && is_string($group) && count($editPath) === 2
-    && postsFieldDef($models, $group, $editPath[0]) !== null)
-    || ($action === 'edit' && $editPath === [] && in_array($group, $postCollections, true));
-if (isset($_GET['upload_error']) && is_string($_GET['upload_error'])) $error = $_GET['upload_error'];
-if (in_array($action, ['edit', 'list', 'structure'], true) && (!is_string($group) || !isset($models[$group]))) {
-    $action = 'dashboard';
-    $error = 'La raccolta non è disponibile. Scegli uno dei contenuti qui sotto.';
-}
-// Una raccolta a contenuto unico non ha una lista: si apre direttamente il suo contenuto
-if ($action === 'list' && is_string($group) && isSingleCollection($group)) {
-    foreach ($data as $entity) {
-        if (($entity['name'] ?? null) === $group) {
-            $action = 'edit';
-            $_GET['id'] = (string) (int) $entity['id'];
-            $_GET['path'] = '';
-            break;
+// Il popup dell'anteprima approva il codice in attesa con un modulo e torna alla stessa pagina
+if ($isPost && isset($_POST['approve_code'])) {
+    if (kris_csrf_valid($_POST['csrf'] ?? null) && $editorLock === '') {
+        try {
+            $stagingNav->approveCode((string) $_POST['approve_code'], (string) ($_SESSION['kris_user'] ?? ''));
+        } catch (\Kris\Staging\StagingException) {
+            // Il codice è cambiato nel frattempo: il popup ricompare con la versione nuova
         }
     }
+    $return = (string) ($_POST['return'] ?? '');
+    $siteBase = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\');
+    header('Location: ' . (preg_match('/^[A-Za-z0-9_=&%.\/-]*kris_preview=1[A-Za-z0-9_=&%.\/-]*$/', $return) === 1 ? $siteBase . '/index.php?' . $return : $BASE . '#/da-pubblicare'));
+    exit;
 }
-// Le raccolte del framework hanno un solo contenuto e uno schema fisso.
-if (isReservedCollection($group) && in_array($action, ['list', 'structure', 'structure_impact'], true)) {
-    $action = 'edit';
-    $_GET['id'] = '0';
-    $_GET['path'] = '';
+
+// Indirizzi dell'editor della 1.x (?action=...): le stesse pagine nell'app
+if (isset($_GET['action'])) {
+    $routes = ['staging' => 'da-pubblicare', 'media' => 'libreria', 'settings' => 'impostazioni', 'structure' => 'struttura'];
+    header('Location: ' . $BASE . '#/' . ($routes[$_GET['action']] ?? ''));
+    exit;
 }
-// La struttura si cambia solo sul sito pubblico: le modifiche in attesa riguardano i contenuti
-if ($stagingMode && in_array($action, ['structure', 'structure_impact'], true)) {
-    $action = 'list';
-    $error = 'La struttura si modifica sul sito pubblico: passa a «Sito pubblico» per cambiarla.';
+
+// --- APP VUE ---
+// L'editor è l'app compilata in kris/editor/dist/ (sorgenti in admin-src/, npm run build): questa pagina la
+// carica con il token e gli indirizzi. Le pagine di accesso restano in PHP, qui sopra.
+$manifest = json_decode((string) @file_get_contents(__DIR__ . '/dist/manifest.json'), true);
+$entry = is_array($manifest) ? ($manifest['src/main.js'] ?? null) : null;
+while (ob_get_level() > 0) ob_end_clean();
+header('Content-Type: text/html; charset=utf-8');
+header('Cache-Control: no-store');
+if (!is_array($entry) || !is_string($entry['file'] ?? null)) {
+    http_response_code(500);
+    echo '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Editor non disponibile · Kris</title></head><body style="font-family:system-ui,sans-serif;padding:32px">'
+        . '<h1 style="font-weight:500">L\'editor non è completo</h1><p>Manca kris/editor/dist/: ricarica la cartella kris/ intera della versione di Kris installata.</p></body></html>';
+    exit;
 }
-$inLegal = $action === 'edit' && $group === 'kris_legal';
-$inSite = $action === 'edit' && $group === 'kris_site';
-$inNotFound = $action === 'edit' && $group === 'kris_notfound';
-// La voce compare quando ci sono modifiche da pubblicare o una pubblicazione da poter annullare.
-$stagingCount = count($stagingNav->changes()) + count($stagingNav->operations()) + count($stagingNav->manifest()['uploads']) + count($stagingNav->manifest()['fonts']);
-$stagingVisible = $stagingCount > 0 || $action === 'staging' || $stagingNav->lastPromotion() !== null;
-$sectionLabel = match ($action) {
-    'media' => 'Libreria media', 'settings' => 'Impostazioni', 'posts' => 'Posts', 'staging' => 'Modifiche in attesa',
-    'edit' => $inLegal ? 'Privacy e cookie' : ($inSite ? 'Favicon' : ($inNotFound ? 'Pagina 404' : 'Contenuti')),
-    'structure', 'structure_impact' => 'Struttura', default => 'Contenuti',
-};
-
-// I file statici dell'editor stanno in kris/editor/, mentre la pagina e
-// servita dallo stub in editor/: si risale alla root del sito dall'URL.
-$assetBase = htmlspecialchars(rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/kris/editor');
-// La versione nell'indirizzo: dopo un aggiornamento il browser non riusa CSS e JS vecchi dalla cache
-$assetVersion = '?v=' . rawurlencode($krisVersion);
-?>
-<!DOCTYPE html>
-<html lang="it">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="kris-csrf" content="<?= htmlspecialchars(kris_csrf_token()) ?>">
-    <title><?= h($sectionLabel) ?> · Kris CMS</title>
-    <script>/* Tema scelto nell'editor, prima del CSS: niente lampo chiaro */try{var t=localStorage.getItem('kris-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t;}catch(e){}</script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" integrity="sha512-6JR4bbn8rCKvrkdoTJd/VFyXAN4CE9XMtgykPWgKiHjou56YDJxWsi90hAeMTYxNwUnKSQu9JPc3SQUg+aGCHw==" crossorigin="anonymous" referrerpolicy="origin"></script>
-    <link rel="stylesheet" href="<?= $assetBase ?>/css/style.css<?= $assetVersion ?>">
-</head>
-
-<body data-editor-action="<?= h($action) ?>"<?php if ($stagingMode): ?> data-staging-mode data-staged-uploads="<?= h(json_encode(array_keys(editorStagedUploads()))) ?>"<?php endif; ?>>
-    <a class="skip-link" href="#main">Vai al contenuto</a>
-
-    <?php require __DIR__ . '/partials/sidebar.php'; ?>
-
-    <div class="editor-workspace">
-    <header class="topbar">
-        <nav class="breadcrumbs" aria-label="Percorso"><a href="?action=dashboard">Il tuo sito</a><span aria-hidden="true">/</span><span><?= h($sectionLabel) ?></span><?php if ($group && !isReservedCollection($group)): ?><span aria-hidden="true">/</span><strong><?= h(collectionLabel($group)) ?></strong><?php endif; ?></nav>
-        <div class="topbar-actions">
-            <?php $returnTo = str_starts_with((string) ($_SERVER['QUERY_STRING'] ?? ''), 'action=') ? '?' . $_SERVER['QUERY_STRING'] : '?action=dashboard'; ?>
-            <form method="POST" class="mode-switch" aria-label="Dove salvano le modifiche">
-                <input type="hidden" name="return_to" value="<?= h($returnTo) ?>">
-                <button name="editing_mode" value="live" aria-pressed="<?= $stagingMode ? 'false' : 'true' ?>">Sito pubblico</button>
-                <button name="editing_mode" value="staging" aria-pressed="<?= $stagingMode ? 'true' : 'false' ?>">In attesa<?php if ($stagingCount): ?> <span class="nav-count"><?= $stagingCount ?></span><?php endif; ?></button>
-            </form>
-            <?php if ($stagingMode): ?>
-                <a href="../index.php?kris_preview=1" target="_blank" rel="noopener" class="btn btn-white">Apri l'anteprima <span aria-hidden="true">↗</span></a>
-            <?php else: ?>
-                <a href="../index.php?kris_preview=0" target="_blank" rel="noopener" class="btn btn-white">Apri il sito <span aria-hidden="true">↗</span></a>
-            <?php endif; ?>
-        </div>
-    </header>
-    <?php if ($stagingMode): ?>
-        <div class="staging-banner" role="status"><p><strong>Stai preparando modifiche in attesa.</strong> Il sito pubblico non cambia finché non le pubblichi. Qui vedi anche le modifiche dell'assistente.</p><a class="btn btn-white" href="?action=staging">Rivedi e pubblica</a></div>
-    <?php endif; ?>
-    <main id="main" tabindex="-1">
-        <div id="request-feedback" class="alert alert-error" role="alert" hidden></div>
-        <?php if ($editorLock !== ''): ?>
-            <div class="alert alert-error system-alert" role="alert">
-                <p><strong>Modifiche sospese.</strong> <?= h($editorLock) ?></p>
-                <?php if ($migrationsPending): ?>
-                    <form method="POST" class="system-alert-action"><button class="btn btn-primary" name="run_migrations" value="1">Aggiorna il formato dei contenuti</button><small>Prima viene salvata una copia dei file dei contenuti.</small></form>
-                <?php elseif (!empty($maintenance['stale']) && $action !== 'settings'): ?>
-                    <a class="btn btn-white" href="?action=settings&amp;tab=versione">Vai alla versione di Kris</a>
-                <?php endif; ?>
-            </div>
-        <?php elseif ($frameworkNotice !== ''): ?>
-            <div class="alert system-alert" role="status"><p><?= h($frameworkNotice) ?></p></div>
-        <?php endif; ?>
-        <?php // Siti installati prima della 1.2.0: l'email di recupero si aggiunge da qui, in un passo.
-        $authConfig = kris_auth_config() ?? [];
-        if (!Kris\Auth\Credentials::validEmail((string) ($authConfig['email'] ?? '')) && empty($_SESSION['kris_email_later']) && $editorLock === ''): ?>
-            <div class="alert account-alert" role="status">
-                <p><strong>Aggiungi la tua email.</strong> Se dimentichi la password, ti manderemo lì un link per sceglierne una nuova.</p>
-                <form method="POST" class="account-alert-form" data-account-form><input type="hidden" name="save_account_email" value="1"><label class="sr-only" for="account-email-quick">Email</label><input id="account-email-quick" type="email" name="account_email" autocomplete="email" placeholder="nome@esempio.it" required><label class="sr-only" for="account-email-quick-password">Password attuale</label><input id="account-email-quick-password" type="password" name="current_password" autocomplete="current-password" placeholder="Password attuale" required><button class="btn btn-primary">Salva email</button></form>
-                <form method="POST"><input type="hidden" name="account_email_later" value="1"><button class="text-link" type="submit">Più tardi</button></form>
-            </div>
-        <?php endif; ?>
-        <?php if ($error): ?>
-            <div class="alert alert-error" role="alert">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                </svg>
-                <?= htmlspecialchars($error) ?>
-            </div>
-        <?php endif; ?>
-        <?php if ($msg): ?>
-            <div class="alert" role="status">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                </svg>
-                <?= htmlspecialchars($msg) ?>
-            </div>
-        <?php endif; ?>
-
-
-        <?php
-        // Router: la vista si sceglie da una mappa esplicita, mai
-        // costruendo un percorso con quello che arriva dall'URL.
-        $views = [
-            'dashboard'        => 'dashboard.php',
-            'list'             => 'list.php',
-            'posts'            => 'posts.php',
-            'structure'        => 'structure.php',
-            'structure_impact' => 'structure_impact.php',
-            'edit'             => 'edit.php',
-            'media'            => 'media.php',
-            'settings'         => 'settings.php',
-            'staging'          => 'staging.php',
-        ];
-        require __DIR__ . '/views/' . ($views[$action] ?? $views['dashboard']);
-        ?>
-    </main>
-    </div>
-
-    <?php require __DIR__ . '/partials/media_overlay.php'; ?>
-    <dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmTitle">
-        <div class="modal-header"><h2 id="confirmTitle"></h2><button type="button" class="icon-button" data-close-dialog aria-label="Chiudi"><?= uiIcon('close') ?></button></div>
-        <div class="modal-body"><p id="confirmText"></p></div><div class="modal-footer" id="confirmActions"></div>
-    </dialog>
-    <div id="toast" class="toast" role="status" hidden></div>
-
-    <script src="<?= $assetBase ?>/js/scripts.js<?= $assetVersion ?>"></script>
-    <?php if ($action === 'structure'): ?>
-        <script src="<?= $assetBase ?>/js/structure.js<?= $assetVersion ?>"></script>
-    <?php endif; ?>
-    <?php if ($action === 'settings'): ?>
-        <script src="<?= $assetBase ?>/js/update.js<?= $assetVersion ?>"></script>
-    <?php endif; ?>
-</body>
-
-</html>
+$distBase = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/\\') . '/kris/editor/dist/';
+$boot = ['csrf' => kris_csrf_token(), 'api' => 'index.php', 'assets' => $distBase];
+echo '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kris</title>'
+    . '<script>try{var t=localStorage.getItem(\'kris-theme\');if(t===\'light\'||t===\'dark\')document.documentElement.dataset.theme=t;}catch(e){}</script>';
+foreach ((array) ($entry['css'] ?? []) as $css) echo '<link rel="stylesheet" href="' . h($distBase . $css) . '">';
+// I moduli dei plugin importano "vue" e "@kris/editor": gli stessi file dell'editor, quindi la stessa istanza
+$imports = [];
+foreach (['vue' => 'src/vue.js', '@kris/editor' => 'src/kit.js'] as $specifier => $source) {
+    if (is_string($manifest[$source]['file'] ?? null)) $imports[$specifier] = $distBase . $manifest[$source]['file'];
+}
+if ($imports) echo '<script type="importmap">' . json_encode(['imports' => $imports], JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) . '</script>';
+echo '<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" integrity="sha512-6JR4bbn8rCKvrkdoTJd/VFyXAN4CE9XMtgykPWgKiHjou56YDJxWsi90hAeMTYxNwUnKSQu9JPc3SQUg+aGCHw==" crossorigin="anonymous" referrerpolicy="origin" defer></script>'
+    . '</head><body><noscript>L\'editor di Kris ha bisogno di JavaScript.</noscript><div id="app"></div>'
+    . '<script>window.KRIS=' . json_encode($boot, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP) . ';</script>'
+    . '<script type="module" src="' . h($distBase . $entry['file']) . '"></script></body></html>';

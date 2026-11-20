@@ -283,13 +283,12 @@ test('le pagine toccate hanno ognuna il suo indirizzo di anteprima', function ()
         $s->operate(['op' => 'create_collection', 'name' => 'lavagna', 'fields' => [['name' => 'page_title', 'type' => 'text']]], 'test');
         $s->operate(['op' => 'create_entity', 'key' => 'lavagna', 'fields' => ['page_title' => 'Oggi']], 'test');
         $s->operate(['op' => 'register_page', 'page' => 'lavagna', 'sitemap' => false], 'test');
-        $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'path' => ['features', 0], 'field' => 'title', 'lang' => 'it', 'value' => 'Nuovo'], 'test');
+        $s->operate(['op' => 'set_field', 'key' => 'features', 'id' => 0, 'field' => 'title', 'lang' => 'it', 'value' => 'Nuovo'], 'test');
         $urls = array_column($s->previewPages(), 'url');
         // La pagina nuova, senza link nel sito e fuori dalla sitemap, ha la sua anteprima
         assertTrue(in_array('index.php?page=lavagna&key=lavagna&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
-        // Un elemento di un elenco: la pagina di dettaglio con il suo path
-        assertTrue(in_array('index.php?page=detail&key=homepage&id=0&path=features%2F0&kris_preview=1', $urls, true), implode(' ', $urls));
-        assertTrue(in_array('index.php?page=homepage&key=homepage&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
+        // Un elemento promosso a tipo (era un elenco della homepage): la sua pagina di dettaglio
+        assertTrue(in_array('index.php?page=detail&key=features&id=0&kris_preview=1', $urls, true), implode(' ', $urls));
     } finally {
         $s->discard();
     }
@@ -376,7 +375,7 @@ test('l anteprima con codice nuovo mostra il popup e serve il JavaScript solo do
         assertContains('name="csrf" value="token-di-prova"', $page['output']);
         assertContains('required', $page['output'], 'serve spuntare l assunzione di responsabilita');
         assertContains('Anteprima senza script', $page['output']);
-        assertContains('src="index.php?kris_preview_asset=js/nuovo.js&kris_preview=1"', $page['output']);
+        assertContains('src="/index.php?kris_preview_asset=js/nuovo.js&kris_preview=1"', $page['output']);
         assertSame(404, renderPage(['kris_preview_asset' => 'js/nuovo.js'], null, 'index.php', true)['status'], 'prima dell approvazione il file non si serve');
 
         $s->approveCode((string) $s->codeFingerprint(), 'admin');
@@ -437,4 +436,24 @@ test('un font WOFF2 si carica nello staging, si vede in anteprima e va in assets
     assertSame('wOF2', substr((string) file_get_contents("{$root}/assets/fonts/inter-regular.woff2"), 0, 4));
     $s->undoLastPromotion();
     assertTrue(!is_file("{$root}/assets/fonts/inter-regular.woff2"), 'l annullamento toglie il font nuovo');
+});
+
+test('/kris-admin/preview/ apre la pagina in anteprima, solo con l editor aperto', function () {
+    $sandbox = projectSandbox();
+    $s = new Staging($sandbox);
+    $file = 'template/homepage.html';
+    $original = (string) file_get_contents("{$sandbox}/{$file}");
+    $s->write($file, str_replace('</body>', '<p>SOLO-IN-STAGING</p></body>', $original), Staging::hash($original), 'test');
+    try {
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/kris-admin/preview/?page=homepage';
+        $admin = renderPage([], null, 'index.php', true);
+        assertSame(200, $admin['status']);
+        assertContains('SOLO-IN-STAGING', $admin['output']);
+        assertContains('id="kris-preview-bar"', $admin['output']);
+        assertContains('kris-admin/index.php#/da-pubblicare', $admin['output'], 'la barra porta al nuovo editor');
+        assertSame(404, renderPage([], null, 'index.php', false)['status'], 'senza sessione non esiste');
+    } finally {
+        unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
+        $s->discard();
+    }
 });

@@ -140,7 +140,8 @@ final class Server
                 return ['deleted' => true];
 
             case 'get_entity':
-                return ['entity' => $this->entity($s->state()['data'], $this->string($r, 'key'), (int) ($r['id'] ?? 0), (array) ($r['path'] ?? []))];
+                if (str_starts_with($this->string($r, 'key'), 'plg_')) throw new AgentException('I dati dei plugin non sono accessibili all\'agente.', 403);
+                return ['entity' => $this->entity($s->state()['content'], $this->string($r, 'key'), (int) ($r['id'] ?? 0), (array) ($r['path'] ?? []))];
 
             case 'operate':
                 if (!is_array($r['operation'] ?? null)) throw new AgentException('Serve "operation", un oggetto con "op".', 400);
@@ -157,6 +158,19 @@ final class Server
             case 'delete_upload':
                 $s->deleteUpload($this->string($r, 'url'), $by);
                 return ['deleted' => true];
+
+            case 'upload_slot':
+                // Un indirizzo sul dominio del sito per mandare il file direttamente (kris-agent.php?upload=…)
+                $slot = $this->slots()->create(basename(is_string($r['name'] ?? null) ? $r['name'] : ''), $by);
+                $base = \Kris\Template\Seo::baseUrl(\Kris\Template\Seo::config($this->root), $_SERVER);
+                return ['slot_id' => $slot['id'], 'upload_url' => $base . '/kris-agent.php?upload=' . $slot['token'],
+                    'expires_at' => $slot['expires_at'], 'max_bytes' => \Kris\Entity\MediaStore::maxBytes(), 'video_max_bytes' => \Kris\Entity\MediaStore::videoMaxBytes()];
+
+            case 'upload_slot_status':
+                return $this->slots()->status($this->string($r, 'slot_id')) ?? throw new AgentException('Indirizzo di caricamento sconosciuto.', 404);
+
+            case 'unused_uploads':
+                return ['files' => $s->unusedUploads(), 'note' => 'I file in attesa si tolgono con delete_upload; quelli già sul sito li elimina l\'admin dalla Libreria media.'];
 
             case 'upload':
                 $data = base64_decode($this->string($r, 'data', true), true);
@@ -258,30 +272,39 @@ final class Server
             $this->staging->rebuild();
             \Kris\Site\Paths::useOverlay($this->staging->dir(), $this->staging->deletedFiles());
         }
+        // Come l'anteprima dell'admin: senza plugin
+        \Kris\Plugin\Plugins::suspend();
         try {
             $page = \Kris\Site\PageRenderer::render($query, $_SERVER);
+            // Con gli indirizzi leggibili i link escono come li vedono i visitatori
+            $routes = \Kris\Site\PageRenderer::routes();
+            if ($routes !== null) {
+                $page['html'] = \Kris\Site\Router::rewriteLinks($page['html'], $routes, \Kris\Site\Router::basePath($_SERVER), \Kris\Site\PageRenderer::language([])[1][0]);
+            }
         } finally {
             \Kris\Site\Paths::useOverlay(null);
         }
         return ['status' => $page['status'], 'lang' => $page['lang'], 'html' => $page['html']];
     }
 
-    /** Configurazione pubblica del sito, in sola lettura: pagine, seo.json e sitemap con le modifiche in attesa, robots.txt. */
+    /**
+     * Configurazione pubblica del sito, in sola lettura: pagine (con quello
+     * che rendono e la sitemap), opzioni SEO, reindirizzamenti e sitemap con
+     * le modifiche in attesa, robots.txt.
+     */
     private function siteConfig(): array
     {
         $state = $this->staging->state();
-        $settingsFile = $this->root . '/data/cms_settings.json';
-        $settings = is_file($settingsFile) ? (new JsonStore($settingsFile))->read([]) : [];
-        $langs = !empty($settings['languages']) && is_array($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+        $langs = \Kris\Store\Site::languages($this->root);
         $seo = \Kris\Template\Seo::config($this->root);
-        $sitemap = is_array($state['seo']['sitemap'] ?? null) ? $state['seo']['sitemap'] : $seo['sitemap'];
         $robots = $this->root . '/robots.txt';
         return [
-            'pages' => $state['pages'],
-            'seo' => $state['seo'] ?: (object) [],
+            'pages' => $state['schema']['pages'] ?: (object) [],
+            'seo' => is_array($state['settings']['seo'] ?? null) && $state['settings']['seo'] ? $state['settings']['seo'] : (object) [],
+            'redirects' => is_array($state['schema']['redirects'] ?? null) && $state['schema']['redirects'] ? $state['schema']['redirects'] : (object) [],
             'robots_txt' => is_file($robots) ? (string) file_get_contents($robots) : null,
             'sitemap_xml' => \Kris\Template\Seo::sitemapXml(
-                \Kris\Template\Seo::sitemapEntries($state['data'], $sitemap, $state['pages']),
+                \Kris\Template\Seo::sitemapEntries($state['schema'], $state['content']),
                 \Kris\Template\Seo::baseUrl($seo, $_SERVER),
                 $langs
             ),
@@ -293,13 +316,15 @@ final class Server
     {
         // Un solo replay delle operazioni per stato e riepilogo: sui siti grandi ogni replay costa
         [$state, $report] = $this->staging->stateAndReport();
-        $settingsFile = $this->root . '/data/cms_settings.json';
-        $settings = is_file($settingsFile) ? (new JsonStore($settingsFile))->read([]) : [];
-        $languages = !empty($settings['languages']) ? array_values($settings['languages']) : ['it', 'en'];
+        $languages = \Kris\Store\Site::languages($this->root);
 
+        // I tipi dei plugin non si mostrano: sono dati privati dei plugin
+        $state['schema']['types'] = array_filter($state['schema']['types'] ?? [], fn($t) => !str_starts_with((string) $t, 'plg_'), ARRAY_FILTER_USE_KEY);
+        $state['content'] = array_values(array_filter($state['content'], fn($c) => !str_starts_with((string) ($c['type'] ?? ''), 'plg_')));
         $entities = [];
-        foreach ($state['data'] as $entity) {
-            $entities[$entity['name']][] = ['id' => $entity['id'], 'title' => $this->title($entity, $languages[0])] + (!empty($entity['hidden']) ? ['hidden' => true] : []);
+        foreach ($state['content'] as $item) {
+            $fields = $state['schema']['types'][$item['type']]['fields'] ?? [];
+            $entities[$item['type']][] = ['id' => $item['id'], 'title' => $this->title($item, (array) $fields, $languages[0])] + (!empty($item['hidden']) ? ['hidden' => true] : []);
         }
         $deleted = array_map('basename', $this->staging->deletedFiles());
         $files = fn(string $pattern): array => array_values(array_diff(array_unique(array_map(
@@ -308,11 +333,9 @@ final class Server
         )), $deleted));
         return [
             'languages' => $languages,
-            'pages' => $state['pages'],
-            'model' => $state['model'],
-            // Nome visibile, descrizione, contenuto unico e ordine delle raccolte nell'editor
-            'collections' => is_array($state['settings']['collections'] ?? null) ? $state['settings']['collections'] : (object) [],
-            'collection_order' => is_array($state['settings']['collection_order'] ?? null) ? $state['settings']['collection_order'] : [],
+            // Le pagine con il tipo che rendono, i tipi con nome visibile, contenuto unico, Posts e campi, nell'ordine dell'editor
+            'pages' => $state['schema']['pages'] ?: (object) [],
+            'types' => $state['schema']['types'] ?: (object) [],
             'entities' => $entities,
             'templates' => $files('template/*.html'),
             'stylesheets' => $files('assets/css/*.css'),
@@ -354,19 +377,15 @@ final class Server
     }
 
     /** @throws AgentException */
-    private function entity(array $data, string $key, int $id, array $path): array
+    private function entity(array $content, string $key, int $id, array $path): array
     {
-        foreach ($data as $entity) {
-            if (($entity['name'] ?? null) === $key && (int) ($entity['id'] ?? -1) === $id) {
-                $cur = $entity;
+        foreach ($content as $item) {
+            if (($item['type'] ?? null) === $key && (int) ($item['id'] ?? -1) === $id) {
+                $cur = $item;
                 for ($i = 0; $i + 1 < count($path); $i += 2) {
                     $next = null;
-                    foreach ($cur['data'] ?? [] as $field) {
-                        if (($field['name'] ?? null) === (string) $path[$i] && is_array($field['value'])) {
-                            foreach ($field['value'] as $child) {
-                                if ((int) ($child['id'] ?? -1) === (int) $path[$i + 1]) $next = $child;
-                            }
-                        }
+                    foreach (is_array($cur['values'][(string) $path[$i]] ?? null) ? $cur['values'][(string) $path[$i]] : [] as $child) {
+                        if ((int) ($child['id'] ?? -1) === (int) $path[$i + 1]) $next = $child;
                     }
                     if ($next === null) throw new AgentException("L'elemento {$path[$i]}/{$path[$i + 1]} non esiste.", 404);
                     $cur = $next;
@@ -377,15 +396,47 @@ final class Server
         throw new AgentException("Il contenuto «{$key}» con id {$id} non esiste.", 404);
     }
 
-    private function title(array $entity, string $lang): string
+    /** Il primo testo non vuoto del contenuto, nella lingua principale: per riconoscerlo nell'elenco. */
+    private function title(array $item, array $fields, string $lang): string
     {
-        foreach ($entity['data'] ?? [] as $field) {
-            if (in_array($field['type'] ?? '', ['text', 'plain'], true)) {
-                $value = is_array($field['value']) ? ($field['value'][$lang] ?? reset($field['value'])) : $field['value'];
-                if (is_string($value) && $value !== '') return mb_substr($value, 0, 80);
-            }
+        foreach ($fields as $def) {
+            if (($def['type'] ?? '') !== 'text') continue;
+            $value = $item['values'][$def['name']] ?? null;
+            $value = is_array($value) ? ($value[$lang] ?? reset($value)) : $value;
+            if (is_string($value) && $value !== '') return mb_substr($value, 0, 80);
         }
         return '';
+    }
+
+    private function slots(): UploadSlots
+    {
+        return new UploadSlots($this->root . '/data/agent_upload_slots.json');
+    }
+
+    /**
+     * Un file mandato a un indirizzo di caricamento (kris-agent.php?upload=<gettone>):
+     * nessuna firma, il gettone monouso basta. Va nello staging come gli upload dell'agente.
+     *
+     * @param ?string $name nome originale (modulo del browser), o null: quello dell'indirizzo
+     * @return array{status: int, body: array}
+     */
+    public function receiveUpload(string $token, string $tmpFile, ?string $name): array
+    {
+        $config = $this->config->load();
+        if ($config === null || empty($config['enabled'])) return ['status' => 403, 'body' => ['ok' => false, 'error' => 'Kris Agent non è attivo su questo sito.']];
+        $slot = $this->slots()->begin($token);
+        if ($slot === null) return ['status' => 404, 'body' => ['ok' => false, 'error' => 'Indirizzo di caricamento sconosciuto, scaduto o già usato: chiedine uno nuovo.']];
+        $name = basename($name !== null && $name !== '' ? $name : ((string) $slot['name'] ?: 'file'));
+        try {
+            if (!is_file($tmpFile) || filesize($tmpFile) === 0) throw new StagingException('Il file è vuoto.');
+            $url = str_ends_with(strtolower($name), '.woff2') ? $this->staging->uploadFont($tmpFile, $name, (string) $slot['by']) : $this->staging->upload($tmpFile, $name, (string) $slot['by']);
+            $this->slots()->finish($slot['id'], $url);
+            return ['status' => 200, 'body' => ['ok' => true, 'url' => $url]];
+        } catch (StagingException | \Kris\Entity\StorageException | \RuntimeException $e) {
+            // Il file è stato rifiutato: l'indirizzo resta libero per un altro, finché non scade
+            $this->slots()->finish($slot['id'], null, $e->getMessage());
+            return ['status' => 422, 'body' => ['ok' => false, 'error' => $e->getMessage()]];
+        }
     }
 
     /** @throws AgentException */

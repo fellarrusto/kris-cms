@@ -1,27 +1,38 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="{{language}}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{title}} - Kris 2</title>
-    <meta name="description" content="{{excerpt}}">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <script src="kris/core/scripts/script.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <meta name="description" content="{{excerpt}}">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/site.js" defer></script>
 </head>
 <body>
-    <header k-component="navbar" k-template="navbar" k-index="0"></header>
+  <a class="skip-link" href="#main">{{#if language == "en"}}Skip to content{{#else}}Vai al contenuto{{/if}}</a>
+  <div k-component="site" k-template="site-header" k-index="0"></div>
 
-    <main class="post-page">
-        <article class="container post-article">
-            <a href="index.php?ln={{language}}#blog" class="back-link">← Blog</a>
-            <time class="post-date" datetime="{{date}}">{{date}}</time>
-            <h1 class="detail-title">{{title}}</h1>
-            <p class="detail-description">{{excerpt}}</p>
-            {{#if cover != ""}}<img class="post-cover" src="{{cover}}" alt="{{cover_alt}}">{{/if}}
-            <div class="post-content">{{body}}</div>
-        </article>
-    </main>
+  <main id="main" class="page">
+    <article class="container article article-narrow">
+      <header class="article-head">
+        <a class="back-link" href="index.php?page=homepage&amp;ln={{language}}#novita"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"/></svg> {{homepage.posts_title}}</a>
+        <p class="article-meta mono"><time datetime="{{date}}">{{date}}</time></p>
+        <h1>{{title}}</h1>
+        <p class="article-lede">{{excerpt}}</p>
+      </header>
+      {{#if cover}}
+      <figure class="article-shot">
+        <div class="frame">
+          <div class="frame-bar" aria-hidden="true"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url mono">/kris-admin/</span></div>
+          <img src="{{cover}}" alt="{{cover_alt}}" sizes="(min-width: 960px) 896px, 100vw">
+        </div>
+      </figure>
+      {{/if}}
+      <div class="prose">{{body}}</div>
+    </article>
+  </main>
 
-    <div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>
+  <div k-component="site" k-template="site-footer" k-index="0"></div>
+  <div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>
 </body>
 </html>
