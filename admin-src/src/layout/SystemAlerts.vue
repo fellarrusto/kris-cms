@@ -61,11 +61,6 @@ function dismissUpdate() {
   latest.value = ''
 }
 
-const wipOn = computed(
-  () =>
-    site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true && !(route.name === 'system' && route.params.tab === 'lavori')
-)
-
 const email = ref('')
 const password = ref('')
 async function saveEmail() {
@@ -127,20 +122,6 @@ async function emailLater() {
       <strong>Indirizzi leggibili non attivi.</strong> Il .htaccess del sito non ha la regola di Kris: le pagine restano con gli indirizzi
       index.php?… finché non la aggiungi (chi gestisce l'hosting la trova in AGENTS.md, «Pagina 404»).
     </p>
-  </div>
-  <div v-if="wipOn" class="alert alert-warning" role="status">
-    <p>
-      <strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor
-      aperto.
-    </p>
-    <a
-      class="btn btn-white btn-small"
-      :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1`"
-      target="_blank"
-      rel="noopener"
-      >Vedi la pagina</a
-    >
-    <router-link class="btn btn-white btn-small" :to="{ name: 'system', params: { tab: 'lavori' } }">Lavori in corso</router-link>
   </div>
   <div v-if="session.data?.email_missing && !lock" class="alert account-alert" role="status">
     <p><strong>Aggiungi la tua email.</strong> Se dimentichi la password, ti manderemo lì un link per sceglierne una nuova.</p>

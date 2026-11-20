@@ -15,7 +15,6 @@ const TABS = [
 ]
 const tabs = computed(() => TABS.filter((t) => site.type(t.type)))
 const current = computed(() => tabs.value.find((t) => t.key === route.params.tab) || tabs.value[0])
-const wipOn = computed(() => site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true)
 </script>
 
 <template>
@@ -41,7 +40,7 @@ const wipOn = computed(() => site.content.find((i) => i.type === 'kris_wip')?.va
         >
           <KIcon :name="t.icon" /><span
             ><strong>{{ t.label }}</strong
-            ><small>{{ t.key === 'lavori' && wipOn ? 'Attivi: i visitatori non vedono il sito' : t.hint }}</small></span
+            ><small>{{ t.hint }}</small></span
           >
         </router-link>
       </nav>

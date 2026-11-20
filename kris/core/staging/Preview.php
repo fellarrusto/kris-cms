@@ -250,6 +250,24 @@ final class Preview
             : $bar . $html;
     }
 
+    /**
+     * Una striscia sottile in cima alla pagina, con l'aspetto di quella
+     * dell'anteprima: per chi ha l'editor aperto (Lavori in corso accesi).
+     *
+     * @param list<array{0: string, 1: string}> $links etichetta e indirizzo
+     */
+    public static function notice(string $html, string $tag, string $text, array $links = []): string
+    {
+        $esc = fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $bar = '<div id="kris-preview-bar" role="status"><span class="kpb-tag">' . $esc($tag) . '</span><span class="kpb-text">' . $esc($text) . '</span>';
+        foreach ($links as [$label, $url]) $bar .= '<a href="' . $esc($url) . '">' . $esc($label) . '</a>';
+        $bar .= '</div>';
+        $html = (string) preg_replace('#<head(\s[^>]*)?>#i', "\$0\n" . self::BAR_STYLE, $html, 1);
+        return preg_match('#<body(\s[^>]*)?>#i', $html) === 1
+            ? (string) preg_replace('#<body(\s[^>]*)?>#i', "\$0\n" . str_replace(['\\', '$'], ['\\\\', '\\$'], $bar), $html, 1)
+            : $bar . $html;
+    }
+
     /** La stessa pagina senza anteprima: kris_preview=0 chiude anche la modalità. */
     public static function exitUrl(array $query): string
     {

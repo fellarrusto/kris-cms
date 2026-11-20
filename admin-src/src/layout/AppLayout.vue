@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/layout/AppSidebar.vue'
 import AppTopbar from '@/layout/AppTopbar.vue'
@@ -14,6 +14,8 @@ const site = useSiteStore()
 const ui = useUiStore()
 const route = useRoute()
 const menuOpen = ref(false)
+// Lavori in corso accesi: una striscia sottile in cima, l unico promemoria
+const wipOn = computed(() => site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true)
 
 async function loadSite() {
   try {
@@ -34,6 +36,12 @@ watch(
 
 <template>
   <a class="skip-link" href="#main">Vai al contenuto</a>
+  <div v-if="wipOn" class="wip-bar" role="status">
+    <span class="wip-tag">Lavori in corso</span>
+    <p>I visitatori vedono la pagina di lavorazione; tu il sito, perché hai l'editor aperto.</p>
+    <a :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1`" target="_blank" rel="noopener">Vedi la pagina</a>
+    <router-link :to="{ name: 'system', params: { tab: 'lavori' } }">Spegni</router-link>
+  </div>
   <div v-if="session.isStaging" class="pending-bar" role="status">
     <KIcon name="clock" />
     <p>
