@@ -19,7 +19,6 @@ const current = computed(() => tabs.value.find((t) => t.key === route.params.tab
 
 <template>
   <div class="container">
-    <h1 class="sr-only">Pagine di sistema</h1>
     <div v-if="!tabs.length" class="empty-state">
       <h2>Questo sito non ha ancora le pagine di sistema.</h2>
       <p>Arrivano con l'aggiornamento del formato dei contenuti.</p>

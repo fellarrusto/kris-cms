@@ -76,24 +76,31 @@ async function switchMode(mode) {
     >
       <KIcon name="menu" />
     </button>
-    <nav class="crumb" aria-label="Posizione">
-      <template v-for="(c, i) in crumb" :key="i">
-        <span v-if="i" aria-hidden="true">/</span>
-        <router-link v-if="c.to" :to="c.to">{{ c.label }}</router-link>
-        <span v-else>{{ c.label }}</span>
-      </template>
-    </nav>
-    <div class="seg mode-switch" role="group" aria-label="Dove salvano le modifiche">
-      <button type="button" value="live" :aria-pressed="String(!session.isStaging)" @click="switchMode(MODES.LIVE)">
-        <span class="dot" aria-hidden="true"></span>Sito pubblico
-      </button>
-      <button type="button" value="staging" :aria-pressed="String(session.isStaging)" @click="switchMode(MODES.STAGING)">
-        In attesa<span v-if="session.stagingCount" class="seg-count">{{ session.stagingCount }}</span>
-      </button>
+    <div class="top-title">
+      <nav v-if="crumb.length > 1" class="crumb" aria-label="Posizione">
+        <template v-for="(c, i) in crumb.slice(0, -1)" :key="i">
+          <span v-if="i" aria-hidden="true">/</span>
+          <router-link v-if="c.to" :to="c.to">{{ c.label }}</router-link>
+          <span v-else>{{ c.label }}</span>
+        </template>
+      </nav>
+      <div id="page-title" class="page-title"></div>
+      <h1 class="top-fallback">{{ crumb[crumb.length - 1].label }}</h1>
     </div>
-    <a :href="siteUrl" target="_blank" rel="noopener" class="btn btn-white"
-      >{{ session.isStaging ? 'Anteprima' : 'Apri il sito' }} <KIcon name="external"
-    /></a>
-    <ThemeToggle />
+    <div class="top-tools">
+      <div id="page-actions" class="page-actions"></div>
+      <div class="seg mode-switch" role="group" aria-label="Dove salvano le modifiche">
+        <button type="button" value="live" :aria-pressed="String(!session.isStaging)" @click="switchMode(MODES.LIVE)">
+          <span class="dot" aria-hidden="true"></span>Sito pubblico
+        </button>
+        <button type="button" value="staging" :aria-pressed="String(session.isStaging)" @click="switchMode(MODES.STAGING)">
+          In attesa<span v-if="session.stagingCount" class="seg-count">{{ session.stagingCount }}</span>
+        </button>
+      </div>
+      <a :href="siteUrl" target="_blank" rel="noopener" class="btn btn-white"
+        >{{ session.isStaging ? 'Anteprima' : 'Apri il sito' }} <KIcon name="external"
+      /></a>
+      <ThemeToggle />
+    </div>
   </header>
 </template>

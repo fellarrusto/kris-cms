@@ -128,11 +128,7 @@ code { background: var(--subtle); padding: 1px 6px; border-radius: 6px; }
 .hint { margin: 8px 0 0; line-height: 1.5; }
 
 /* --- Cornice ---------------------------------------------------------------- */
-.shell { display: grid; grid-template-columns: 264px minmax(0, 1fr); grid-template-rows: auto 1fr; gap: var(--gap); padding: var(--gap); min-height: 100vh; }
-/* La barra in alto sta sopra il contenuto; la sidebar parte alla stessa altezza della prima card */
-.shell > .top { grid-column: 2; grid-row: 1; }
-.shell > .side { grid-column: 1; grid-row: 2; }
-.shell > .main { grid-column: 2; grid-row: 2; align-self: start; }
+.shell { display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: var(--gap); padding: var(--gap); min-height: 100vh; }
 /* Modalità In attesa: una striscia sottile a tutta larghezza in cima, sopra la cornice */
 .pending-bar { display: flex; align-items: center; gap: 10px; background: var(--pending); color: #fff; padding: 5px 8px 5px var(--gap); font-size: 13px; line-height: 1.3; }
 .pending-bar svg { width: 15px; height: 15px; flex: none; }
@@ -165,12 +161,24 @@ code { background: var(--subtle); padding: 1px 6px; border-radius: 6px; }
 .side-scrim { display: none; }
 
 .main { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
-.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; background: var(--surface); border-radius: var(--r-xl); padding: 16px 16px 16px 24px; min-height: 76px; }
+/* Barra in alto: percorso e titolo della pagina (PageHead, o il nome della sezione), poi gli strumenti della pagina e quelli comuni */
+.top-title { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.top-title h1 { font-size: 24px; margin: 0; }
+.top-title .sub { font-size: 14px; }
+.page-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.page-title > div { min-width: 0; }
+.page-title:empty, .top-title:has(.page-title > *) .top-fallback { display: none; }
+.top-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: auto; }
+.page-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.page-actions:empty { display: none; }
+.top .search { background: var(--surface-2); }
+.top .back { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; text-decoration: none; color: var(--text); flex: none; }
 .icon-button.menu-toggle { display: none; }
 .crumb { font-size: 13px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
 .crumb a { color: var(--muted); text-decoration: none; }
 .crumb a:hover { color: var(--text); text-decoration: underline; }
-.seg { margin-left: auto; display: flex; background: var(--surface); border-radius: var(--pill); padding: 4px; gap: 2px; }
+.seg { display: flex; background: var(--surface-2); border-radius: var(--pill); padding: 4px; gap: 2px; }
 .seg button, .seg a { text-decoration: none; border: 0; background: transparent; font: inherit; font-size: 13px; min-height: 36px; padding: 0 14px; border-radius: var(--pill); color: var(--text-2); display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .seg [aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
 .is-pending .seg [value="staging"][aria-pressed="true"] { background: var(--pending); color: #fff; }
@@ -178,10 +186,6 @@ code { background: var(--subtle); padding: 1px 6px; border-radius: 6px; }
 .seg-count { font-family: var(--mono); font-size: 12px; }
 
 /* --- Testi delle pagine -------------------------------------------------------- */
-.page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; background: var(--surface); border-radius: var(--r-xl); padding: 20px 24px; }
-.page-head h1, .edit-head h1 { font-size: 26px; margin: 0 0 4px; }
-.page-head .search { background: var(--surface-2); }
-.page-head > div:first-child { min-width: 0; flex: 1; }
 h1, .page-heading h1 { font-size: 34px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; margin: 8px 0 4px; overflow-wrap: anywhere; }
 .sub, .page-heading p { color: var(--muted); font-size: 15px; }
 .kicker, .eyebrow { font-size: 13px; color: var(--muted); }
@@ -329,8 +333,6 @@ label { font-size: 14px; }
 
 /* --- Modifica di un contenuto ----------------------------------------------- */
 .edit-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.edit-head .back { width: 44px; height: 44px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; text-decoration: none; color: var(--text); flex: none; }
-.edit-head-text { min-width: 0; flex: 1 1 260px; }
 .edit-head-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-left: auto; }
 .lang-switch { display: flex; background: var(--subtle); border-radius: var(--pill); padding: 3px; }
 .lang-switch button { border: 0; background: transparent; font: inherit; font-size: 13px; min-height: 32px; padding: 0 12px; border-radius: var(--pill); display: flex; gap: 6px; align-items: center; cursor: pointer; color: var(--text-2); }
@@ -339,15 +341,14 @@ label { font-size: 14px; }
 /* Una sezione di Kris dentro una schermata a schede: niente indice laterale, gli strumenti a destra */
 .embedded-edit .edit-cols { grid-template-columns: minmax(0, 1fr); }
 .embedded-edit .edit-cols > .index { display: none; }
-.edit-top { display: flex; flex-direction: column; gap: 12px; padding: 16px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
-.edit-top:not(:has(.edit-head > *, .sub, .nested-crumb, .notice)) { display: none; }
-.embedded-edit .edit-top { flex-direction: row-reverse; align-items: center; flex-wrap: wrap; }
-.embedded-edit .edit-top .sub { flex: 1 1 320px; }
+.edit-top { display: flex; flex-direction: row-reverse; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.edit-top:not(:has(.edit-head-tools > *, .sub, .nested-crumb, .notice)) { display: none; }
+.edit-top .sub, .edit-top .nested-crumb, .edit-top .notice { flex: 1 1 320px; }
 .panel .empty-state { background: none; padding: 16px 0 0; }
 .edit-top .sub { font-size: 14px; }
 .edit-cols.no-index { grid-template-columns: minmax(0, 1fr); }
-.embedded-edit .edit-head { justify-content: flex-end; }
-.embedded-edit .edit-head:not(:has(*)) { display: none; }
+.edit-head { justify-content: flex-end; }
+.edit-head:not(:has(.edit-head-tools > *)) { display: none; }
 .panel { background: var(--surface); border-radius: var(--r-xl); padding: 8px 24px 24px; min-width: 0; }
 .field-section { border-top: 1px solid var(--line); margin-top: 10px; }
 .field-section:first-of-type { border-top: 0; margin-top: 0; }
@@ -544,17 +545,16 @@ dialog::backdrop { background: var(--scrim); }
 @media (max-width: 900px) {
     :root { --gap: 12px; }
     .shell { grid-template-columns: minmax(0, 1fr); padding: 12px; }
-    .shell > .top, .shell > .main { grid-column: 1; }
     .side { position: fixed; z-index: 40; left: 0; top: 0; bottom: 0; width: min(300px, 86vw); max-height: none; border-radius: 0 var(--r-xl) var(--r-xl) 0; transform: translateX(-105%); transition: transform .2s; box-shadow: 0 20px 60px rgba(0, 0, 0, .2); }
     .side.is-open { transform: none; }
     .side-scrim { display: block; position: fixed; inset: 0; z-index: 39; background: var(--scrim); }
     .icon-button.menu-toggle { display: inline-grid; background: var(--surface); }
     .seg { margin-left: 0; order: 3; width: 100%; }
     .seg button { flex: 1; justify-content: center; }
-    .top .crumb { flex: 1; }
-    .edit-head-text { flex-basis: calc(100% - 56px); }
+    .top { padding: 12px 12px 12px 16px; }
+    .top-tools { margin-left: 0; width: 100%; }
+    .top-title h1 { font-size: 20px; }
     .edit-head-tools { margin-left: 0; width: 100%; justify-content: space-between; }
-    .edit-head h1, .page-head h1 { font-size: 22px; }
     .settings-layout { grid-template-columns: minmax(0, 1fr); }
     .settings-nav { position: static; flex-direction: row; overflow-x: auto; }
     .settings-nav a { flex: none; }

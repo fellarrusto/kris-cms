@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import MediaService from '@/services/MediaService'
 import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
@@ -72,10 +73,12 @@ async function remove() {
       <router-link class="btn btn-primary" :to="{ name: 'media' }">Torna alla libreria</router-link>
     </div>
     <template v-else>
-      <div class="page-head">
-        <div><p class="kicker"><router-link :to="{ name: 'media' }">Libreria media</router-link></p><h1 style="font-size: 26px; word-break: break-all">{{ file.name }}</h1></div>
-        <router-link class="btn btn-white" :to="{ name: 'media' }"><KIcon name="back" />Torna alla libreria</router-link>
-      </div>
+      <PageHead>
+        <div><p class="kicker"><router-link :to="{ name: 'media' }">Libreria media</router-link></p><h1 style="word-break: break-all">{{ file.name }}</h1></div>
+        <template #actions>
+          <router-link class="btn btn-white" :to="{ name: 'media' }"><KIcon name="back" />Torna alla libreria</router-link>
+        </template>
+      </PageHead>
       <div class="media-detail">
         <a class="media-art" :href="file.src" target="_blank" rel="noopener" :aria-label="`Apri ${file.name} a grandezza piena`">
           <img v-if="file.kind === 'image'" :src="file.src" :alt="file.name" @load="dims = `${$event.target.naturalWidth}×${$event.target.naturalHeight}`" />

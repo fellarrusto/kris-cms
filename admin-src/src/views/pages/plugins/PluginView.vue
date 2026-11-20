@@ -2,6 +2,7 @@
 import { computed, markRaw, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import { pluginView } from '@/lib/plugins'
 import { useSessionStore } from '@/stores/session'
 
@@ -35,13 +36,14 @@ watch(
 
 <template>
   <div class="container">
-    <div class="page-head">
+    <PageHead>
       <div>
-        <p class="eyebrow">{{ plugin?.title || 'Plugin' }}</p>
         <h1>{{ view?.title || 'Plugin' }}</h1>
       </div>
-      <router-link v-if="plugin?.settings" class="btn btn-white btn-small" :to="{ name: 'plugin-settings', params: { name: plugin.name } }"><KIcon name="settings" />Impostazioni</router-link>
-    </div>
+      <template #actions>
+        <router-link v-if="plugin?.settings" class="btn btn-white btn-small" :to="{ name: 'plugin-settings', params: { name: plugin.name } }"><KIcon name="settings" />Impostazioni</router-link>
+      </template>
+    </PageHead>
     <div v-if="error" class="alert alert-error" role="alert"><KIcon name="warning" /><p>{{ error }}</p></div>
     <p v-else-if="!component" class="muted">Carico…</p>
     <component :is="component" v-else :plugin="plugin" :view="view.name" />

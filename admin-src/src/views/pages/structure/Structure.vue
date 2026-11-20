@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
 import { useUiStore } from '@/stores/ui'
@@ -43,7 +44,9 @@ async function create() {
 
 <template>
   <div class="container">
-    <div class="page-head"><div><h1>Struttura</h1><p class="sub">I tipi di contenuto del sito e i loro campi. Qui si decide cosa si può modificare, non i testi.</p></div></div>
+    <PageHead>
+      <div><h1>Struttura</h1><p class="sub">I tipi di contenuto del sito e i loro campi. Qui si decide cosa si può modificare, non i testi.</p></div>
+    </PageHead>
     <div v-if="session.isStaging" class="notice notice-warning"><strong>Solo sul sito pubblico.</strong><p>La struttura si cambia sul sito pubblico: passa a «Sito pubblico» per modificarla.</p></div>
     <div class="structure-cols">
       <div class="rows">

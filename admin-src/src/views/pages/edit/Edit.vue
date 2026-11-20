@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import KSwitch from '@/components/KSwitch.vue'
 import SortableList from '@/components/SortableList.vue'
 import FieldInput from '@/views/pages/edit/components/FieldInput.vue'
@@ -107,20 +108,6 @@ const title = computed(() => {
   if (!path.value.length && (reserved.value || model.isSingle(site.schema, type.value)))
     return reserved.value ? model.RESERVED_VIEWS[type.value]?.label : site.label(type.value)
   return model.title(node.value, fields.value, languages.value[0])
-})
-const kicker = computed(() => {
-  if (path.value.length) {
-    const listDef = site
-      .fieldsOf(type.value, model.listNames(path.value.slice(0, -2)))
-      .find((f) => f.name === path.value[path.value.length - 2])
-    return `${site.label(type.value)} / ${listDef ? model.fieldLabel(listDef) : path.value[path.value.length - 2]}`
-  }
-  if (reserved.value) return 'Sito'
-  return model.isSingle(site.schema, type.value)
-    ? Object.values(site.schema.pages || {}).some((p) => p?.type === type.value)
-      ? 'Pagine'
-      : 'Componenti'
-    : site.label(type.value)
 })
 const back = computed(() => {
   if (path.value.length)
@@ -281,17 +268,14 @@ const isChanged = (def) =>
 
 <template>
   <div :class="embedded ? 'embedded-edit' : 'container'">
+    <PageHead v-if="!embedded">
+      <router-link class="back" :to="back" aria-label="Torna indietro"><KIcon name="back" /></router-link>
+      <h1>{{ title }}</h1>
+    </PageHead>
     <div class="edit-cols" :class="{ 'no-index': embedded || !node || !fields.length }">
       <component :is="node && fields.length ? 'form' : 'div'" class="panel" @submit.prevent="save">
         <div class="edit-top">
           <div class="edit-head">
-            <template v-if="!embedded">
-              <router-link class="back" :to="back" aria-label="Torna indietro"><KIcon name="back" /></router-link>
-              <div class="edit-head-text">
-                <p class="kicker">{{ kicker }}</p>
-                <h1>{{ title }}</h1>
-              </div>
-            </template>
             <div class="edit-head-tools">
               <div v-if="node && localized.length && languages.length > 1" class="lang-switch" role="group" aria-label="Lingua di modifica">
                 <button v-for="l in languages" :key="l" type="button" :aria-pressed="String(lang === l)" @click="lang = l">

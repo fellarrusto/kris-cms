@@ -53,10 +53,10 @@ watch(
     <router-link class="btn btn-small" :to="{ name: 'publish' }">Rivedi e pubblica</router-link>
   </div>
   <div class="shell" :class="{ 'is-pending': session.isStaging }">
-    <AppTopbar :menu-open="menuOpen" @toggle-menu="menuOpen = !menuOpen" />
     <AppSidebar :open="menuOpen" />
     <div v-if="menuOpen" class="side-scrim" @click="menuOpen = false"></div>
     <main id="main" class="main" tabindex="-1">
+      <AppTopbar :menu-open="menuOpen" @toggle-menu="menuOpen = !menuOpen" />
       <SystemAlerts />
       <div v-if="!site.loaded" class="loading">Carico i contenuti…</div>
       <router-view v-else :key="session.mode" />

@@ -23,6 +23,13 @@
       "_site-IwGpjuAv.js"
     ]
   },
+  "_PageHead-DRSGLCb7.js": {
+    "file": "assets/PageHead-DRSGLCb7.js",
+    "name": "PageHead",
+    "imports": [
+      "_runtime-dom.esm-bundler-BIQKpi-v.js"
+    ]
+  },
   "_PluginService-ClAWyJV6.js": {
     "file": "assets/PluginService-ClAWyJV6.js",
     "name": "PluginService",
@@ -71,7 +78,7 @@
     ]
   },
   "src/main.js": {
-    "file": "assets/main-7wuX1wox.js",
+    "file": "assets/main-DYyg43Kk.js",
     "name": "main",
     "src": "src/main.js",
     "isEntry": true,
@@ -95,11 +102,11 @@
       "src/views/pages/plugins/PluginView.vue"
     ],
     "css": [
-      "assets/main-eVf8tqYh.css"
+      "assets/main-BXnJR4kz.css"
     ]
   },
   "src/views/pages/addresses/Addresses.vue": {
-    "file": "assets/Addresses-QAgcFbtR.js",
+    "file": "assets/Addresses-Bt3zqbG4.js",
     "name": "Addresses",
     "src": "src/views/pages/addresses/Addresses.vue",
     "isDynamicEntry": true,
@@ -111,7 +118,7 @@
     ]
   },
   "src/views/pages/collection/Collection.vue": {
-    "file": "assets/Collection-D6u2Vsbk.js",
+    "file": "assets/Collection-3Sgko14Z.js",
     "name": "Collection",
     "src": "src/views/pages/collection/Collection.vue",
     "isDynamicEntry": true,
@@ -119,23 +126,25 @@
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "src/main.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_KSwitch-BhafmeS3.js",
       "_SortableList-CP_wRzFJ.js"
     ]
   },
   "src/views/pages/dashboard/Dashboard.vue": {
-    "file": "assets/Dashboard-PnjASFWr.js",
+    "file": "assets/Dashboard-STXynUgB.js",
     "name": "Dashboard",
     "src": "src/views/pages/dashboard/Dashboard.vue",
     "isDynamicEntry": true,
     "imports": [
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_plugins-Buvy0DcR.js"
     ]
   },
   "src/views/pages/edit/Edit.vue": {
-    "file": "assets/Edit-Bo1RB4lj.js",
+    "file": "assets/Edit-B2oaQj-Z.js",
     "name": "Edit",
     "src": "src/views/pages/edit/Edit.vue",
     "isDynamicEntry": true,
@@ -143,6 +152,7 @@
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "src/main.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_KSwitch-BhafmeS3.js",
       "_SortableList-CP_wRzFJ.js",
       "_FieldInput-Bw3V6s5_.js",
@@ -150,32 +160,34 @@
     ]
   },
   "src/views/pages/media/Media.vue": {
-    "file": "assets/Media-DkWscfMq.js",
+    "file": "assets/Media-CMYRaN2O.js",
     "name": "Media",
     "src": "src/views/pages/media/Media.vue",
     "isDynamicEntry": true,
     "imports": [
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_MediaService-DXSxCRXN.js",
       "_format-DfYk6USW.js"
     ]
   },
   "src/views/pages/media/MediaFile.vue": {
-    "file": "assets/MediaFile-zjAYn28P.js",
+    "file": "assets/MediaFile-CeSWprqh.js",
     "name": "MediaFile",
     "src": "src/views/pages/media/MediaFile.vue",
     "isDynamicEntry": true,
     "imports": [
       "src/main.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_MediaService-DXSxCRXN.js",
       "_format-DfYk6USW.js",
       "_runtime-dom.esm-bundler-BIQKpi-v.js"
     ]
   },
   "src/views/pages/plugins/PluginSettings.vue": {
-    "file": "assets/PluginSettings-BY4btBiB.js",
+    "file": "assets/PluginSettings-CFaKnvT1.js",
     "name": "PluginSettings",
     "src": "src/views/pages/plugins/PluginSettings.vue",
     "isDynamicEntry": true,
@@ -183,6 +195,7 @@
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "src/main.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_FieldInput-Bw3V6s5_.js",
       "_PluginService-ClAWyJV6.js",
       "_KSwitch-BhafmeS3.js",
@@ -190,30 +203,32 @@
     ]
   },
   "src/views/pages/plugins/PluginView.vue": {
-    "file": "assets/PluginView-81-a7-XX.js",
+    "file": "assets/PluginView-B1vEQN6L.js",
     "name": "PluginView",
     "src": "src/views/pages/plugins/PluginView.vue",
     "isDynamicEntry": true,
     "imports": [
       "src/main.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_plugins-Buvy0DcR.js",
       "_runtime-dom.esm-bundler-BIQKpi-v.js"
     ]
   },
   "src/views/pages/publish/Publish.vue": {
-    "file": "assets/Publish-Cii_1r4B.js",
+    "file": "assets/Publish-Bz5AIfwV.js",
     "name": "Publish",
     "src": "src/views/pages/publish/Publish.vue",
     "isDynamicEntry": true,
     "imports": [
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js",
       "_format-DfYk6USW.js"
     ]
   },
   "src/views/pages/settings/Settings.vue": {
-    "file": "assets/Settings-2KQLvb9g.js",
+    "file": "assets/Settings-DbeRqBdA.js",
     "name": "Settings",
     "src": "src/views/pages/settings/Settings.vue",
     "isDynamicEntry": true,
@@ -225,35 +240,38 @@
       "_KSwitch-BhafmeS3.js",
       "_PluginService-ClAWyJV6.js",
       "src/views/pages/edit/Edit.vue",
+      "_PageHead-DRSGLCb7.js",
       "_SortableList-CP_wRzFJ.js",
       "_FieldInput-Bw3V6s5_.js",
       "_MediaService-DXSxCRXN.js"
     ]
   },
   "src/views/pages/structure/Structure.vue": {
-    "file": "assets/Structure-DTfk-xqQ.js",
+    "file": "assets/Structure-BX7YbxQS.js",
     "name": "Structure",
     "src": "src/views/pages/structure/Structure.vue",
     "isDynamicEntry": true,
     "imports": [
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "src/main.js",
-      "_site-IwGpjuAv.js"
+      "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js"
     ]
   },
   "src/views/pages/structure/StructureType.vue": {
-    "file": "assets/StructureType-D5krAAJr.js",
+    "file": "assets/StructureType-D2mUTPSY.js",
     "name": "StructureType",
     "src": "src/views/pages/structure/StructureType.vue",
     "isDynamicEntry": true,
     "imports": [
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
       "src/main.js",
-      "_site-IwGpjuAv.js"
+      "_site-IwGpjuAv.js",
+      "_PageHead-DRSGLCb7.js"
     ]
   },
   "src/views/pages/system/SystemPages.vue": {
-    "file": "assets/SystemPages-BopM99dj.js",
+    "file": "assets/SystemPages-CMBQyVCx.js",
     "name": "SystemPages",
     "src": "src/views/pages/system/SystemPages.vue",
     "isDynamicEntry": true,
@@ -262,6 +280,7 @@
       "_site-IwGpjuAv.js",
       "src/views/pages/edit/Edit.vue",
       "_runtime-dom.esm-bundler-BIQKpi-v.js",
+      "_PageHead-DRSGLCb7.js",
       "_KSwitch-BhafmeS3.js",
       "_SortableList-CP_wRzFJ.js",
       "_FieldInput-Bw3V6s5_.js",

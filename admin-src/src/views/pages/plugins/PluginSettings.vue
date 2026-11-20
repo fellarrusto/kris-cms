@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import { useDirty } from '@/components/dirty'
 import FieldInput from '@/views/pages/edit/components/FieldInput.vue'
 import PluginService from '@/services/PluginService'
@@ -72,14 +73,15 @@ const discard = () => (values.value = JSON.parse(JSON.stringify(saved.value)))
 
 <template>
   <div class="container">
-    <div class="page-head">
+    <PageHead>
       <div>
-        <p class="eyebrow">Plugin</p>
         <h1>{{ title || 'Impostazioni del plugin' }}</h1>
         <p class="sub">Le impostazioni valgono subito sul sito pubblico, anche in modalità «In attesa».</p>
       </div>
-      <router-link class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'plugin' } }"><KIcon name="puzzle" />Tutti i plugin</router-link>
-    </div>
+      <template #actions>
+        <router-link class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'plugin' } }"><KIcon name="puzzle" />Tutti i plugin</router-link>
+      </template>
+    </PageHead>
     <div v-if="error" class="alert alert-error" role="alert"><KIcon name="warning" /><p>{{ error }}</p></div>
     <p v-else-if="loading" class="muted">Carico…</p>
     <form v-else class="panel" @submit.prevent="save">

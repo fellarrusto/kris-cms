@@ -2,6 +2,7 @@
 import { computed, ref, watchEffect } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import KSwitch from '@/components/KSwitch.vue'
 import SortableList from '@/components/SortableList.vue'
 import { useSessionStore } from '@/stores/session'
@@ -99,31 +100,33 @@ async function remove(row) {
 
 <template>
   <div class="container">
-    <div class="page-head">
+    <PageHead>
       <div>
         <h1>{{ site.label(type) }}</h1>
         <p class="sub">
-          <template v-if="typeDescription(site.schema, type)">{{ typeDescription(site.schema, type) }} </template>
+          <template v-if="typeDescription(site.schema, type)">{{ `${typeDescription(site.schema, type)} ` }}</template>
           <span class="num">{{ rows.length }}</span> {{ rows.length === 1 ? 'contenuto' : 'contenuti'
           }}<template v-if="hiddenCount">, {{ hiddenCount }} {{ hiddenCount === 1 ? 'sospeso' : 'sospesi' }}</template
           >.
           <template v-if="isNewestFirst(site.schema, type)"> I nuovi entrano in cima.</template>
         </p>
       </div>
-      <div class="actions">
-        <router-link v-if="!session.isStaging" class="btn btn-white" :to="{ name: 'structure-type', params: { type } }"
-          ><KIcon name="code" />Struttura</router-link
-        >
-        <button
-          v-if="fields.length && !(single && rows.length)"
-          class="btn btn-primary"
-          :disabled="saving || session.locked"
-          @click="create"
-        >
-          <KIcon name="plus" />Nuovo contenuto
-        </button>
-      </div>
-    </div>
+      <template #actions>
+        <div class="actions">
+          <router-link v-if="!session.isStaging" class="btn btn-white" :to="{ name: 'structure-type', params: { type } }"
+            ><KIcon name="code" />Struttura</router-link
+          >
+          <button
+            v-if="fields.length && !(single && rows.length)"
+            class="btn btn-primary"
+            :disabled="saving || session.locked"
+            @click="create"
+          >
+            <KIcon name="plus" />Nuovo contenuto
+          </button>
+        </div>
+      </template>
+    </PageHead>
 
     <div v-if="!fields.length" class="empty-state">
       <h2>Prima definiamo cosa raccontare.</h2>
