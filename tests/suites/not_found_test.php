@@ -142,7 +142,7 @@ test('la 404 di serie usa i testi della sezione Pagina 404, nella lingua richies
     assertSame(404, $it['status']);
     assertContains('Qui non c&#039;è niente', $it['output']);
     assertContains('Torna alla home', $it['output']);
-    assertContains('href="index.php?page=homepage&amp;ln=it"', $it['output']);
+    assertContains('href="/"', $it['output']);
     assertContains('Nothing here', renderPage(['page' => 'inesistente', 'ln' => 'en'], $root)['output']);
 });
 

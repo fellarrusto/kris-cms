@@ -16,6 +16,7 @@ const busy = ref(false)
 const result = ref(null) // { kind, title, text, notes, target, major, warnings, blocked }
 const steps = ref([])
 const file = ref(null)
+const picked = ref(null) // il pacchetto scelto, prima di caricarlo
 
 const OUTCOMES = { ok: 'riuscito', rollback: 'annullato, sito ripristinato', error: 'non riuscito', manual_rollback: 'tornati alla versione precedente', ftp: 'file caricati a mano' }
 
@@ -88,8 +89,8 @@ async function install(prepareOp, fields) {
 }
 
 function upload() {
-  if (!file.value?.files?.length) return ui.toast('Scegli prima il file zip del pacchetto.')
-  install('upload', { package: file.value.files[0] })
+  if (!picked.value) return ui.toast('Scegli prima il file zip del pacchetto.')
+  install('upload', { package: picked.value })
 }
 
 async function rollback() {
@@ -155,7 +156,12 @@ async function recover() {
         <details class="update-manual" :open="result?.manual">
           <summary>Carica un pacchetto a mano</summary>
           <p class="hint">Se l'hosting non riesce a scaricare gli aggiornamenti, scarica lo zip dalla pagina delle release di Kris e caricalo qui. La firma viene verificata prima di installare.</p>
-          <div class="update-actions"><input ref="file" type="file" accept=".zip,application/zip" aria-label="Pacchetto zip di Kris" /><button type="button" class="btn btn-white" :disabled="busy" @click="upload">Carica e verifica</button></div>
+          <div class="update-actions">
+            <input ref="file" type="file" accept=".zip,application/zip" hidden @change="picked = $event.target.files[0] || null" />
+            <button type="button" class="btn btn-white" :disabled="busy" @click="file.click()"><KIcon name="upload" />{{ picked ? 'Cambia pacchetto' : 'Scegli il pacchetto' }}</button>
+            <span v-if="picked" class="mono picked-file">{{ picked.name }}</span>
+            <button type="button" class="btn btn-primary" :disabled="busy || !picked" @click="upload">Carica e verifica</button>
+          </div>
         </details>
         <div v-if="data.rollback" class="update-rollback">
           <div><strong>Torna a Kris {{ data.rollback.from }}</strong><small>Possibile fino al {{ formatDate(data.rollback.expires_at) }}. Le modifiche ai contenuti fatte dopo l'aggiornamento del {{ formatDate(data.rollback.created_at) }} andranno perse.</small></div>

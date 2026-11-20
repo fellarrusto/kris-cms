@@ -142,14 +142,15 @@ final class PageRenderer
      * acceso, altrimenti null: template/kris_wip.html del tema, resa con i campi
      * della sezione, o quella di serie di Kris.
      */
-    public static function workInProgress(string $lang): ?string
+    public static function workInProgress(string $lang, bool $force = false): ?string
     {
         try {
             $entity = Entity::load('kris_wip');
         } catch (Throwable $e) {
             return null; // sito senza la sezione (migrazione non ancora applicata)
         }
-        if ($entity->getData('enabled') !== '1') return null;
+        // $force: l'anteprima dall'editor, anche con l'interruttore spento
+        if ($entity->getData('enabled') !== '1' && !$force) return null;
         $template = Paths::template('kris_wip');
         if (is_file($template)) {
             try {

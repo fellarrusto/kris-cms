@@ -36,8 +36,10 @@ final class Seo
         return [
             'base_url' => is_string($config['base_url'] ?? null) ? rtrim($config['base_url'], '/') : null,
             'head' => ($config['head'] ?? true) !== false,
-            // Indirizzi leggibili (/menu, /en/progetto/3): servono la riscrittura sul server (.htaccess)
-            'pretty_urls' => ($config['pretty_urls'] ?? false) === true,
+            // Indirizzi leggibili (/menu, /en/progetto/3) sempre, dalla 2.0: i vecchi index.php?… rispondono con un 301.
+            // La chiave pretty_urls dei siti 1.x non conta più. Unica eccezione: su Apache senza la regola del
+            // .htaccess di Kris i percorsi darebbero 404, quindi restano gli indirizzi di prima (e l'editor lo segnala).
+            'pretty_urls' => self::rewriteAvailable($root),
             // Lingua automatica: la homepage senza lingua nell'indirizzo segue il browser del visitatore
             'auto_language' => ($config['auto_language'] ?? false) === true,
             // Reindirizzamenti 301: {"/vecchio": "/nuovo"}, percorsi dalla cartella del sito o indirizzi https
@@ -47,6 +49,21 @@ final class Seo
             'robots' => is_string($config['robots'] ?? null) ? $config['robots'] : '',
         ];
     }
+
+    /**
+     * Vero se il server passa a Kris i percorsi che non sono file: su Apache e
+     * LiteSpeed serve la regola del .htaccess di Kris nella cartella del sito;
+     * sugli altri server (Nginx, il server di sviluppo di PHP) si presume
+     * configurato, come chiede AGENTS.md.
+     */
+    public static function rewriteAvailable(string $root): bool
+    {
+        $software = (string) ($_SERVER['SERVER_SOFTWARE'] ?? '');
+        if (stripos($software, 'apache') === false && stripos($software, 'litespeed') === false) return true;
+        static $cache = [];
+        return $cache[$root] ??= preg_match('/index\.php \[L/', (string) @file_get_contents(rtrim($root, '/\\') . '/.htaccess')) === 1;
+    }
+
     /** Indirizzo pubblico della cartella del sito, senza barra finale. */
     public static function baseUrl(array $config, array $server): string
     {

@@ -36,7 +36,11 @@ function toggle(option, on) {
 function grow(event) {
   const el = event.target
   el.style.height = 'auto'
-  el.style.height = Math.min(el.scrollHeight + 2, 560) + 'px'
+  // scrollHeight non conta i bordi: con box-sizing border-box vanno aggiunti, esatti
+  const borders = el.offsetHeight - el.clientHeight
+  const height = Math.min(el.scrollHeight + borders, 560)
+  el.style.height = height + 'px'
+  el.style.overflowY = el.scrollHeight + borders > 560 ? 'auto' : 'hidden'
 }
 const vGrow = { mounted: (el) => requestAnimationFrame(() => grow({ target: el })) }
 

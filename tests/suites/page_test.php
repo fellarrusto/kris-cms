@@ -44,7 +44,7 @@ test('la homepage elenca le tre feature', function () {
 test('ogni feature linka il proprio dettaglio', function () {
     $out = renderPage([])['output'];
     foreach ([0, 1, 2] as $i) {
-        assertContains('key=features&amp;id=' . $i . '&amp;', $out);
+        assertContains('href="/detail/' . $i . '"', $out);
     }
 });
 
@@ -68,7 +68,7 @@ test('la lingua richiesta cambia i contenuti', function () {
 test("la homepage elenca i post nell'ordine dei dati", function () {
     $out = renderPage([])['output'];
     assertSame(3, substr_count($out, 'class="post-card"'));
-    assertTrue(strpos($out, 'key=posts&amp;id=2&amp;') < strpos($out, 'key=posts&amp;id=0&amp;'), 'il post piu recente non e in cima');
+    assertTrue(strpos($out, 'href="/post/2"') < strpos($out, 'href="/post/0"'), 'il post piu recente non e in cima');
 });
 
 test('un post risponde 200 e mostra il testo formattato', function () {
@@ -183,15 +183,17 @@ test('lingua automatica: la homepage senza lingua segue cookie e browser, non i 
     file_put_contents("{$root}/config/seo.json", json_encode($seo + ['auto_language' => true]));
     try {
         $GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'] = 'en-US,en;q=0.9,it;q=0.5';
-        assertSame(302, renderPage([], $root)['status'], 'browser in inglese');
-        assertSame(200, renderPage([], $root, 'index.php', false, ['kris_lang' => 'it'])['status'], 'scelta già fatta: italiano');
-        assertSame(200, renderPage(['ln' => 'en'], $root)['status'], 'lingua nell indirizzo: nessun redirect');
-        assertSame(200, renderPage(['page' => 'privacy', 'key' => 'kris_legal'], $root)['status'], 'solo la homepage');
+        assertSame(302, renderOnce([], $root)['status'], 'browser in inglese');
+        assertSame(200, renderOnce([], $root, 'index.php', false, ['kris_lang' => 'it'])['status'], 'scelta già fatta: italiano');
+        $en = renderPage(['ln' => 'en'], $root);
+        assertSame([200, [[301, '/en/']]], [$en['status'], $en['redirects']], 'lingua nell indirizzo: solo il 301 al percorso, nessun redirect della lingua automatica');
+        $privacy = renderPage(['page' => 'privacy', 'key' => 'kris_legal'], $root);
+        assertSame([200, [[301, '/privacy']]], [$privacy['status'], $privacy['redirects']], 'solo la homepage');
         $GLOBALS['KRIS_TEST_USER_AGENT'] = 'Mozilla/5.0 (compatible; Googlebot/2.1)';
-        assertSame(200, renderPage([], $root)['status'], 'i motori di ricerca vedono la lingua principale');
+        assertSame(200, renderOnce([], $root)['status'], 'i motori di ricerca vedono la lingua principale');
         unset($GLOBALS['KRIS_TEST_USER_AGENT']);
         $GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'] = 'de-DE,fr;q=0.8';
-        assertSame(200, renderPage([], $root)['status'], 'lingua non attiva: la principale');
+        assertSame(200, renderOnce([], $root)['status'], 'lingua non attiva: la principale');
     } finally {
         unset($GLOBALS['KRIS_TEST_ACCEPT_LANGUAGE'], $GLOBALS['KRIS_TEST_USER_AGENT']);
     }
@@ -204,6 +206,7 @@ test('lavori in corso: i visitatori ricevono la pagina 503, chi ha l editor aper
     $files = $migration['up']($files);
     assertSame($files, $migration['up']($files), 'la migrazione è idempotente');
     assertSame(200, renderPage([], $root)['status'], 'con l interruttore spento non cambia nulla');
+    assertSame(200, renderPage(['kris_wip_preview' => '1'], $root)['status'], 'senza editor il parametro non conta');
     foreach ($files['k_data'] as &$entity) {
         if ($entity['name'] !== 'kris_wip') continue;
         foreach ($entity['data'] as &$field) if ($field['name'] === 'enabled') $field['value'] = '1';
@@ -217,10 +220,22 @@ test('lavori in corso: i visitatori ricevono la pagina 503, chi ha l editor aper
     assertContains('Sito in lavorazione', $guest['output']);
     assertContains('noindex', $guest['output']);
     assertSame(200, renderPage([], $root, 'index.php', true)['status'], 'l admin vede il sito');
+    assertContains('Sito in lavorazione', renderPage(['kris_wip_preview' => '1'], $root, 'index.php', true)['output'], 'l admin vede la pagina con kris_wip_preview');
     assertSame(503, renderPage([], $root, 'sitemap.php')['status']);
 
     file_put_contents("{$root}/template/kris_wip.html", '<!doctype html><html><head></head><body><h1>TEMA: {{title}}</h1></body></html>');
     assertContains('TEMA: Sito in lavorazione', renderPage([], $root)['output'], 'il template del tema, se c è');
+
+    // Spento: i visitatori vedono il sito, chi ha l editor aperto può vedere la pagina in anteprima
+    $data = json_decode((string) file_get_contents("{$root}/data/k_data.json"), true);
+    foreach ($data as &$entity) {
+        if ($entity['name'] !== 'kris_wip') continue;
+        foreach ($entity['data'] as &$field) if ($field['name'] === 'enabled') $field['value'] = '';
+    }
+    unset($entity, $field);
+    file_put_contents("{$root}/data/k_data.json", json_encode($data));
+    assertSame(200, renderPage([], $root)['status']);
+    assertContains('TEMA: Sito in lavorazione', renderPage(['kris_wip_preview' => '1'], $root, 'index.php', true)['output'], 'anteprima anche spenta');
 });
 
 test('proprieta del sito e campi seo_* della pagina: titolo, description, Open Graph, verifiche', function () {

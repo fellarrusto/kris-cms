@@ -83,7 +83,7 @@ test('sitemap.php risponde con l XML generato dai contenuti', function () {
 
 test('la pagina pubblica ha canonical e hreflang', function () {
     $html = renderPage(['page' => 'homepage', 'ln' => 'en'])['output'];
-    assertContains('<link rel="canonical" href="http://localhost/?ln=en">', $html);
+    assertContains('<link rel="canonical" href="http://localhost/en/">', $html);
     assertContains('hreflang="x-default"', $html);
 });
 
@@ -182,7 +182,7 @@ test('le pagine e la 404 mostrano la favicon scelta nell editor', function () {
     file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
     file_put_contents("{$root}/data/k_model.json", json_encode($files['k_model']));
 
-    $tag = '<link rel="icon" type="image/png" href="assets/uploads/icona.png">';
+    $tag = '<link rel="icon" type="image/png" href="/assets/uploads/icona.png">';
     assertContains($tag, renderPage(['ln' => 'en'], $root)['output']);
     assertContains($tag, renderPage(['page' => 'inesistente'], $root)['output']);
     file_put_contents("{$root}/template/404.html", '<!doctype html><html><head><title>404</title></head><body>no</body></html>');

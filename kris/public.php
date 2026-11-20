@@ -9,6 +9,13 @@ use Kris\Site\Router;
 use Kris\Staging\Preview;
 use Kris\Staging\Staging;
 
+// Ogni redirect della pagina passa da qui: i test leggono la destinazione (in CLI header() non la conserva)
+$redirect = static function (string $url, int $code): never {
+    $GLOBALS['kris_location'] = $url;
+    header('Location: ' . $url, true, $code);
+    exit;
+};
+
 // Durante un aggiornamento il sito risponde 503. Se l'aggiornamento si e
 // interrotto (manutenzione scaduta) il sito torna visibile comunque.
 $maintenance = kris_maintenance();
@@ -33,6 +40,13 @@ if ($requestPath === $previewPrefix || str_starts_with($requestPath, $previewPre
 
 // Lavori in corso: i visitatori ricevono la pagina di lavorazione (503); chi ha l'editor aperto vede il sito
 $wip = PageRenderer::workInProgress($lang);
+// Chi ha l'editor aperto vede il sito; con ?kris_wip_preview=1 vede la pagina di lavorazione, anche spenta
+if (Preview::isAdmin() && ($_GET['kris_wip_preview'] ?? null) === '1' && ($wipPreview = PageRenderer::workInProgress($lang, true)) !== null) {
+    header('Cache-Control: no-store');
+    header('X-Robots-Tag: noindex');
+    echo $wipPreview;
+    exit;
+}
 if ($wip !== null && !Preview::isAdmin()) {
     http_response_code(503);
     header('Retry-After: 3600');
@@ -125,8 +139,7 @@ $to = $redirects[$requested] ?? $redirects[rtrim($requested, '/')] ?? null;
 // Una destinazione /… è del sito: //… o /\… porterebbero altrove e non valgono
 if (is_string($to) && str_starts_with($to, '/') && preg_match('#^/[/\\\\]#', $to) === 1) $to = null;
 if ($to !== null && $preview === null) {
-    header('Location: ' . (str_starts_with($to, '/') ? $basePath . $to : $to), true, 301);
-    exit;
+    $redirect((str_starts_with($to, '/') ? $basePath . $to : $to), 301);
 }
 if ($routes !== null) {
     [, $langs] = PageRenderer::language([]);
@@ -141,8 +154,7 @@ if ($routes !== null) {
                 ($resolved['path'] ?? '') === '' ? [] : explode('/', $resolved['path']), $query['ln'], $langs[0]);
             if ($target !== null) {
                 $rest = array_diff_key($query, array_flip($pageParams));
-                header('Location: ' . $basePath . $target . ($rest ? '?' . http_build_query($rest) : ''), true, 302);
-                exit;
+                $redirect($basePath . $target . ($rest ? '?' . http_build_query($rest) : ''), 302);
             }
         }
         // Un percorso che non è di nessuna pagina è una 404
@@ -152,12 +164,11 @@ if ($routes !== null) {
             $routes,
             (string) ($query['page'] ?? 'homepage'), (string) ($query['key'] ?? 'homepage'), (int) ($query['id'] ?? 0),
             ($query['path'] ?? '') === '' ? [] : explode('/', (string) $query['path']),
-            (string) ($query['ln'] ?? $langs[0]), $langs[0]
+            in_array($query['ln'] ?? null, $langs, true) ? (string) $query['ln'] : $langs[0], $langs[0]
         );
         if ($pretty !== null) {
             $rest = array_diff_key($query, array_flip($pageParams));
-            header('Location: ' . $basePath . $pretty . ($rest ? '?' . http_build_query($rest) : ''), true, 301);
-            exit;
+            $redirect($basePath . $pretty . ($rest ? '?' . http_build_query($rest) : ''), 301);
         }
     }
 }
@@ -181,8 +192,7 @@ if (\Kris\Template\Seo::config(KRIS_ROOT)['auto_language'] && $preview === null)
         if ($wanted !== null && $wanted !== $langs[0]) {
             $target = $routes !== null ? $basePath . Router::path($routes, 'homepage', 'homepage', 0, [], $wanted, $langs[0]) : $basePath . '/?ln=' . rawurlencode($wanted);
             header('Vary: Accept-Language, Cookie');
-            header('Location: ' . $target, true, 302);
-            exit;
+            $redirect($target, 302);
         }
     }
 }

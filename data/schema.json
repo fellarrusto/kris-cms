@@ -596,12 +596,14 @@
         "detail": {
             "template": "detail",
             "type": "features",
-            "sitemap": true
+            "sitemap": true,
+            "slug": "title"
         },
         "post": {
             "template": "post",
             "type": "posts",
-            "sitemap": true
+            "sitemap": true,
+            "slug": "title"
         },
         "privacy": {
             "template": "privacy",

@@ -29,7 +29,7 @@ if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno
 /** Operazioni che cambiano la struttura: solo sul sito pubblico. */
 const KRIS_API_SCHEMA_OPS = ['add_field', 'remove_field', 'rename_field', 'describe_field', 'change_type', 'move_field', 'set_options',
     'create_collection', 'rename_collection', 'remove_collection', 'set_post_collection', 'set_collection_info', 'move_collection',
-    'register_page', 'unregister_page', 'set_sitemap'];
+    'register_page', 'unregister_page', 'set_sitemap', 'set_page'];
 
 function kris_api_respond(array $data, int $status = 200): never
 {
@@ -218,6 +218,8 @@ try {
                 'uploads' => ['accept' => MediaStore::allowedExtensions(), 'max_bytes' => MediaStore::maxBytes(), 'video_max_bytes' => MediaStore::videoMaxBytes(),
                     'can_process' => MediaStore::canProcessImages(), 'can_webp' => MediaStore::canWriteWebp()],
                 'field_types' => EDITOR_FIELD_TYPES,
+                // Su Apache senza la regola del .htaccess di Kris le pagine restano con gli indirizzi index.php?…
+                'rewrite_missing' => !\Kris\Template\Seo::rewriteAvailable(KRIS_ROOT),
                 'plugins' => editorPluginsSummary(),
             ]);
 
@@ -304,7 +306,7 @@ try {
             $robots = array_values(array_filter(array_map('trim', preg_split('/\R/', (string) ($in['robots'] ?? '')) ?: []), fn($l) => $l !== '' && preg_match('/^[A-Za-z-]+\s*:/', $l) === 1));
             \Kris\Store\Stores::site()->transaction(['settings'], function (array $d) use ($in, $base, $robots): array {
                 // Le altre opzioni SEO del sito restano; quelle del modulo si sostituiscono
-                $seo = ['pretty_urls' => !empty($in['pretty_urls']), 'auto_language' => !empty($in['auto_language']), 'head' => ($in['head'] ?? true) !== false]
+                $seo = ['auto_language' => !empty($in['auto_language']), 'head' => ($in['head'] ?? true) !== false]
                     + array_diff_key(is_array($d['settings']['seo'] ?? null) ? $d['settings']['seo'] : [], array_flip(['base_url', 'robots']));
                 if ($base !== '') $seo['base_url'] = rtrim($base, '/');
                 if ($robots) $seo['robots'] = $robots;
