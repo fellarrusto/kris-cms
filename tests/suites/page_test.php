@@ -219,7 +219,9 @@ test('lavori in corso: i visitatori ricevono la pagina 503, chi ha l editor aper
     assertSame(503, $guest['status']);
     assertContains('Sito in lavorazione', $guest['output']);
     assertContains('noindex', $guest['output']);
-    assertSame(200, renderPage([], $root, 'index.php', true)['status'], 'l admin vede il sito');
+    $admin = renderPage([], $root, 'index.php', true);
+    assertSame(200, $admin['status'], 'l admin vede il sito');
+    assertContains('Lavori in corso attivi', $admin['output'], 'con una striscia che ricorda che i visitatori non lo vedono');
     assertContains('Sito in lavorazione', renderPage(['kris_wip_preview' => '1'], $root, 'index.php', true)['output'], 'l admin vede la pagina con kris_wip_preview');
     assertSame(503, renderPage([], $root, 'sitemap.php')['status']);
 
@@ -235,6 +237,7 @@ test('lavori in corso: i visitatori ricevono la pagina 503, chi ha l editor aper
     unset($entity, $field);
     file_put_contents("{$root}/data/k_data.json", json_encode($data));
     assertSame(200, renderPage([], $root)['status']);
+    assertNotContains('Lavori in corso attivi', renderPage([], $root, 'index.php', true)['output'], 'spento: niente striscia');
     assertContains('TEMA: Sito in lavorazione', renderPage(['kris_wip_preview' => '1'], $root, 'index.php', true)['output'], 'anteprima anche spenta');
 });
 
