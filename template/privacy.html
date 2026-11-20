@@ -1,30 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="{{language}}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy policy - Kris 2</title>
-    <link rel="stylesheet" href="assets/css/style.css">
-    <script src="kris/core/scripts/script.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{#if language == "en"}}Privacy policy{{#else}}Informativa sulla privacy{{/if}}</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/site.js" defer></script>
 </head>
 <body>
-    <header k-component="navbar" k-template="navbar" k-index="0"></header>
+  <a class="skip-link" href="#main">{{#if language == "en"}}Skip to content{{#else}}Vai al contenuto{{/if}}</a>
+  <div k-component="site" k-template="site-header" k-index="0"></div>
 
-    <main class="post-page">
-        <article class="container post-article legal-page">
-            <a href="index.php?ln={{language}}" class="back-link">← Home</a>
-            <h1 class="detail-title">Privacy policy</h1>
-            {{#if updated_at != ""}}<p class="post-date">{{updated_at}}</p>{{/if}}
-            <div class="post-content">{{privacy_policy}}</div>
-            <address class="legal-owner">
-                <strong>{{owner_name}}</strong><br>
-                {{owner_address}}<br>
-                {{owner_vat}}<br>
-                <a href="mailto:{{privacy_email}}">{{privacy_email}}</a>
-            </address>
-        </article>
-    </main>
+  <main id="main" class="page">
+    <article class="container article article-narrow">
+      <header class="article-head">
+        <a class="back-link" href="index.php?page=homepage&amp;ln={{language}}"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"/></svg> {{site.back_home}}</a>
+        {{#if updated_at}}<p class="article-meta mono">{{updated_at}}</p>{{/if}}
+        <h1>{{#if language == "en"}}Privacy policy{{#else}}Informativa sulla privacy{{/if}}</h1>
+      </header>
+      <div class="prose">
+        {{#if privacy_policy}}{{privacy_policy}}{{#else}}<p>{{#if language == "en"}}The text is written by the site owner in Settings › Privacy and cookies.{{#else}}Il testo lo scrive il titolare del sito in Impostazioni › Privacy e cookie.{{/if}}</p>{{/if}}
+      </div>
+      <address class="legal-owner">
+        <strong>{{owner_name}}</strong>
+        {{#if owner_address}}<span>{{owner_address}}</span>{{/if}}
+        {{#if owner_vat}}<span>{{owner_vat}}</span>{{/if}}
+        {{#if privacy_email}}<a href="mailto:{{privacy_email}}">{{privacy_email}}</a>{{/if}}
+      </address>
+    </article>
+  </main>
 
-    <div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>
+  <div k-component="site" k-template="site-footer" k-index="0"></div>
+  <div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>
 </body>
 </html>

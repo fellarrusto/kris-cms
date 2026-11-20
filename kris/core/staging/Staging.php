@@ -575,7 +575,8 @@ final class Staging
         $out = [];
 
         foreach ((array) ($state['schema']['types'] ?? []) as $collection => $type) {
-            if (!is_array($type['fields'] ?? null) || str_starts_with((string) $collection, 'kris_')) continue;
+            // kris_ e plg_ sono del framework e dei plugin: i loro campi non passano dai template
+            if (!is_array($type['fields'] ?? null) || preg_match('/^(kris|plg)_/', (string) $collection) === 1) continue;
             foreach (self::schemaLevels($type['fields'], (string) $collection) as $where => $defs) {
                 $withSection = array_filter($defs, fn($d) => ($d['section'] ?? '') !== '');
                 $loose = array_column(array_filter($defs, fn($d) => ($d['section'] ?? '') === ''), 'name');
@@ -584,6 +585,8 @@ final class Staging
                 }
                 $unused = [];
                 foreach ($defs as $def) {
+                    // seo_title, seo_description e seo_image li usa Kris per il <head> (PageRenderer)
+                    if (in_array($def['name'] ?? '', ['seo_title', 'seo_description', 'seo_image'], true)) continue;
                     $q = preg_quote((string) ($def['name'] ?? ''), '/');
                     if (preg_match('/\{\{[^}]*\b' . $q . '\b[^}]*\}\}|k-[a-z-]+=["\']' . $q . '["\']/', $templates) !== 1) $unused[] = $def['name'];
                 }

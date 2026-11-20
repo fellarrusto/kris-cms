@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="{{language}}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <meta name="robots" content="noindex">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/site.js" defer></script>
+</head>
+<body>
+  <div k-component="site" k-template="site-header" k-index="0"></div>
+
+  <main id="main" class="page status-page">
+    <div class="container status-inner">
+      <p class="status-code mono" aria-hidden="true">404</p>
+      <h1>{{title}}</h1>
+      <p class="status-text">{{text}}</p>
+      {{#if image}}<img class="status-image" src="{{image}}" alt="">{{/if}}
+      <div class="actions">
+        <a class="btn btn-primary" href="{{button_url}}">{{button_label}}</a>
+      </div>
+    </div>
+  </main>
+
+  <div k-component="site" k-template="site-footer" k-index="0"></div>
+</body>
+</html>

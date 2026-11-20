@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="{{language}}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <meta name="description" content="{{summary}}">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script src="assets/js/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">{{#if language == "en"}}Skip to content{{#else}}Vai al contenuto{{/if}}</a>
+  <div k-component="site" k-template="site-header" k-index="0"></div>
+
+  <main id="main" class="page">
+    <article class="container article">
+      <header class="article-head">
+        <a class="back-link" href="index.php?page=homepage&amp;ln={{language}}#funzioni"><svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4"/></svg> {{homepage.more_label}}</a>
+        <h1>{{title}}</h1>
+        <p class="article-lede">{{summary}}</p>
+        <p class="article-meta article-meta-after">{{#if category == "contenuti"}}{{homepage.cat_contenuti}}{{#elif category == "indirizzi"}}{{homepage.cat_indirizzi}}{{#elif category == "pubblicazione"}}{{homepage.cat_pubblicazione}}{{#elif category == "privacy"}}{{homepage.cat_privacy}}{{#else}}{{homepage.cat_estensioni}}{{/if}}{{#if new_in_2}} <span class="tag">{{homepage.new_label}}</span>{{/if}}</p>
+      </header>
+
+      <div class="article-body">
+        <div class="prose">{{body}}</div>
+        {{#if code}}
+        <div class="code article-code">
+          <div class="code-bar mono">{{code_file}}</div>
+          <pre><code>{{code}}</code></pre>
+        </div>
+        {{/if}}
+      </div>
+
+      {{#if image}}
+      <figure class="article-shot">
+        <div class="frame">
+          <div class="frame-bar" aria-hidden="true"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url mono">/kris-admin/</span></div>
+          <img src="{{image}}" alt="{{image_alt}}" loading="lazy" sizes="(min-width: 1280px) 1200px, 100vw">
+        </div>
+      </figure>
+      {{/if}}
+
+      <ul class="highlights" k-array="highlights" k-template="feature-highlight"></ul>
+    </article>
+
+    <section class="section more" aria-labelledby="more-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="more-title">{{homepage.more_label}}</h2>
+        </header>
+        <ul class="feature-index feature-index-compact" k-array="features" k-template="feature-row"></ul>
+      </div>
+    </section>
+  </main>
+
+  <div k-component="site" k-template="site-footer" k-index="0"></div>
+  <div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>
+</body>
+</html>

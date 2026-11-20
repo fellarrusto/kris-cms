@@ -31,7 +31,7 @@ function updateSite(): string
     mkdir($dir, 0777, true);
     copy(KRIS_ROOT . '/index.php', $dir . '/index.php');
     foreach (['kris', 'template', 'config'] as $folder) {
-        rcopy(KRIS_ROOT . '/' . $folder, $dir . '/' . $folder);
+        rcopy(siteSource($folder), $dir . '/' . $folder);
     }
     @unlink($dir . '/config/auth.php');
     @unlink($dir . '/config/update.php');

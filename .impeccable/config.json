@@ -1,0 +1,113 @@
+{
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      ".impeccable/mocks/decision/assigned.html",
+      ".impeccable/mocks/decision/model-pick.html",
+      ".impeccable/mocks/decision/challenger-annual.html",
+      ".impeccable/mocks/decision/canon.html"
+    ],
+    "ignoreValues": [
+      {
+        "rule": "undersized-ui-text",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-11-20T08:58:26.354Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "tight-leading",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-11-20T08:58:26.594Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/assigned.html"
+        ],
+        "createdAt": "2026-11-20T08:58:26.834Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "undersized-ui-text",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-11-20T08:58:27.086Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "tight-leading",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-11-20T08:58:27.343Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-11-20T08:58:27.588Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "undersized-ui-text",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-annual.html"
+        ],
+        "createdAt": "2026-11-20T08:58:27.843Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "tight-leading",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-annual.html"
+        ],
+        "createdAt": "2026-11-20T08:58:28.140Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-annual.html"
+        ],
+        "createdAt": "2026-11-20T08:58:28.410Z",
+        "reason": "Claude: schizzo usa-e-getta della pagina di decisione (il testo sotto 22px viene disegnato come barre), non UI che va sul sito"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "template/homepage.html"
+        ],
+        "createdAt": "2026-11-20T09:24:48.757Z",
+        "reason": "Claude: falso positivo, il detector cerca assets/css/style.css dentro template/ (Kris lo serve dalla root del sito): h1 70px, h2 46px, body 16px"
+      },
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "template/funzione.html"
+        ],
+        "createdAt": "2026-11-20T09:24:48.949Z",
+        "reason": "Claude: falso positivo, il detector cerca assets/css/style.css dentro template/ (Kris lo serve dalla root del sito): h1 70px, h2 46px, body 16px"
+      }
+    ]
+  }
+}

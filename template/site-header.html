@@ -1,0 +1,27 @@
+<header class="site-header" data-nav>
+  <div class="container site-header-inner">
+    <a class="wordmark" href="index.php?page=homepage&amp;ln={{language}}" aria-label="Kris, home">
+      <svg class="wordmark-mark" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6"/><path d="M8.5 6.5v11M15.5 6.5 9.2 12.4l6.6 5.1"/></svg>
+      <span>Kris</span>
+      <span class="wordmark-version mono">{{version}}</span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
+      <span class="visually-hidden">Menu</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16M4 16h16"/></svg>
+    </button>
+    <nav class="site-nav" id="site-nav" aria-label="Menu">
+      <ul class="site-nav-links">
+        <li><a href="index.php?page=homepage&amp;ln={{language}}#funzioni">{{nav_features}}</a></li>
+        <li><a href="index.php?page=homepage&amp;ln={{language}}#novita">{{nav_posts}}</a></li>
+        <li><a href="{{docs_url}}">{{nav_docs}}</a></li>
+      </ul>
+      <div class="site-nav-end">
+        <div class="lang-switch" role="group" aria-label="Lingua / Language">
+          <a href="?ln=it" hreflang="it" lang="it" data-lang="it" {{#if language == "it"}}aria-current="true"{{/if}}>IT</a>
+          <a href="?ln=en" hreflang="en" lang="en" data-lang="en" {{#if language == "en"}}aria-current="true"{{/if}}>EN</a>
+        </div>
+        <a class="btn btn-primary btn-small" href="{{download_url}}">{{download_label}}</a>
+      </div>
+    </nav>
+  </div>
+</header>
