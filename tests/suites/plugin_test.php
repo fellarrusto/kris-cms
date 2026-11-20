@@ -31,7 +31,7 @@ function pluginSite(): string
     $dir = str_replace('\\', '/', sys_get_temp_dir()) . '/kris-plugin-site-' . getmypid() . '-' . uniqid();
     mkdir($dir, 0777, true);
     copy(KRIS_ROOT . '/index.php', $dir . '/index.php');
-    foreach (['kris', 'template'] as $folder) rcopy(KRIS_ROOT . '/' . $folder, $dir . '/' . $folder);
+    foreach (['kris', 'template'] as $folder) rcopy(siteSource($folder), $dir . '/' . $folder);
     mkdir($dir . '/config', 0777, true);
     writeFormat2($dir, format2Fixture());
     register_shutdown_function(fn() => rrmdir($dir));

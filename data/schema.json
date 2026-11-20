@@ -3,349 +3,490 @@
     "types": {
         "homepage": {
             "label": "Homepage",
+            "description": "La pagina principale della demo",
             "single": true,
             "fields": [
                 {
-                    "name": "meta_title",
+                    "name": "seo_title",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della pagina per i motori di ricerca",
-                    "section": "Meta"
+                    "description": "Titolo per i motori di ricerca (vuoto: quello del sito)",
+                    "section": "SEO"
                 },
                 {
-                    "name": "page_title",
+                    "name": "seo_description",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo principale visibile nell'hero",
-                    "section": "Intestazione"
+                    "description": "Descrizione per i motori di ricerca e la condivisione",
+                    "section": "SEO"
                 },
                 {
-                    "name": "page_subtitle",
+                    "name": "hero_title",
                     "type": "text",
                     "localized": true,
-                    "description": "Sottotitolo dell'hero",
-                    "section": "Intestazione"
+                    "description": "Titolo grande in apertura",
+                    "section": "Apertura"
                 },
                 {
-                    "name": "hero_description",
-                    "type": "richtext",
-                    "localized": true,
-                    "description": "Testo descrittivo nella sezione hero",
-                    "section": "Intestazione"
-                },
-                {
-                    "name": "btn_get_started",
+                    "name": "hero_text",
                     "type": "text",
                     "localized": true,
-                    "description": "Testo del pulsante di avvio rapido",
-                    "section": "Intestazione"
+                    "description": "Testo sotto il titolo",
+                    "section": "Apertura"
                 },
                 {
-                    "name": "btn_why_kris",
+                    "name": "cta_primary",
                     "type": "text",
                     "localized": true,
-                    "description": "Testo del pulsante 'Perché Kris'",
-                    "section": "Intestazione"
+                    "description": "Pulsante principale",
+                    "section": "Apertura"
                 },
                 {
-                    "name": "code_title",
+                    "name": "cta_secondary",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della sezione con esempio di codice",
-                    "section": "Esempio di codice"
+                    "description": "Pulsante secondario",
+                    "section": "Apertura"
                 },
                 {
-                    "name": "code_example",
+                    "name": "requirements",
                     "type": "text",
+                    "localized": true,
+                    "description": "Riga dei requisiti sotto i pulsanti",
+                    "section": "Apertura"
+                },
+                {
+                    "name": "hero_image",
+                    "type": "media",
                     "localized": false,
-                    "description": "Snippet di codice mostrato nella homepage",
-                    "section": "Esempio di codice"
+                    "description": "Schermata dell'editor accanto al titolo",
+                    "section": "Apertura"
                 },
                 {
-                    "name": "features_title",
+                    "name": "hero_image_alt",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della sezione funzionalità",
-                    "section": "Funzionalità"
+                    "description": "Descrizione della schermata (testo alternativo)",
+                    "section": "Apertura"
                 },
                 {
-                    "name": "how_it_works_title",
+                    "name": "steps_title",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della sezione 'Come funziona'",
+                    "description": "Titolo di «Come funziona»",
+                    "section": "Come funziona"
+                },
+                {
+                    "name": "steps_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo di «Come funziona»",
                     "section": "Come funziona"
                 },
                 {
                     "name": "steps",
                     "type": "list",
+                    "description": "I passi, nell'ordine",
+                    "section": "Come funziona",
                     "of": [
                         {
                             "name": "title",
                             "type": "text",
                             "localized": true,
-                            "description": "Titolo del passaggio"
+                            "description": "Titolo del passo"
                         },
                         {
-                            "name": "description",
+                            "name": "text",
                             "type": "text",
                             "localized": true,
-                            "description": "Descrizione del passaggio"
+                            "description": "Spiegazione"
+                        },
+                        {
+                            "name": "file",
+                            "type": "text",
+                            "localized": false,
+                            "description": "Nome del file mostrato"
+                        },
+                        {
+                            "name": "code",
+                            "type": "text",
+                            "localized": false,
+                            "description": "Codice d'esempio"
+                        },
+                        {
+                            "name": "image",
+                            "type": "media",
+                            "localized": false,
+                            "description": "Schermata al posto del codice (facoltativa)"
+                        },
+                        {
+                            "name": "image_alt",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Descrizione della schermata"
                         }
-                    ],
-                    "description": "Passaggi della sezione 'Come funziona'",
-                    "section": "Come funziona"
+                    ]
                 },
                 {
-                    "name": "blog_title",
+                    "name": "features_title",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della sezione blog",
-                    "section": "Blog"
+                    "description": "Titolo della sezione funzioni",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "cta_title",
+                    "name": "features_text",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della call to action",
-                    "section": "Call to action"
+                    "description": "Testo della sezione funzioni",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "cta_subtitle",
+                    "name": "filter_label",
                     "type": "text",
                     "localized": true,
-                    "description": "Sottotitolo della call to action",
-                    "section": "Call to action"
+                    "description": "Nome del filtro (per i lettori di schermo)",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "btn_download",
+                    "name": "filter_all",
                     "type": "text",
                     "localized": true,
-                    "description": "Testo del pulsante di download",
-                    "section": "Call to action"
+                    "description": "Filtro: tutte",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "btn_docs",
+                    "name": "cat_contenuti",
                     "type": "text",
                     "localized": true,
-                    "description": "Testo del pulsante per la documentazione",
-                    "section": "Call to action"
+                    "description": "Categoria: contenuti",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "logo",
-                    "type": "media",
-                    "localized": true,
-                    "description": "Logo principale del sito",
-                    "section": "Footer"
-                },
-                {
-                    "name": "footer_logo_text",
+                    "name": "cat_indirizzi",
                     "type": "text",
                     "localized": true,
-                    "description": "Nome/testo del logo nel footer",
-                    "section": "Footer"
+                    "description": "Categoria: indirizzi",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "footer_tagline",
+                    "name": "cat_pubblicazione",
                     "type": "text",
                     "localized": true,
-                    "description": "Tagline breve nel footer",
-                    "section": "Footer"
+                    "description": "Categoria: pubblicazione",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "footer_resources_title",
+                    "name": "cat_privacy",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della colonna risorse nel footer",
-                    "section": "Footer"
+                    "description": "Categoria: privacy",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "footer_docs",
+                    "name": "cat_estensioni",
                     "type": "text",
                     "localized": true,
-                    "description": "Link alla documentazione nel footer",
-                    "section": "Footer"
+                    "description": "Categoria: estensioni",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "footer_community_title",
+                    "name": "new_label",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della colonna community nel footer",
-                    "section": "Footer"
+                    "description": "Etichetta delle novità della 2.0",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "footer_github",
+                    "name": "more_label",
                     "type": "text",
                     "localized": true,
-                    "description": "Link GitHub nel footer",
-                    "section": "Footer"
+                    "description": "Titolo dell'elenco delle altre funzioni, nella pagina di una funzione",
+                    "section": "Funzioni"
                 },
                 {
-                    "name": "footer_legal_title",
+                    "name": "posts_title",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo della colonna legale nel footer",
-                    "section": "Footer"
+                    "description": "Titolo della sezione novità",
+                    "section": "Novità"
                 },
                 {
-                    "name": "footer_privacy",
+                    "name": "faq_title",
                     "type": "text",
                     "localized": true,
-                    "description": "Link alla privacy policy nel footer",
-                    "section": "Footer"
+                    "description": "Titolo delle domande frequenti",
+                    "section": "Domande"
                 },
                 {
-                    "name": "footer_cookies",
-                    "type": "text",
-                    "localized": true,
-                    "description": "Link alla cookie policy nel footer",
-                    "section": "Footer"
+                    "name": "faq",
+                    "type": "list",
+                    "description": "Domande frequenti",
+                    "section": "Domande",
+                    "of": [
+                        {
+                            "name": "question",
+                            "type": "text",
+                            "localized": true,
+                            "description": "Domanda"
+                        },
+                        {
+                            "name": "answer",
+                            "type": "richtext",
+                            "localized": true,
+                            "description": "Risposta"
+                        }
+                    ]
                 },
                 {
-                    "name": "footer_cookie_settings",
+                    "name": "close_title",
                     "type": "text",
                     "localized": true,
-                    "description": "Link per riaprire il banner cookie",
-                    "section": "Footer"
+                    "description": "Titolo della chiusura",
+                    "section": "Chiusura"
                 },
                 {
-                    "name": "footer_copyright",
+                    "name": "close_text",
                     "type": "text",
                     "localized": true,
-                    "description": "Testo di copyright nel footer",
-                    "section": "Footer"
+                    "description": "Testo della chiusura",
+                    "section": "Chiusura"
+                }
+            ]
+        },
+        "site": {
+            "label": "Elementi comuni",
+            "description": "Menu, piè di pagina e collegamenti usati in tutte le pagine",
+            "single": true,
+            "fields": [
+                {
+                    "name": "nav_features",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu: funzioni",
+                    "section": "Menu"
+                },
+                {
+                    "name": "nav_posts",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu: novità",
+                    "section": "Menu"
+                },
+                {
+                    "name": "nav_docs",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Voce di menu: documentazione",
+                    "section": "Menu"
+                },
+                {
+                    "name": "download_label",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Pulsante di scaricamento nel menu",
+                    "section": "Menu"
+                },
+                {
+                    "name": "version",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Versione di Kris mostrata nel sito",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "repo_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo della repository GitHub",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "download_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo per scaricare Kris",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "docs_url",
+                    "type": "text",
+                    "localized": false,
+                    "description": "Indirizzo della documentazione",
+                    "section": "Collegamenti"
+                },
+                {
+                    "name": "footer_text",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Testo del piè di pagina",
+                    "section": "Piè di pagina"
+                },
+                {
+                    "name": "footer_legal",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Titolo della colonna legale",
+                    "section": "Piè di pagina"
+                },
+                {
+                    "name": "cookie_prefs",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Collegamento per riaprire le preferenze dei cookie",
+                    "section": "Piè di pagina"
+                },
+                {
+                    "name": "back_home",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Collegamento per tornare alla home",
+                    "section": "Piè di pagina"
                 }
             ]
         },
         "features": {
-            "label": "Lista delle funzionalità principali",
+            "label": "Funzioni",
+            "description": "Le funzioni di Kris, ognuna con la sua pagina",
             "fields": [
-                {
-                    "name": "category",
-                    "type": "text",
-                    "localized": false,
-                    "description": "Categoria di appartenenza della funzionalità"
-                },
-                {
-                    "name": "icon",
-                    "type": "text",
-                    "localized": true,
-                    "description": "Icona rappresentativa della funzionalità"
-                },
                 {
                     "name": "title",
                     "type": "text",
                     "localized": true,
-                    "description": "Nome della funzionalità"
+                    "description": "Nome della funzione",
+                    "section": "Contenuto"
                 },
                 {
-                    "name": "description",
+                    "name": "category",
+                    "type": "select",
+                    "localized": false,
+                    "description": "Categoria (filtra l'elenco)",
+                    "section": "Contenuto",
+                    "options": [
+                        "contenuti",
+                        "indirizzi",
+                        "pubblicazione",
+                        "privacy",
+                        "estensioni"
+                    ]
+                },
+                {
+                    "name": "new_in_2",
+                    "type": "boolean",
+                    "localized": false,
+                    "description": "Nuova nella 2.0 (mostra l'etichetta)",
+                    "section": "Contenuto"
+                },
+                {
+                    "name": "summary",
                     "type": "text",
                     "localized": true,
-                    "description": "Breve descrizione della funzionalità"
+                    "description": "Riassunto di una riga",
+                    "section": "Contenuto"
                 },
                 {
-                    "name": "tags",
+                    "name": "body",
+                    "type": "richtext",
+                    "localized": true,
+                    "description": "Descrizione completa",
+                    "section": "Contenuto"
+                },
+                {
+                    "name": "code",
                     "type": "text",
                     "localized": false,
-                    "description": "Tag associati alla funzionalità"
+                    "description": "Codice d'esempio (facoltativo)",
+                    "section": "Esempio"
+                },
+                {
+                    "name": "code_file",
+                    "type": "text",
+                    "localized": false,
+                    "description": "File dell'esempio",
+                    "section": "Esempio"
+                },
+                {
+                    "name": "image",
+                    "type": "media",
+                    "localized": false,
+                    "description": "Schermata (facoltativa)",
+                    "section": "Esempio"
+                },
+                {
+                    "name": "image_alt",
+                    "type": "text",
+                    "localized": true,
+                    "description": "Descrizione della schermata",
+                    "section": "Esempio"
                 },
                 {
                     "name": "highlights",
                     "type": "list",
+                    "description": "Punti in evidenza",
+                    "section": "Dettagli",
                     "of": [
                         {
-                            "name": "title",
+                            "name": "label",
                             "type": "text",
                             "localized": true,
-                            "description": "Titolo del punto saliente"
+                            "description": "Titolo del punto"
                         },
                         {
-                            "name": "description",
+                            "name": "text",
                             "type": "text",
                             "localized": true,
-                            "description": "Dettaglio del punto saliente"
+                            "description": "Spiegazione"
                         }
-                    ],
-                    "description": "Punti salienti della funzionalità"
+                    ]
                 }
             ]
         },
         "posts": {
-            "label": "Articoli del blog",
+            "label": "Novità",
+            "description": "Articoli sulle novità di Kris",
             "newest_first": true,
             "fields": [
                 {
                     "name": "title",
                     "type": "text",
                     "localized": true,
-                    "description": "Titolo dell'articolo"
+                    "description": "Titolo",
+                    "section": "Articolo"
                 },
                 {
                     "name": "date",
                     "type": "text",
                     "localized": false,
-                    "description": "Data di pubblicazione (AAAA-MM-GG)"
+                    "description": "Data (AAAA-MM-GG)",
+                    "section": "Articolo"
                 },
                 {
                     "name": "excerpt",
                     "type": "text",
                     "localized": true,
-                    "description": "Anteprima mostrata nell'elenco e nei motori di ricerca"
+                    "description": "Riassunto per l'elenco",
+                    "section": "Articolo"
                 },
                 {
                     "name": "cover",
                     "type": "media",
-                    "localized": true,
-                    "description": "Immagine di copertina (opzionale)"
+                    "localized": false,
+                    "description": "Immagine di copertina (facoltativa)",
+                    "section": "Articolo"
                 },
                 {
                     "name": "cover_alt",
                     "type": "text",
                     "localized": true,
-                    "description": "Testo alternativo della copertina"
+                    "description": "Descrizione della copertina",
+                    "section": "Articolo"
                 },
                 {
                     "name": "body",
                     "type": "richtext",
                     "localized": true,
-                    "description": "Testo dell'articolo"
-                }
-            ]
-        },
-        "navbar": {
-            "label": "Barra di navigazione",
-            "description": "Logo e voci del menu in cima a ogni pagina",
-            "single": true,
-            "fields": [
-                {
-                    "name": "logo",
-                    "type": "media",
-                    "localized": true,
-                    "description": "Logo nella barra di navigazione"
-                },
-                {
-                    "name": "page_title",
-                    "type": "text",
-                    "localized": true,
-                    "description": "Nome del sito nella navbar"
-                },
-                {
-                    "name": "nav_features",
-                    "type": "text",
-                    "localized": true,
-                    "description": "Voce di menu per le funzionalità"
-                },
-                {
-                    "name": "nav_docs",
-                    "type": "text",
-                    "localized": true,
-                    "description": "Voce di menu per la documentazione"
-                },
-                {
-                    "name": "nav_github",
-                    "type": "text",
-                    "localized": true,
-                    "description": "Voce di menu per GitHub"
+                    "description": "Testo dell'articolo",
+                    "section": "Articolo"
                 }
             ]
         },
@@ -591,45 +732,39 @@
             "template": "homepage",
             "type": "homepage",
             "item": 0,
-            "sitemap": true
+            "sitemap": true,
+            "priority": 1
         },
-        "detail": {
-            "template": "detail",
+        "funzione": {
+            "template": "funzione",
             "type": "features",
             "sitemap": true,
+            "priority": 0.8,
             "slug": "title"
         },
         "post": {
             "template": "post",
             "type": "posts",
             "sitemap": true,
+            "priority": 0.6,
             "slug": "title"
         },
         "privacy": {
             "template": "privacy",
             "type": "kris_legal",
             "item": 0,
-            "sitemap": true
+            "sitemap": true,
+            "priority": 0.2
         },
         "cookie": {
             "template": "cookie",
             "type": "kris_legal",
             "item": 0,
-            "sitemap": true
+            "sitemap": true,
+            "priority": 0.2
         }
     },
-    "promoted": [
-        {
-            "from": "homepage",
-            "id": 0,
-            "list": "features",
-            "to": "features"
-        },
-        {
-            "from": "homepage",
-            "id": 0,
-            "list": "posts",
-            "to": "posts"
-        }
-    ]
+    "redirects": {
+        "/detail": "/#funzioni"
+    }
 }

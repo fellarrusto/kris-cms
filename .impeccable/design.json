@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-20T12:00:00Z",
+  "title": "Design System: Kris 2 — tema demo",
+  "extensions": {
+    "colorMeta": {
+      "fg": { "role": "primary", "displayName": "Nero inchiostro", "canonical": "#0a0a0a", "tonalRamp": ["#0a0a0a", "#262626", "#3b3b3b", "#666666", "#a3a3a3", "#d9d9d9", "#ebebeb", "#f5f5f5"] },
+      "bg": { "role": "neutral", "displayName": "Bianco carta", "canonical": "#ffffff", "tonalRamp": ["#0a0a0a", "#262626", "#3b3b3b", "#666666", "#a3a3a3", "#d9d9d9", "#f5f5f5", "#ffffff"] },
+      "fg-2": { "role": "neutral", "displayName": "Grafite", "canonical": "#3b3b3b" },
+      "muted": { "role": "neutral", "displayName": "Grigio nota", "canonical": "#666666" },
+      "line": { "role": "neutral", "displayName": "Filetto", "canonical": "#ebebeb" },
+      "line-2": { "role": "neutral", "displayName": "Filetto marcato", "canonical": "#d9d9d9" },
+      "soft": { "role": "neutral", "displayName": "Velo", "canonical": "#f5f5f5" },
+      "code-bg": { "role": "neutral", "displayName": "Fondo del codice", "canonical": "#0a0a0a" },
+      "code-line": { "role": "neutral", "displayName": "Filetto del codice", "canonical": "#262626" },
+      "code-fg": { "role": "neutral", "displayName": "Testo del codice", "canonical": "#a3a3a3" },
+      "code-hi": { "role": "neutral", "displayName": "Segnaposto evidenziato", "canonical": "#ffffff" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Solo il titolo dell'apertura." },
+      "headline": { "displayName": "Headline", "purpose": "Titoli di sezione e banda di chiusura." },
+      "headline-page": { "displayName": "Headline di pagina", "purpose": "h1 di funzioni, articoli, informative." },
+      "title": { "displayName": "Title", "purpose": "Titolo dei passi." },
+      "title-row": { "displayName": "Titolo di riga", "purpose": "Nome della funzione, domanda frequente." },
+      "lede": { "displayName": "Lede", "purpose": "Sottotitoli in grafite." },
+      "body": { "displayName": "Body", "purpose": "Testo corrente; la prose sale a 17px/1.7." },
+      "label": { "displayName": "Label", "purpose": "Navigazione, filtro, categorie, metadati." },
+      "mono": { "displayName": "Mono", "purpose": "Solo codice, nomi di file, versione, date, sigle della lingua." }
+    },
+    "shadows": [
+      { "name": "frame", "value": "0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -8px rgb(0 0 0 / 0.12), 0 40px 80px -24px rgb(0 0 0 / 0.14)", "purpose": "Solo la cornice delle schermate dell'editor." },
+      { "name": "banner", "value": "0 24px 64px -16px rgb(0 0 0 / 0.22)", "purpose": "Banner dei cookie." },
+      { "name": "menu", "value": "0 24px 40px -24px rgb(0 0 0 / 0.18)", "purpose": "Pannello del menu aperto sotto i 860px." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.22, 0.8, 0.24, 1)", "purpose": "Ingresso della schermata e transizioni di forma." },
+      { "name": "shot-in", "value": "1100ms ease-out, delay 80ms, from translate3d(0, 28px, 0) scale(0.985)", "purpose": "L'unico ingresso: la schermata dell'apertura, visibile dal primo frame." },
+      { "name": "banner-in", "value": "360ms ease-out, from translate3d(0, 12px, 0)", "purpose": "Comparsa del banner dei cookie." },
+      { "name": "state", "value": "150ms-200ms", "purpose": "Colore, bordo, fondo, freccia e chevron." },
+      { "name": "reduced-motion", "value": "animation: none; transition-duration: 0.01ms; scroll-behavior: auto", "purpose": "Con prefers-reduced-motion: reduce." }
+    ],
+    "breakpoints": [
+      { "name": "banner", "value": "600px" },
+      { "name": "stack", "value": "760px" },
+      { "name": "nav", "value": "860px" },
+      { "name": "hero", "value": "960px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Pulsante primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Azione principale: nero pieno a pillola.",
+      "html": "<a class=\"ds-btn ds-btn-primary\" href=\"#\">Scarica Kris 2</a>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 22px; border: 1px solid transparent; border-radius: 999px; font: 500 0.9375rem/1 Geist, system-ui, sans-serif; text-decoration: none; transition: background-color .15s, border-color .15s, transform .15s cubic-bezier(0.22,0.8,0.24,1); } .ds-btn:active { transform: scale(0.98); } .ds-btn:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; } .ds-btn-primary { background: #0a0a0a; color: #fff; } .ds-btn-primary:hover { background: #2b2b2b; }"
+    },
+    {
+      "name": "Pulsante secondario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Azione secondaria a filetto, con freccia per i link esterni.",
+      "html": "<a class=\"ds-btn2\" href=\"#\">GitHub <svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\" aria-hidden=\"true\"><path d=\"M5 11 11 5M6 5h5v5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></a>",
+      "css": ".ds-btn2 { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 22px; background: #fff; color: #0a0a0a; border: 1px solid #d9d9d9; border-radius: 999px; font: 500 0.9375rem/1 Geist, system-ui, sans-serif; text-decoration: none; transition: border-color .15s; } .ds-btn2:hover { border-color: #0a0a0a; } .ds-btn2:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; }"
+    },
+    {
+      "name": "Filtro delle funzioni",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Pillole a filetto; premuta in nero pieno.",
+      "html": "<div class=\"ds-filter\"><button aria-pressed=\"true\">Tutte</button><button aria-pressed=\"false\">Contenuti</button><button aria-pressed=\"false\">Privacy</button></div>",
+      "css": ".ds-filter { display: flex; flex-wrap: wrap; gap: 8px; } .ds-filter button { min-height: 36px; padding: 0 14px; background: #fff; border: 1px solid #d9d9d9; border-radius: 99px; color: #3b3b3b; font: 0.875rem Geist, system-ui, sans-serif; cursor: pointer; transition: background-color .15s, border-color .15s, color .15s; } .ds-filter button:hover { border-color: #0a0a0a; color: #0a0a0a; } .ds-filter button[aria-pressed=\"true\"] { background: #0a0a0a; border-color: #0a0a0a; color: #fff; } .ds-filter button:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; }"
+    },
+    {
+      "name": "Navigazione",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Marchio, versione in mono, link a pillola, selettore IT/EN.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-mark\">Kris <span class=\"ds-ver\">2.0</span></span><a href=\"#\">Funzioni</a><a href=\"#\">Novità</a><span class=\"ds-lang\"><a aria-current=\"true\" href=\"#\">IT</a><a href=\"#\">EN</a></span></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 4px; height: 64px; font-family: Geist, system-ui, sans-serif; border-bottom: 1px solid #ebebeb; } .ds-mark { font-weight: 600; font-size: 1.125rem; letter-spacing: -0.02em; margin-right: 24px; } .ds-ver { padding: 3px 7px; border: 1px solid #ebebeb; border-radius: 99px; color: #666; font: 500 0.6875rem 'Geist Mono', ui-monospace, monospace; } .ds-nav > a { display: inline-flex; align-items: center; height: 36px; padding: 0 12px; border-radius: 99px; color: #3b3b3b; font-size: 0.9375rem; text-decoration: none; transition: color .15s, background-color .15s; } .ds-nav > a:hover { color: #0a0a0a; background: #f5f5f5; } .ds-nav a:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; } .ds-lang { display: inline-flex; margin-left: auto; padding: 3px; border: 1px solid #ebebeb; border-radius: 99px; } .ds-lang a { height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: 99px; color: #666; font: 500 0.75rem 'Geist Mono', ui-monospace, monospace; text-decoration: none; } .ds-lang a[aria-current=\"true\"] { background: #0a0a0a; color: #fff; }"
+    },
+    {
+      "name": "Cornice delle schermate",
+      "kind": "custom",
+      "refersTo": "frame",
+      "description": "Contenitore delle catture vere dell'editor: filetto, barra con punti e URL in mono, ombra morbida.",
+      "html": "<div class=\"ds-frame\"><div class=\"ds-frame-bar\"><span class=\"ds-dots\"><i></i><i></i><i></i></span><span class=\"ds-url\">/kris-admin/</span></div><div class=\"ds-frame-body\"></div></div>",
+      "css": ".ds-frame { overflow: hidden; max-width: 480px; background: #fff; border: 1px solid #d9d9d9; border-radius: 14px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -8px rgb(0 0 0 / 0.12), 0 40px 80px -24px rgb(0 0 0 / 0.14); } .ds-frame-bar { display: flex; align-items: center; gap: 16px; height: 36px; padding: 0 14px; border-bottom: 1px solid #ebebeb; background: #fbfbfb; } .ds-dots { display: inline-flex; gap: 6px; } .ds-dots i { width: 9px; height: 9px; border-radius: 50%; background: #dedede; } .ds-url { color: #666; font: 0.6875rem 'Geist Mono', ui-monospace, monospace; } .ds-frame-body { height: 220px; background: #f5f5f5; }"
+    },
+    {
+      "name": "Codice su nero",
+      "kind": "custom",
+      "refersTo": "code-block",
+      "description": "Codice vero del tema; segnaposto e attributi k-* in bianco.",
+      "html": "<div class=\"ds-code\"><div class=\"ds-code-bar\">template/homepage.html</div><pre><code>&lt;h1&gt;<span class=\"ds-tok\">{{page_title}}</span>&lt;/h1&gt;\n&lt;div <span class=\"ds-tok\">k-array</span>=\"services\" <span class=\"ds-tok\">k-template</span>=\"service-card\"&gt;&lt;/div&gt;</code></pre></div>",
+      "css": ".ds-code { overflow: hidden; background: #0a0a0a; border-radius: 10px; color: #a3a3a3; } .ds-code-bar { padding: 12px 18px; border-bottom: 1px solid #262626; color: #8a8a8a; font: 0.75rem 'Geist Mono', ui-monospace, monospace; } .ds-code pre { margin: 0; padding: 18px; overflow-x: auto; font: 0.8125rem/1.75 'Geist Mono', ui-monospace, monospace; } .ds-tok { color: #fff; }"
+    },
+    {
+      "name": "Riga dell'indice delle funzioni",
+      "kind": "custom",
+      "refersTo": "feature-row",
+      "description": "Categoria, nome con tag, sintesi, freccia; sotto un filetto nero, fondo velo al passaggio.",
+      "html": "<ul class=\"ds-index\"><li><a href=\"#\"><span class=\"ds-cat\">Contenuti</span><span class=\"ds-name\">Elenchi annidati <span class=\"ds-tag\">Nuovo nella 2.0</span></span><span class=\"ds-sum\">Un elenco può contenere altri elenchi.</span><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3 8h10M9 4l4 4-4 4\"/></svg></a></li></ul>",
+      "css": ".ds-index { list-style: none; margin: 0; padding: 0; border-top: 1px solid #0a0a0a; font-family: Geist, system-ui, sans-serif; } .ds-index a { display: grid; grid-template-columns: 8rem minmax(0,4fr) minmax(0,5fr) 16px; align-items: baseline; gap: 8px 32px; padding: 20px 12px; border-bottom: 1px solid #ebebeb; border-radius: 2px; color: #0a0a0a; text-decoration: none; transition: background-color .15s; } .ds-index a:hover { background: #f5f5f5; } .ds-index a:focus-visible { outline: 2px solid #0a0a0a; outline-offset: 3px; } .ds-cat { color: #666; font-size: 0.875rem; } .ds-name { font-size: 1.0625rem; font-weight: 500; letter-spacing: -0.01em; } .ds-sum { color: #3b3b3b; font-size: 0.9375rem; line-height: 1.55; } .ds-tag { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; margin-left: 6px; border: 1px solid #d9d9d9; border-radius: 99px; font-size: 0.75rem; font-weight: 500; color: #3b3b3b; } .ds-index svg { width: 16px; height: 16px; align-self: center; fill: none; stroke: #666; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s cubic-bezier(0.22,0.8,0.24,1), stroke .15s; } .ds-index a:hover svg { transform: translateX(3px); stroke: #0a0a0a; }"
+    },
+    {
+      "name": "Banda di chiusura",
+      "kind": "custom",
+      "refersTo": "close-band",
+      "description": "Unica superficie nera: titolo bianco, pulsanti inverse e ghost.",
+      "html": "<section class=\"ds-close\"><h2>Il prossimo sito, con Kris.</h2><p>Testo in grigio chiaro sul nero.</p><a class=\"ds-inv\" href=\"#\">Scarica Kris 2</a> <a class=\"ds-ghost\" href=\"#\">AGENTS.md</a></section>",
+      "css": ".ds-close { background: #0a0a0a; color: #fff; padding: 72px 40px; font-family: Geist, system-ui, sans-serif; } .ds-close h2 { margin: 0; max-width: 14ch; font-size: 3rem; line-height: 1.02; letter-spacing: -0.04em; font-weight: 600; } .ds-close p { margin: 20px 0 36px; color: #a6a6a6; font-size: 1.0625rem; } .ds-inv, .ds-ghost { display: inline-flex; align-items: center; min-height: 44px; padding: 0 22px; border-radius: 999px; font-weight: 500; font-size: 0.9375rem; text-decoration: none; border: 1px solid transparent; transition: background-color .15s, border-color .15s; } .ds-inv { background: #fff; color: #0a0a0a; } .ds-inv:hover { background: #e6e6e6; } .ds-ghost { color: #fff; border-color: #3a3a3a; } .ds-ghost:hover { border-color: #fff; } .ds-close a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Il banco di prova",
+    "overview": "Il sito mostra il prodotto vero al lavoro, nello standard della categoria eseguito con finitura alta: un titolo forte, la schermata reale dell'editor, le funzioni elencate con precisione e il codice vero del tema. Il mondo è bianco puro e nero quasi assoluto; i grigi esistono solo per il testo secondario e per i filetti da 1 px. Niente colore d'accento: la gerarchia la fanno peso, dimensione e il contrasto pieno del nero.\n\nLa densità è quella di un indice, non di una vetrina: le funzioni sono righe in una tabella filtrabile, i passi sono righe numerate con il codice accanto, le domande sono `details` divisi da filetti. Le superfici si separano con linee, non con riquadri; l'unico oggetto \"sollevato\" è la cornice che contiene le schermate dell'editor. Il movimento è uno solo: la schermata dell'apertura entra una volta, partendo già visibile.",
+    "keyCharacteristics": [
+      "Bianco `#ffffff` e nero `#0a0a0a`, grigi solo per testo secondario e filetti.",
+      "Geist per tutto, tracking negativo sui titoli; Geist Mono solo per codice, nomi di file, pillola della versione, date e selettore della lingua.",
+      "Pulsanti a pillola: primario nero pieno, secondario a filetto.",
+      "Schermate vere dell'editor in una cornice sottile con barra e ombra morbida.",
+      "Codice su nero con i segnaposto di Kris evidenziati in bianco.",
+      "Griglia 5fr/7fr ripetuta in apertura, intestazioni di sezione, passi e domande."
+    ],
+    "rules": [
+      { "name": "La Regola del Bianco e Nero", "body": "Nessun colore di tinta. Un grigio nuovo si giustifica solo come testo secondario o filetto; ogni altro ruolo usa il nero o il bianco.", "section": "colors" },
+      { "name": "La Regola del Filetto", "body": "Le aree si separano con linee da 1 px (`line` tra le righe, `fg` in cima a un indice), non con fondi colorati o riquadri.", "section": "colors" },
+      { "name": "La Regola del Mono Onesto", "body": "Geist Mono solo per codice, nomi di file, versione, date e sigle della lingua. Mai per etichette decorative o titoletti sopra i titoli.", "section": "typography" },
+      { "name": "La Regola del Tracking", "body": "Più grande è il titolo, più è stretto: -0.034em / -0.035em / -0.04em sui titoli grandi, -0.01em / -0.02em sui piccoli, 0 sul testo.", "section": "typography" },
+      { "name": "La Regola della Cornice Unica", "body": "Ombra morbida solo per ciò che sta sopra la pagina (schermate, banner, menu aperto). Contenuti, righe e codice restano piatti.", "section": "elevation" }
+    ],
+    "dos": [
+      "**Do** usare solo i token di `:root` per colore, raggio e larghezze; nero `#0a0a0a` per testo e azioni, grigi solo per testo secondario e filetti da 1 px.",
+      "**Do** presentare funzioni, novità e domande come righe di un indice sotto un filetto nero, con fondo velo al passaggio.",
+      "**Do** mostrare il prodotto con catture vere dell'editor dentro la cornice, e dichiararne la provenienza.",
+      "**Do** scrivere il codice mostrato su nero, con i segnaposto di Kris evidenziati, copiato dal tema vero.",
+      "**Do** usare la griglia 5fr/7fr e il contenitore da 1200px con il margine `clamp(16px, 4vw, 40px)`.",
+      "**Do** disegnare le icone come SVG in linea, 16px, tratto 1.5, estremi arrotondati, `currentColor`.",
+      "**Do** far partire ogni animazione da uno stato già visibile e spegnerla con `prefers-reduced-motion`."
+    ],
+    "donts": [
+      "**Don't** usare card tutte uguali icona-titolo-testo per le funzioni o per qualunque elenco.",
+      "**Don't** mettere titoletti, sopratitoli o etichette in maiuscoletto sopra i titoli: il titolo parla da solo.",
+      "**Don't** usare icone a glifo (emoji, caratteri, font di icone) al posto degli SVG.",
+      "**Don't** introdurre un colore d'accento o un grigio come fondo di sezione; l'unica superficie scura è la banda di chiusura (e il codice).",
+      "**Don't** usare Geist Mono per testo che non sia codice, nomi di file, versione, date o sigle della lingua.",
+      "**Don't** dare ombra a righe, codice o testi: l'ombra spetta solo a cornice, banner e menu aperto.",
+      "**Don't** usare schermate finte, numeri, clienti o testimonianze inventati."
+    ]
+  }
+}

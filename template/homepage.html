@@ -1,124 +1,98 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="{{language}}">
-
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{meta_title}}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{hero_title}}</title>
   <link rel="stylesheet" href="assets/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="kris/core/scripts/script.js"></script>
+  <script src="assets/js/site.js" defer></script>
 </head>
-
 <body>
-  <header k-component="navbar" k-template="navbar" k-index="0"></header>
+  <a class="skip-link" href="#main">{{#if language == "en"}}Skip to content{{#else}}Vai al contenuto{{/if}}</a>
+  <div k-component="site" k-template="site-header" k-index="0"></div>
 
-  <section class="hero">
-    <div class="container">
-      <div class="hero-content">
-        <h1 class="hero-title">{{page_title}}</h1>
-        <p class="hero-tagline">{{page_subtitle}}</p>
-        <p class="hero-description">{{hero_description}}</p>
-        <div class="hero-actions">
-          <a href="#get-started" class="btn btn-primary">{{btn_get_started}}</a>
-          <a href="#why-kris" class="btn btn-secondary">{{btn_why_kris}}</a>
+  <main id="main">
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <h1 class="hero-title">{{hero_title}}</h1>
+          <p class="hero-text">{{hero_text}}</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="{{site.download_url}}">{{cta_primary}}</a>
+            <a class="btn btn-secondary" href="{{site.repo_url}}">{{cta_secondary}} <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"/></svg></a>
+          </div>
+          <p class="hero-requirements">{{requirements}}</p>
+        </div>
+        {{#if hero_image}}
+        <figure class="hero-shot">
+          <div class="frame">
+            <div class="frame-bar" aria-hidden="true"><span class="frame-dots"><i></i><i></i><i></i></span><span class="frame-url mono">/kris-admin/</span></div>
+            <img src="{{hero_image}}" alt="{{hero_image_alt}}" fetchpriority="high" sizes="(min-width: 960px) 62vw, 100vw">
+          </div>
+        </figure>
+        {{/if}}
+      </div>
+    </section>
+
+    <section class="section steps" id="come-funziona" aria-labelledby="steps-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="steps-title">{{steps_title}}</h2>
+          <p>{{steps_text}}</p>
+        </header>
+        <ol class="steps-list" k-array="steps" k-template="step-item"></ol>
+      </div>
+    </section>
+
+    <section class="section features" id="funzioni" aria-labelledby="features-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="features-title">{{features_title}}</h2>
+          <p>{{features_text}}</p>
+        </header>
+        <div class="filter" role="group" aria-label="{{filter_label}}" data-filter hidden>
+          <button type="button" aria-pressed="true" data-filter-value="">{{filter_all}}</button>
+          <button type="button" aria-pressed="false" data-filter-value="contenuti">{{cat_contenuti}}</button>
+          <button type="button" aria-pressed="false" data-filter-value="indirizzi">{{cat_indirizzi}}</button>
+          <button type="button" aria-pressed="false" data-filter-value="pubblicazione">{{cat_pubblicazione}}</button>
+          <button type="button" aria-pressed="false" data-filter-value="privacy">{{cat_privacy}}</button>
+          <button type="button" aria-pressed="false" data-filter-value="estensioni">{{cat_estensioni}}</button>
+        </div>
+        <ul class="feature-index" k-array="features" k-template="feature-row" data-filter-list></ul>
+      </div>
+    </section>
+
+    <section class="section posts" id="novita" aria-labelledby="posts-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="posts-title">{{posts_title}}</h2>
+        </header>
+        <div class="post-list" k-array="posts" k-template="post-card"></div>
+      </div>
+    </section>
+
+    <section class="section faq" id="domande" aria-labelledby="faq-title">
+      <div class="container faq-inner">
+        <header class="section-head">
+          <h2 id="faq-title">{{faq_title}}</h2>
+        </header>
+        <div class="faq-list" k-array="faq" k-template="faq-item"></div>
+      </div>
+    </section>
+
+    <section class="close" aria-labelledby="close-title">
+      <div class="container close-inner">
+        <h2 id="close-title">{{close_title}}</h2>
+        <p>{{close_text}}</p>
+        <div class="actions">
+          <a class="btn btn-inverse" href="{{site.download_url}}">{{cta_primary}}</a>
+          <a class="btn btn-ghost" href="{{site.docs_url}}">AGENTS.md <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5"/></svg></a>
         </div>
       </div>
-      <div class="hero-visual">
-        <div class="code-preview">
-          <div class="code-header">
-            <div class="code-dots">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-            <span class="code-title">{{code_title}}</span>
-          </div>
-          <div class="code-content">
-            <pre>{{code_example}}</pre>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
+  </main>
 
-  <section id="features" class="features">
-    <div class="container">
-      <h2 class="section-title">{{features_title}}</h2>
-
-      <div class="filters" style="text-align: center; margin-bottom: 3rem;">
-        <button class="btn btn-primary" onclick="filterItems(this, '', '.feature-item', 'btn-primary', 'btn-secondary')"
-          style="margin-right: 10px;">Tutti</button>
-        <button class="btn btn-secondary" onclick="filterItems(this, 'tech', '.feature-item', 'btn-primary', 'btn-secondary')"
-          style="margin-right: 10px;">Tech</button>
-        <button class="btn btn-secondary" onclick="filterItems(this, 'ui', '.feature-item', 'btn-primary', 'btn-secondary')"
-          style="margin-right: 10px;">UI</button>
-        <button class="btn btn-secondary"
-          onclick="filterItems(this, 'flat', '.feature-item', 'btn-primary', 'btn-secondary')">Flat</button>
-      </div>
-      <div k-array="features" k-template="feature-card" class="grid"></div>
-    </div>
-  </section>
-
-  <section class="how-it-works">
-    <div class="container">
-      <h2 class="section-title">{{how_it_works_title}}</h2>
-      <ol class="steps" k-array="steps" k-template="step-item"></ol>
-    </div>
-  </section>
-
-  <section id="blog" class="blog">
-    <div class="container">
-      <h2 class="section-title">{{blog_title}}</h2>
-      <div k-array="posts" k-template="post-card" class="grid"></div>
-    </div>
-  </section>
-
-  <section id="get-started" class="cta">
-    <div class="container">
-      <h2>{{cta_title}}</h2>
-      <p>{{cta_subtitle}}</p>
-      <div class="cta-actions">
-        <a href="#" class="btn btn-primary">{{btn_download}}</a>
-        <a href="#" class="btn btn-secondary">{{btn_docs}}</a>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <div class="footer-brand">
-          <div class="logo-container">
-            <img src="{{logo}}" alt="Kris 2 Logo" class="logo-img">
-            <span class="logo-text">{{footer_logo_text}}</span>
-          </div>
-          <p>{{footer_tagline}}</p>
-        </div>
-        <div class="footer-links">
-          <div class="footer-column">
-            <h4>{{footer_resources_title}}</h4>
-            <a href="#">{{footer_docs}}</a>
-          </div>
-          <div class="footer-column">
-            <h4>{{footer_community_title}}</h4>
-            <a href="https://github.com/fellarrusto/kris-cms">{{footer_github}}</a>
-          </div>
-          <div class="footer-column">
-            <h4>{{footer_legal_title}}</h4>
-            <a href="index.php?page=privacy&amp;key=kris_legal&amp;ln={{language}}">{{footer_privacy}}</a>
-            <a href="index.php?page=cookie&amp;key=kris_legal&amp;ln={{language}}">{{footer_cookies}}</a>
-            <a href="#" data-kris-consent="open">{{footer_cookie_settings}}</a>
-          </div>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <p>{{footer_copyright}}</p>
-      </div>
-    </div>
-  </footer>
-
+  <div k-component="site" k-template="site-footer" k-index="0"></div>
   <div k-component="kris_legal" k-template="cookie-banner" k-index="0"></div>
 </body>
-
 </html>

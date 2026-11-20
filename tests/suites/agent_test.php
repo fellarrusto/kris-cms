@@ -24,7 +24,7 @@ function agentSite(bool $enabled = true): array
     $root = sys_get_temp_dir() . '/kris-agent-' . bin2hex(random_bytes(4));
     mkdir("{$root}/data", 0777, true);
     mkdir("{$root}/config", 0777, true);
-    rcopy(KRIS_ROOT . '/template', "{$root}/template");
+    rcopy(siteSource('template'), "{$root}/template");
     copy(KRIS_TESTS . '/fixtures/k_data.json', "{$root}/data/k_data.json");
     copy(KRIS_TESTS . '/fixtures/k_model.json', "{$root}/data/k_model.json");
     copy(KRIS_TESTS . '/fixtures/allowed_pages.json', "{$root}/config/allowed_pages.json");

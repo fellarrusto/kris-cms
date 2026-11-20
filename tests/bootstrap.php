@@ -13,6 +13,12 @@ declare(strict_types=1);
 define('KRIS_ROOT', dirname(__DIR__));
 define('KRIS_TESTS', __DIR__);
 
+/** Cartella da copiare in un sito di prova: i template vengono da tests/theme (il tema della 1.x, legato alle fixture), non dal sito demo. */
+function siteSource(string $folder): string
+{
+    return $folder === 'template' ? KRIS_TESTS . '/theme' : KRIS_ROOT . '/' . $folder;
+}
+
 require_once KRIS_ROOT . '/kris/bootstrap.php';
 
 use Kris\Entity\Entity;
@@ -122,7 +128,7 @@ function projectSandbox(): string
         copy(KRIS_ROOT . '/' . $stub, $dir . '/' . $stub);
     }
     foreach (['kris', 'template', 'config'] as $folder) {
-        rcopy(KRIS_ROOT . '/' . $folder, $dir . '/' . $folder);
+        rcopy(siteSource($folder), $dir . '/' . $folder);
     }
     rcopy(KRIS_TESTS . '/fixtures', $dir . '/data');
     // Le fixture sono un sito della 1.x: pagine e SEO stanno in config/

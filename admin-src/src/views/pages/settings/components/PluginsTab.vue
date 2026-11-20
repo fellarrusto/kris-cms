@@ -122,7 +122,7 @@ async function remove() {
   <section class="card">
     <header class="card-header">
       <span class="collection-icon"><KIcon name="puzzle" /></span>
-      <div><h2>Plugin</h2><p>Funzioni in più dal catalogo ufficiale di Kris, firmate come gli aggiornamenti: misurazione, cookie policy, avvisi ai motori di ricerca.</p></div>
+      <div><h2>Plugin</h2><p>Funzioni in più dal catalogo ufficiale di Kris, firmate come gli aggiornamenti: misurazione, avvisi ai motori di ricerca.</p></div>
     </header>
     <div class="card-body">
       <p v-if="loading" class="muted">Carico i plugin…</p>

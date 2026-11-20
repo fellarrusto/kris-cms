@@ -23,7 +23,7 @@ function contentSite(?callable $prepare = null): string
     $root = sys_get_temp_dir() . '/kris-staging-c-' . bin2hex(random_bytes(4));
     mkdir("{$root}/config", 0777, true);
     mkdir("{$root}/assets/uploads", 0777, true);
-    rcopy(KRIS_ROOT . '/template', "{$root}/template");
+    rcopy(siteSource('template'), "{$root}/template");
     writeFormat2($root, format2Fixture($prepare));
     register_shutdown_function(fn() => rrmdir($root));
     return $root;
@@ -589,6 +589,7 @@ test('gli avvisi segnalano campi senza sezione, campi non usati e font mancanti'
         ['op' => 'create_collection', 'name' => 'servizi', 'fields' => [
             ['name' => 'titolo', 'type' => 'text', 'section' => 'Testata'],
             ['name' => 'sottotitolo', 'type' => 'text'],
+            ['name' => 'seo_title', 'type' => 'text', 'section' => 'Meta'],
         ]],
     ], 'a');
     $s->write('template/servizi.html', '<h1>{{titolo}}</h1>', null, 'a');
@@ -597,6 +598,8 @@ test('gli avvisi segnalano campi senza sezione, campi non usati e font mancanti'
     assertContains('«servizi»: sottotitolo senza sezione', $warnings);
     assertContains('«servizi»: nessun template usa sottotitolo.', $warnings);
     assertNotContains('usa titolo', $warnings);
+    // seo_title lo usa Kris per il <head>, non un template
+    assertNotContains('seo_title', $warnings);
     assertContains('assets/css/tema.css cita il font manca.woff2', $warnings);
 });
 
