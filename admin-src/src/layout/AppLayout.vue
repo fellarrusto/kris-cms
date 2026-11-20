@@ -34,15 +34,17 @@ watch(
 
 <template>
   <a class="skip-link" href="#main">Vai al contenuto</a>
+  <div v-if="session.isStaging" class="pending-bar" role="status">
+    <KIcon name="clock" />
+    <p>
+      <strong>Stai lavorando in attesa.</strong> Il sito pubblico non cambia finché non pubblichi.
+      <template v-if="session.stagingCount"
+        >{{ session.stagingCount }} {{ session.stagingCount === 1 ? 'modifica pronta' : 'modifiche pronte' }}.</template
+      >
+    </p>
+    <router-link class="btn btn-small" :to="{ name: 'publish' }">Rivedi e pubblica</router-link>
+  </div>
   <div class="shell" :class="{ 'is-pending': session.isStaging }">
-    <div v-if="session.isStaging" class="pending-bar" role="status">
-      <KIcon name="clock" />
-      <p>
-        <strong>Stai lavorando in attesa.</strong> Il sito pubblico non cambia finché non pubblichi.
-        <template v-if="session.stagingCount">{{ session.stagingCount }} {{ session.stagingCount === 1 ? 'modifica pronta' : 'modifiche pronte' }}.</template>
-      </p>
-      <router-link class="btn btn-small" :to="{ name: 'publish' }">Rivedi e pubblica</router-link>
-    </div>
     <AppSidebar :open="menuOpen" />
     <div v-if="menuOpen" class="side-scrim" @click="menuOpen = false"></div>
     <main id="main" class="main" tabindex="-1">

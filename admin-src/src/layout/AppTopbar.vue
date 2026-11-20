@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import { MODES } from '@/config'
 import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
@@ -25,6 +26,7 @@ const SECTIONS = {
   structure: 'Struttura',
   'structure-type': 'Struttura',
   addresses: 'Indirizzi',
+  system: 'Pagine di sistema',
   settings: 'Impostazioni',
 }
 const crumb = computed(() => {
@@ -35,11 +37,21 @@ const crumb = computed(() => {
     return [{ label: 'Plugin', to: { name: 'settings', params: { tab: 'plugin' } } }, { label: p?.title || String(route.params.name) }]
   }
   const section = SECTIONS[route.name]
-  const out = [{ label: section || 'Contenuti', to: { name: section ? (route.name === 'structure-type' ? 'structure' : route.name === 'media-file' ? 'media' : route.name) : 'dashboard' } }]
-  if (type && site.type(type)) out.push({ label: site.label(type), to: route.name === 'structure-type' ? undefined : { name: 'collection', params: { type } } })
+  const out = [
+    {
+      label: section || 'Contenuti',
+      to: {
+        name: section ? (route.name === 'structure-type' ? 'structure' : route.name === 'media-file' ? 'media' : route.name) : 'dashboard',
+      },
+    },
+  ]
+  if (type && site.type(type))
+    out.push({ label: site.label(type), to: route.name === 'structure-type' ? undefined : { name: 'collection', params: { type } } })
   return out
 })
-const siteUrl = computed(() => (session.data?.site_url || '../') + (session.isStaging ? 'index.php?kris_preview=1' : 'index.php?kris_preview=0'))
+const siteUrl = computed(
+  () => (session.data?.site_url || '../') + (session.isStaging ? 'index.php?kris_preview=1' : 'index.php?kris_preview=0')
+)
 
 async function switchMode(mode) {
   if (mode === session.mode) return
@@ -54,8 +66,15 @@ async function switchMode(mode) {
 
 <template>
   <header class="top">
-    <button type="button" class="icon-button menu-toggle" aria-controls="sidebar" :aria-expanded="String(menuOpen)" aria-label="Apri il menu" @click="$emit('toggle-menu')">
-      <KIcon name="list" />
+    <button
+      type="button"
+      class="icon-button menu-toggle"
+      aria-controls="sidebar"
+      :aria-expanded="String(menuOpen)"
+      aria-label="Apri il menu"
+      @click="$emit('toggle-menu')"
+    >
+      <KIcon name="menu" />
     </button>
     <nav class="crumb" aria-label="Posizione">
       <template v-for="(c, i) in crumb" :key="i">
@@ -65,11 +84,16 @@ async function switchMode(mode) {
       </template>
     </nav>
     <div class="seg mode-switch" role="group" aria-label="Dove salvano le modifiche">
-      <button type="button" value="live" :aria-pressed="String(!session.isStaging)" @click="switchMode(MODES.LIVE)"><span class="dot" aria-hidden="true"></span>Sito pubblico</button>
+      <button type="button" value="live" :aria-pressed="String(!session.isStaging)" @click="switchMode(MODES.LIVE)">
+        <span class="dot" aria-hidden="true"></span>Sito pubblico
+      </button>
       <button type="button" value="staging" :aria-pressed="String(session.isStaging)" @click="switchMode(MODES.STAGING)">
         In attesa<span v-if="session.stagingCount" class="seg-count">{{ session.stagingCount }}</span>
       </button>
     </div>
-    <a :href="siteUrl" target="_blank" rel="noopener" class="btn btn-white">{{ session.isStaging ? 'Anteprima' : 'Apri il sito' }} <KIcon name="external" /></a>
+    <a :href="siteUrl" target="_blank" rel="noopener" class="btn btn-white"
+      >{{ session.isStaging ? 'Anteprima' : 'Apri il sito' }} <KIcon name="external"
+    /></a>
+    <ThemeToggle />
   </header>
 </template>

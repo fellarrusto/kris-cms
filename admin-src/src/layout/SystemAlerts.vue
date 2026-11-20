@@ -61,7 +61,10 @@ function dismissUpdate() {
   latest.value = ''
 }
 
-const wipOn = computed(() => site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true && route.params.type !== 'kris_wip')
+const wipOn = computed(
+  () =>
+    site.content.find((i) => i.type === 'kris_wip')?.values?.enabled === true && !(route.name === 'system' && route.params.tab === 'lavori')
+)
 
 const email = ref('')
 const password = ref('')
@@ -86,30 +89,58 @@ async function emailLater() {
     <KIcon name="warning" />
     <p><strong>Modifiche sospese.</strong> {{ lock.message }}</p>
     <div v-if="lock.migrations?.length" class="alert-actions">
-      <button class="btn btn-primary btn-small" :disabled="migrating" @click="migrate">{{ migrating ? 'Aggiorno…' : 'Aggiorna il formato dei contenuti' }}</button>
+      <button class="btn btn-primary btn-small" :disabled="migrating" @click="migrate">
+        {{ migrating ? 'Aggiorno…' : 'Aggiorna il formato dei contenuti' }}
+      </button>
       <small>Prima viene salvata una copia dei contenuti.</small>
     </div>
-    <router-link v-else-if="lock.stale" class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'versione' } }">Vai alla versione di Kris</router-link>
+    <router-link v-else-if="lock.stale" class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'versione' } }"
+      >Vai alla versione di Kris</router-link
+    >
   </div>
-  <div v-else-if="session.data?.notice" class="alert" role="status"><p>{{ session.data.notice }}</p></div>
+  <div v-else-if="session.data?.notice" class="alert" role="status">
+    <p>{{ session.data.notice }}</p>
+  </div>
   <div v-if="showUpdate" class="alert alert-info" role="status">
-    <p><strong>È disponibile Kris {{ latest }}.</strong> Prima di installarla puoi leggere le novità.</p>
+    <p>
+      <strong>È disponibile Kris {{ latest }}.</strong> Prima di installarla puoi leggere le novità.
+    </p>
     <router-link class="btn btn-primary btn-small" :to="{ name: 'settings', params: { tab: 'versione' } }">Aggiorna ora</router-link>
     <button type="button" class="text-link" @click="dismissUpdate">Più tardi</button>
   </div>
-  <div v-for="(a, i) in session.data?.plugins?.alerts || []" :key="`plugin-${i}`" class="alert" :class="a.kind === 'danger' ? 'alert-error' : 'alert-warning'" role="status">
+  <div
+    v-for="(a, i) in session.data?.plugins?.alerts || []"
+    :key="`plugin-${i}`"
+    class="alert"
+    :class="a.kind === 'danger' ? 'alert-error' : 'alert-warning'"
+    role="status"
+  >
     <KIcon name="puzzle" />
     <p>{{ a.text }}</p>
-    <router-link v-if="route.name !== 'settings'" class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'plugin' } }">Plugin</router-link>
+    <router-link v-if="route.name !== 'settings'" class="btn btn-white btn-small" :to="{ name: 'settings', params: { tab: 'plugin' } }"
+      >Plugin</router-link
+    >
   </div>
   <div v-if="session.data?.rewrite_missing" class="alert alert-warning" role="status">
     <KIcon name="link" />
-    <p><strong>Indirizzi leggibili non attivi.</strong> Il .htaccess del sito non ha la regola di Kris: le pagine restano con gli indirizzi index.php?… finché non la aggiungi (chi gestisce l'hosting la trova in AGENTS.md, «Pagina 404»).</p>
+    <p>
+      <strong>Indirizzi leggibili non attivi.</strong> Il .htaccess del sito non ha la regola di Kris: le pagine restano con gli indirizzi
+      index.php?… finché non la aggiungi (chi gestisce l'hosting la trova in AGENTS.md, «Pagina 404»).
+    </p>
   </div>
   <div v-if="wipOn" class="alert alert-warning" role="status">
-    <p><strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor aperto.</p>
-    <a class="btn btn-white btn-small" :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1`" target="_blank" rel="noopener">Vedi la pagina</a>
-    <router-link class="btn btn-white btn-small" :to="{ name: 'edit', params: { type: 'kris_wip', id: 0 } }">Lavori in corso</router-link>
+    <p>
+      <strong>Lavori in corso attivi.</strong> I visitatori vedono solo la pagina di lavorazione; tu vedi il sito perché hai l'editor
+      aperto.
+    </p>
+    <a
+      class="btn btn-white btn-small"
+      :href="`${session.data?.site_url || '../'}index.php?kris_wip_preview=1`"
+      target="_blank"
+      rel="noopener"
+      >Vedi la pagina</a
+    >
+    <router-link class="btn btn-white btn-small" :to="{ name: 'system', params: { tab: 'lavori' } }">Lavori in corso</router-link>
   </div>
   <div v-if="session.data?.email_missing && !lock" class="alert account-alert" role="status">
     <p><strong>Aggiungi la tua email.</strong> Se dimentichi la password, ti manderemo lì un link per sceglierne una nuova.</p>
@@ -117,7 +148,15 @@ async function emailLater() {
       <label class="sr-only" for="quick-email">Email</label>
       <input id="quick-email" v-model="email" class="input" type="email" autocomplete="email" placeholder="nome@esempio.it" required />
       <label class="sr-only" for="quick-password">Password attuale</label>
-      <input id="quick-password" v-model="password" class="input" type="password" autocomplete="current-password" placeholder="Password attuale" required />
+      <input
+        id="quick-password"
+        v-model="password"
+        class="input"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Password attuale"
+        required
+      />
       <button class="btn btn-primary btn-small">Salva email</button>
       <button type="button" class="text-link" @click="emailLater">Più tardi</button>
     </form>

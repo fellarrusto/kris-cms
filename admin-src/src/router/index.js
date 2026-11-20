@@ -2,6 +2,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import AppLayout from '@/layout/AppLayout.vue'
 import { useSessionStore } from '@/stores/session'
 import { useDirty } from '@/components/dirty'
+import { RESERVED_HOME } from '@/router/menu'
 
 /**
  * Indirizzi con # (kris-admin/#/...): sugli hosting non servono regole di riscrittura.
@@ -24,7 +25,8 @@ const router = createRouter({
         { path: 'da-pubblicare', name: 'publish', component: () => import('@/views/pages/publish/Publish.vue') },
         { path: 'struttura', name: 'structure', component: () => import('@/views/pages/structure/Structure.vue') },
         { path: 'struttura/:type', name: 'structure-type', component: () => import('@/views/pages/structure/StructureType.vue') },
-        { path: 'indirizzi', name: 'addresses', component: () => import('@/views/pages/addresses/Addresses.vue') },
+        { path: 'indirizzi/:tab?', name: 'addresses', component: () => import('@/views/pages/addresses/Addresses.vue') },
+        { path: 'sistema/:tab?', name: 'system', component: () => import('@/views/pages/system/SystemPages.vue') },
         { path: 'impostazioni/:tab?', name: 'settings', component: () => import('@/views/pages/settings/Settings.vue') },
         { path: 'plugin/:name', name: 'plugin-settings', component: () => import('@/views/pages/plugins/PluginSettings.vue') },
         { path: 'plugin/:name/:view', name: 'plugin-view', component: () => import('@/views/pages/plugins/PluginView.vue') },
@@ -40,6 +42,8 @@ router.beforeEach(async (to, from) => {
   const session = useSessionStore()
   if (!session.data) await session.load()
   if (to.meta.admin && !session.isAdmin) return { name: 'dashboard' }
+  // Le sezioni di Kris si modificano nelle loro schede (i vecchi link #/modifica/kris_… portano lì)
+  if (to.name === 'edit' && RESERVED_HOME[to.params.type] && !(to.params.path || []).length) return RESERVED_HOME[to.params.type]
   return true
 })
 
