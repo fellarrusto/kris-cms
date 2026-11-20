@@ -2,6 +2,26 @@
     "format": 1,
     "releases": [
         {
+            "version": "2.0.1",
+            "min_from": "1.10.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.3",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Editor più ordinato: barra in alto unica con titolo e strumenti di ogni pagina, sidebar e schede allineate, lingue dentro la scheda dei campi.",
+            "date": "2026-11-20",
+            "editor_upgrade": true,
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v2.0.1/kris-2.0.1.zip",
+            "sha256": "212b87875969fdf257ee6e04b29514dc49b02f6573c54895201798e195b59367",
+            "size": 377473
+        },
+        {
             "version": "2.0.0",
             "min_from": "1.10.0",
             "breaking": false,
