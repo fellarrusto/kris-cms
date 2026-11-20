@@ -238,7 +238,7 @@ Perché un indirizzo inventato (`/pagina-che-non-esiste`) arrivi a Kris serve un
 
 ## Lavori in corso
 
-Ogni sito ha la sezione riservata **Lavori in corso** nell'editor (Pagine di sistema › Lavori in corso, con «Vedi la pagina di lavorazione» per vederla dall'editor): raccolta `kris_wip` (contenuto con ID `0`, migrazione `0007_lavori_in_corso.php`) con `enabled` (interruttore), `title` e `text`. Con l'interruttore acceso i visitatori ricevono una pagina 503 con `Retry-After` (anche `sitemap.php`), chi ha la sessione dell'editor vede il sito normale e l'editor mostra un promemoria in ogni schermata. La pagina è `template/kris_wip.html` del tema, resa con i campi della sezione (e con `kris_head.html`), oppure quella di serie di Kris (`kris/wip.php`). Staging e agente ne scrivono i valori con `set_field`, come per la 404.
+Ogni sito ha la sezione riservata **Lavori in corso** nell'editor (Pagine di sistema › Lavori in corso, con «Vedi la pagina di lavorazione» per vederla dall'editor): raccolta `kris_wip` (contenuto con ID `0`, migrazione `0007_lavori_in_corso.php`) con `enabled` (interruttore), `title` e `text`. Con l'interruttore acceso i visitatori ricevono una pagina 503 con `Retry-After` (anche `sitemap.php`), chi ha la sessione dell'editor vede il sito normale, con una striscia in cima che lo ricorda e porta alla pagina di lavorazione, e l'editor mostra un promemoria in ogni schermata. La pagina è `template/kris_wip.html` del tema, resa con i campi della sezione (e con `kris_head.html`), oppure quella di serie di Kris (`kris/wip.php`). Staging e agente ne scrivono i valori con `set_field`, come per la 404.
 
 ## Privacy e cookie
 
