@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import MediaService from '@/services/MediaService'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
@@ -99,15 +100,17 @@ async function optimize() {
 
 <template>
   <div class="container">
-    <div class="page-head">
+    <PageHead>
       <div>
         <h1>Libreria media</h1>
         <p class="sub"><span class="num">{{ files.length }}</span> file<template v-if="session.isStaging">. I file caricati ora restano in attesa finché non pubblichi.</template></p>
       </div>
-      <button v-if="!session.isStaging && limits.can_webp" class="btn btn-white" :disabled="optimizing || session.locked" title="Crea le misure per schermi diversi delle immagini già caricate" @click="optimize">
-        {{ optimizing ? 'Ottimizzo…' : 'Ottimizza le immagini' }}
-      </button>
-    </div>
+      <template #actions>
+        <button v-if="!session.isStaging && limits.can_webp" class="btn btn-white" :disabled="optimizing || session.locked" title="Crea le misure per schermi diversi delle immagini già caricate" @click="optimize">
+          {{ optimizing ? 'Ottimizzo…' : 'Ottimizza le immagini' }}
+        </button>
+      </template>
+    </PageHead>
     <div class="dropzone" :class="{ 'is-over': over }" @dragenter.prevent="over = true" @dragover.prevent="over = true" @dragleave="over = false" @drop.prevent="onDrop">
       <div>
         <strong>Trascina qui i file, oppure</strong>

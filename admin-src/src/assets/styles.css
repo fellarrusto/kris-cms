@@ -161,12 +161,32 @@ code { background: var(--subtle); padding: 1px 6px; border-radius: 6px; }
 .side-scrim { display: none; }
 
 .main { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
-.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; background: var(--surface); border-radius: var(--r-xl); padding: 16px 16px 16px 24px; min-height: 76px; }
+/* Barra in alto: percorso e titolo della pagina (PageHead, o il nome della sezione), poi gli strumenti della pagina e quelli comuni */
+.top-title { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.top-title h1 { font-size: 24px; margin: 0; }
+.top-title .sub { font-size: 14px; }
+.page-title { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.page-title > div { min-width: 0; }
+.page-title:empty, .top-title:has(.page-title > *) .top-fallback { display: none; }
+.top-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: auto; }
+.page-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.page-actions:empty { display: none; }
+.top .search { background: var(--surface-2); }
+/* Controlli della barra tutti alla stessa altezza, stesso testo e stesso bordo */
+.top-tools { --top-h: 40px; }
+.top-tools .btn, .top-tools .search { min-height: var(--top-h); height: var(--top-h); font-size: 14px; }
+.top-tools .btn-small { padding: 0 18px; }
+.top-tools .search input { min-height: 0; font-size: 14px; }
+.top-tools .round-button { width: var(--top-h); height: var(--top-h); }
+.top-tools .seg { height: var(--top-h); padding: 3px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border); align-items: stretch; }
+.top-tools .seg button { min-height: 0; font-size: 14px; }
+.top .back { width: 40px; height: 40px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; text-decoration: none; color: var(--text); flex: none; }
 .icon-button.menu-toggle { display: none; }
 .crumb { font-size: 13px; color: var(--muted); display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
 .crumb a { color: var(--muted); text-decoration: none; }
 .crumb a:hover { color: var(--text); text-decoration: underline; }
-.seg { margin-left: auto; display: flex; background: var(--surface); border-radius: var(--pill); padding: 4px; gap: 2px; }
+.seg { display: flex; background: var(--surface-2); border-radius: var(--pill); padding: 4px; gap: 2px; }
 .seg button, .seg a { text-decoration: none; border: 0; background: transparent; font: inherit; font-size: 13px; min-height: 36px; padding: 0 14px; border-radius: var(--pill); color: var(--text-2); display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .seg [aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
 .is-pending .seg [value="staging"][aria-pressed="true"] { background: var(--pending); color: #fff; }
@@ -174,8 +194,6 @@ code { background: var(--subtle); padding: 1px 6px; border-radius: 6px; }
 .seg-count { font-family: var(--mono); font-size: 12px; }
 
 /* --- Testi delle pagine -------------------------------------------------------- */
-.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 24px; flex-wrap: wrap; }
-.page-head > div:first-child { min-width: 0; flex: 1; }
 h1, .page-heading h1 { font-size: 34px; font-weight: 500; letter-spacing: -.02em; line-height: 1.15; margin: 8px 0 4px; overflow-wrap: anywhere; }
 .sub, .page-heading p { color: var(--muted); font-size: 15px; }
 .kicker, .eyebrow { font-size: 13px; color: var(--muted); }
@@ -323,9 +341,6 @@ label { font-size: 14px; }
 
 /* --- Modifica di un contenuto ----------------------------------------------- */
 .edit-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.edit-head .back { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; text-decoration: none; color: var(--text); flex: none; }
-.edit-head h1 { font-size: 28px; margin: 0; }
-.edit-head-text { min-width: 0; flex: 1 1 260px; }
 .edit-head-tools { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-left: auto; }
 .lang-switch { display: flex; background: var(--subtle); border-radius: var(--pill); padding: 3px; }
 .lang-switch button { border: 0; background: transparent; font: inherit; font-size: 13px; min-height: 32px; padding: 0 12px; border-radius: var(--pill); display: flex; gap: 6px; align-items: center; cursor: pointer; color: var(--text-2); }
@@ -334,8 +349,14 @@ label { font-size: 14px; }
 /* Una sezione di Kris dentro una schermata a schede: niente indice laterale, gli strumenti a destra */
 .embedded-edit .edit-cols { grid-template-columns: minmax(0, 1fr); }
 .embedded-edit .edit-cols > .index { display: none; }
-.embedded-edit .edit-head { justify-content: flex-end; margin-bottom: 12px; }
-.embedded-edit .edit-head:not(:has(*)) { display: none; }
+.edit-top { display: flex; flex-direction: row-reverse; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.edit-top:not(:has(.edit-head-tools > *, .sub, .nested-crumb, .notice)) { display: none; }
+.edit-top .sub, .edit-top .nested-crumb, .edit-top .notice { flex: 1 1 320px; }
+.panel .empty-state { background: none; padding: 16px 0 0; }
+.edit-top .sub { font-size: 14px; }
+.edit-cols.no-index { grid-template-columns: minmax(0, 1fr); }
+.edit-head { justify-content: flex-end; }
+.edit-head:not(:has(.edit-head-tools > *)) { display: none; }
 .panel { background: var(--surface); border-radius: var(--r-xl); padding: 8px 24px 24px; min-width: 0; }
 .field-section { border-top: 1px solid var(--line); margin-top: 10px; }
 .field-section:first-of-type { border-top: 0; margin-top: 0; }
@@ -538,10 +559,10 @@ dialog::backdrop { background: var(--scrim); }
     .icon-button.menu-toggle { display: inline-grid; background: var(--surface); }
     .seg { margin-left: 0; order: 3; width: 100%; }
     .seg button { flex: 1; justify-content: center; }
-    .top .crumb { flex: 1; }
-    .edit-head-text { flex-basis: calc(100% - 56px); }
+    .top { padding: 12px 12px 12px 16px; }
+    .top-tools { margin-left: 0; width: 100%; }
+    .top-title h1 { font-size: 20px; }
     .edit-head-tools { margin-left: 0; width: 100%; justify-content: space-between; }
-    .edit-head h1 { font-size: 24px; }
     .settings-layout { grid-template-columns: minmax(0, 1fr); }
     .settings-nav { position: static; flex-direction: row; overflow-x: auto; }
     .settings-nav a { flex: none; }

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import PluginWidget from '@/components/PluginWidget.vue'
 import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
@@ -47,7 +48,7 @@ const target = (t) =>
 
 <template>
   <div class="container">
-    <div class="page-head">
+    <PageHead>
       <div>
         <h1>Cosa vuoi modificare?</h1>
         <p class="sub">
@@ -58,10 +59,12 @@ const target = (t) =>
           }}
         </p>
       </div>
-      <label v-if="site.userTypes.length" class="search"
-        ><KIcon name="search" /><input v-model="search" type="search" placeholder="Cerca un contenuto" aria-label="Cerca un contenuto"
-      /></label>
-    </div>
+      <template #actions>
+        <label v-if="site.userTypes.length" class="search"
+          ><KIcon name="search" /><input v-model="search" type="search" placeholder="Cerca un contenuto" aria-label="Cerca un contenuto"
+        /></label>
+      </template>
+    </PageHead>
 
     <template v-if="collections.length">
       <div class="section-head">

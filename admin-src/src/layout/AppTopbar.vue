@@ -29,25 +29,14 @@ const SECTIONS = {
   system: 'Pagine di sistema',
   settings: 'Impostazioni',
 }
-const crumb = computed(() => {
+// Titolo della barra per le schermate senza PageHead (Impostazioni, Indirizzi, Pagine di sistema…)
+const fallbackTitle = computed(() => {
   const type = String(route.params.type || '')
-  if (RESERVED_VIEWS[type]) return [{ label: 'Sito' }, { label: RESERVED_VIEWS[type].label }]
-  if (route.name === 'plugin-view' || route.name === 'plugin-settings') {
-    const p = session.data?.plugins?.active?.find((x) => x.name === route.params.name)
-    return [{ label: 'Plugin', to: { name: 'settings', params: { tab: 'plugin' } } }, { label: p?.title || String(route.params.name) }]
-  }
-  const section = SECTIONS[route.name]
-  const out = [
-    {
-      label: section || 'Contenuti',
-      to: {
-        name: section ? (route.name === 'structure-type' ? 'structure' : route.name === 'media-file' ? 'media' : route.name) : 'dashboard',
-      },
-    },
-  ]
-  if (type && site.type(type))
-    out.push({ label: site.label(type), to: route.name === 'structure-type' ? undefined : { name: 'collection', params: { type } } })
-  return out
+  if (RESERVED_VIEWS[type]) return RESERVED_VIEWS[type].label
+  if (route.name === 'plugin-view' || route.name === 'plugin-settings')
+    return session.data?.plugins?.active?.find((x) => x.name === route.params.name)?.title || String(route.params.name)
+  if (type && site.type(type)) return site.label(type)
+  return SECTIONS[route.name] || 'Contenuti'
 })
 const siteUrl = computed(
   () => (session.data?.site_url || '../') + (session.isStaging ? 'index.php?kris_preview=1' : 'index.php?kris_preview=0')
@@ -76,24 +65,24 @@ async function switchMode(mode) {
     >
       <KIcon name="menu" />
     </button>
-    <nav class="crumb" aria-label="Posizione">
-      <template v-for="(c, i) in crumb" :key="i">
-        <span v-if="i" aria-hidden="true">/</span>
-        <router-link v-if="c.to" :to="c.to">{{ c.label }}</router-link>
-        <span v-else>{{ c.label }}</span>
-      </template>
-    </nav>
-    <div class="seg mode-switch" role="group" aria-label="Dove salvano le modifiche">
-      <button type="button" value="live" :aria-pressed="String(!session.isStaging)" @click="switchMode(MODES.LIVE)">
-        <span class="dot" aria-hidden="true"></span>Sito pubblico
-      </button>
-      <button type="button" value="staging" :aria-pressed="String(session.isStaging)" @click="switchMode(MODES.STAGING)">
-        In attesa<span v-if="session.stagingCount" class="seg-count">{{ session.stagingCount }}</span>
-      </button>
+    <div class="top-title">
+      <div id="page-title" class="page-title"></div>
+      <h1 class="top-fallback">{{ fallbackTitle }}</h1>
     </div>
-    <a :href="siteUrl" target="_blank" rel="noopener" class="btn btn-white"
-      >{{ session.isStaging ? 'Anteprima' : 'Apri il sito' }} <KIcon name="external"
-    /></a>
-    <ThemeToggle />
+    <div class="top-tools">
+      <div id="page-actions" class="page-actions"></div>
+      <div class="seg mode-switch" role="group" aria-label="Dove salvano le modifiche">
+        <button type="button" value="live" :aria-pressed="String(!session.isStaging)" @click="switchMode(MODES.LIVE)">
+          <span class="dot" aria-hidden="true"></span>Sito pubblico
+        </button>
+        <button type="button" value="staging" :aria-pressed="String(session.isStaging)" @click="switchMode(MODES.STAGING)">
+          In attesa<span v-if="session.stagingCount" class="seg-count">{{ session.stagingCount }}</span>
+        </button>
+      </div>
+      <a :href="siteUrl" target="_blank" rel="noopener" class="btn btn-white"
+        >{{ session.isStaging ? 'Anteprima' : 'Apri il sito' }} <KIcon name="external"
+      /></a>
+      <ThemeToggle />
+    </div>
   </header>
 </template>

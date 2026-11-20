@@ -1,0 +1,1 @@
+import{o as t,c as r,A as a,bb as o,$ as s,d as n,F as l}from"./runtime-dom.esm-bundler-BIQKpi-v.js";const d={__name:"PageHead",setup(c){return(e,p)=>(t(),r(l,null,[(t(),a(s,{defer:"",to:"#page-title"},[o(e.$slots,"default")])),e.$slots.actions?(t(),a(s,{key:0,defer:"",to:"#page-actions"},[o(e.$slots,"actions")])):n("",!0)],64))}};export{d as _};

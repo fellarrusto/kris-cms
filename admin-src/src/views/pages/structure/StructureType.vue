@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import FieldRow from '@/views/pages/structure/components/FieldRow.vue'
 import { useDirty } from '@/components/dirty'
 import SiteService from '@/services/SiteService'
@@ -195,15 +196,16 @@ async function removeType() {
 
 <template>
   <div class="container">
-    <div v-if="session.isStaging" class="notice notice-warning"><strong>Solo sul sito pubblico.</strong><p>La struttura si cambia sul sito pubblico: passa a «Sito pubblico» per modificarla.</p></div>
-    <div class="page-head">
+    <PageHead>
       <div>
-        <p class="kicker"><router-link :to="{ name: 'structure' }">Struttura</router-link></p>
         <h1>{{ site.label(type) }}</h1>
         <p class="sub mono">{{ type }} · {{ serialize().length }} {{ serialize().length === 1 ? 'campo' : 'campi' }} · {{ count }} {{ count === 1 ? 'contenuto' : 'contenuti' }}</p>
       </div>
-      <router-link class="btn btn-white" :to="{ name: 'collection', params: { type } }">Apri i contenuti</router-link>
-    </div>
+      <template #actions>
+        <router-link class="btn btn-white" :to="{ name: 'collection', params: { type } }">Apri i contenuti</router-link>
+      </template>
+    </PageHead>
+    <div v-if="session.isStaging" class="notice notice-warning"><strong>Solo sul sito pubblico.</strong><p>La struttura si cambia sul sito pubblico: passa a «Sito pubblico» per modificarla.</p></div>
 
     <div v-if="impact" class="box" style="box-shadow: inset 0 0 0 1.5px var(--warn-line)" role="alert">
       <h2>Prima di salvare</h2>

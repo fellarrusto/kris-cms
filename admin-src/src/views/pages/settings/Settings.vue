@@ -57,9 +57,6 @@ const current = computed(() => tabs.value.find((t) => t.key === route.params.tab
 
 <template>
   <div class="container">
-    <div class="page-head">
-      <div><h1>Impostazioni</h1></div>
-    </div>
     <div class="settings-layout">
       <nav class="settings-nav" aria-label="Sezioni delle impostazioni">
         <router-link

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import KIcon from '@/components/KIcon.vue'
+import PageHead from '@/components/PageHead.vue'
 import StagingService from '@/services/StagingService'
 import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
@@ -80,13 +81,15 @@ function toggleFile(name) {
   <div class="container">
     <p v-if="!data" class="loading">Carico le modifiche in attesa…</p>
     <template v-else>
-      <div class="page-head">
+      <PageHead>
         <div>
           <h1>{{ total ? `${total} ${total === 1 ? 'modifica da rivedere' : 'modifiche da rivedere'}` : 'Niente da pubblicare' }}</h1>
           <p class="sub">{{ total ? 'Il sito pubblico non cambia finché non le pubblichi.' : 'Non ci sono modifiche in attesa.' }}</p>
         </div>
-        <a v-if="total" class="btn btn-white" :href="`${session.data.site_url}index.php?kris_preview=1`" target="_blank" rel="noopener">Apri l'anteprima <KIcon name="external" /></a>
-      </div>
+        <template #actions>
+          <a v-if="total" class="btn btn-white" :href="`${session.data.site_url}index.php?kris_preview=1`" target="_blank" rel="noopener">Apri l'anteprima <KIcon name="external" /></a>
+        </template>
+      </PageHead>
       <div class="publish-cols">
         <div class="container">
           <template v-if="total">
