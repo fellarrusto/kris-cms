@@ -181,8 +181,12 @@ return [
                 if ($from !== $type) continue;
                 foreach ($model[$type] as $f) {
                     if (!is_array($f) || ($f['name'] ?? null) !== $list) continue;
+                    // Una descrizione breve è un buon nome visibile; una frase lunga resta descrizione
+                    $text = is_string($f['description'] ?? null) ? trim($f['description']) : '';
+                    $short = $text !== '' && mb_strlen($text) <= 40 && !preg_match('/[.:;!?]\s*$/u', $text);
                     $types[$name] = array_filter([
-                        'label' => is_string($f['description'] ?? null) && $f['description'] !== '' ? $f['description'] : null,
+                        'label' => $short ? $text : ($text !== '' ? ucfirst(str_replace('_', ' ', $name)) : null),
+                        'description' => !$short && $text !== '' ? $text : null,
                         'newest_first' => !empty($f['posts']) ? true : null,
                     ], fn($v) => $v !== null) + ['fields' => array_map($field, array_values(array_filter(is_array($f['of'] ?? null) ? $f['of'] : [], 'is_array')))];
                 }

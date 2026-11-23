@@ -166,6 +166,12 @@ test('l agente legge, modifica e carica solo nello staging', function () {
 
     $entity = agentCall($root, $worker, ['action' => 'get_entity', 'key' => 'homepage', 'id' => 0, 'path' => ['steps', 1]])['body']['entity'];
     assertSame(1, $entity['id']);
+
+    // Gli elementi degli elenchi dicono la loro posizione: l'ordine non è quello degli id
+    agentCall($root, $worker, ['action' => 'operate', 'operation' => ['op' => 'move_item', 'key' => 'homepage', 'id' => 0, 'array' => 'steps', 'item_id' => 1, 'to' => 0]]);
+    $steps = agentCall($root, $worker, ['action' => 'get_entity', 'key' => 'homepage', 'id' => 0])['body']['entity']['values']['steps'];
+    assertSame([1, 0], [$steps[0]['id'], $steps[0]['position']]);
+    assertSame(1, $steps[1]['position']);
 });
 
 test('errori dello staging e azioni sconosciute tornano come risposte leggibili', function () {
@@ -326,6 +332,11 @@ test('site_config mostra pagine, seo, robots e sitemap con le modifiche in attes
     assertContains('Disallow: /editor/', (string) $c['robots_txt']);
     assertContains('<urlset', $c['sitemap_xml']);
     assertNotContains('page=lavagna', $c['sitemap_xml']);
+    // Indirizzi leggibili come in /sitemap.php, non index.php?page=…
+    agentCall($root, $worker, ['action' => 'operate', 'operation' => ['op' => 'set_sitemap', 'page' => 'lavagna', 'sitemap' => true]]);
+    $xml = agentCall($root, $worker, ['action' => 'site_config'])['body']['sitemap_xml'];
+    assertContains('/lavagna</loc>', $xml);
+    assertNotContains('?page=', $xml);
 });
 
 test('render_page restituisce l HTML finito di una pagina con le modifiche in attesa', function () {

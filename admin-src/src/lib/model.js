@@ -10,6 +10,7 @@ export const FIELD_TYPES = {
   boolean: 'Interruttore',
   select: 'Scelta',
   list: 'Elenco',
+  embed: 'Contenuto incorporato',
 }
 
 /** Tipi di Kris (kris_) e dei plugin (plg_): schema fisso, sezioni dedicate. */

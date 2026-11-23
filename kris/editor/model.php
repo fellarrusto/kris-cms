@@ -237,6 +237,7 @@ const EDITOR_FIELD_TYPES = [
     'boolean' => 'Interruttore',
     'select' => 'Scelta',
     'list' => 'Elenco',
+    'embed' => 'Contenuto incorporato',
 ];
 
 /**

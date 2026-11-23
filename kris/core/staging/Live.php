@@ -43,8 +43,8 @@ final class Live
             $uploadExists = fn(string $url): bool => is_file("{$root}/assets/uploads/" . basename($url));
             foreach (array_values($ops) as $n => $op) {
                 if (!is_array($op)) throw new StagingException("L'operazione {$n} non è un oggetto con \"op\". Nulla è stato modificato.");
-                if (($op['op'] ?? null) === 'register_page' && !self::templateExists($root, (string) ($op['page'] ?? ''))) {
-                    throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/{$op['page']}.html.");
+                if (($op['op'] ?? null) === 'register_page' && !self::templateExists($root, (string) ($op['template'] ?? $op['page'] ?? ''))) {
+                    throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/" . ($op['template'] ?? $op['page']) . ".html.");
                 }
                 try {
                     [$state, $completed] = Operations::apply($state, $op, $languages, $uploadExists, false, false, $warnings);

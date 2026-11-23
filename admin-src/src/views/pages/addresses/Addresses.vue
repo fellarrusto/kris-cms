@@ -86,17 +86,25 @@ const setSitemap = (page, on) =>
     () => site.apply([{ op: 'set_sitemap', page: page.name, sitemap: on }]),
     on ? 'La pagina è nella sitemap.' : 'La pagina non è più nella sitemap.'
   )
-async function unregister(page) {
-  if (
-    !(await ui.confirm({
-      title: `Togliere la pagina «${page.name}»?`,
-      text: 'Non sarà più una pagina pubblica e sparisce dalla sitemap. Il template e i contenuti restano.',
-      confirmLabel: 'Togli pagina',
-    }))
-  )
-    return
-  run(() => site.apply([{ op: 'unregister_page', page: page.name }]), 'Pagina tolta.')
+// Togliere una pagina: i suoi indirizzi, già nei link e su Google, possono portare a un'altra (301)
+const removing = ref(null)
+function unregister(page) {
+  editing.value = null
+  adding.value = false
+  removing.value = { name: page.name, to: '/' }
 }
+function confirmUnregister() {
+  const r = removing.value
+  const op = { op: 'unregister_page', page: r.name }
+  if (r.to.trim()) op.redirect_to = r.to.trim()
+  run(async () => {
+    await site.apply([op])
+    removing.value = null
+  }, r.to.trim() ? `Pagina tolta: i suoi indirizzi portano a ${r.to.trim()}.` : 'Pagina tolta.')
+}
+const targets = computed(() =>
+  pages.value.filter((p) => p.name !== removing.value?.name && (p.fixed || p.name === 'homepage')).map((p) => (p.name === 'homepage' ? '/' : `/${p.name}`))
+)
 
 // Nuova pagina: un template del tema che rende un contenuto fisso o uno per contenuto
 const adding = ref(false)
@@ -120,6 +128,7 @@ const editing = ref(null)
 const textFields = (type) => (site.fieldsOf(type) || []).filter((f) => f.type === 'text')
 function edit(p) {
   adding.value = false
+  removing.value = null
   editing.value = {
     name: p.name,
     template: p.template,
@@ -268,6 +277,31 @@ function saveRedirects() {
             </table>
           </div>
           <form
+            v-if="removing"
+            class="box collection-info-form"
+            style="background: var(--surface-2); margin-top: 12px"
+            @submit.prevent="confirmUnregister"
+          >
+            <h2>Togliere la pagina «{{ removing.name }}»?</h2>
+            <p class="hint">Non sarà più una pagina pubblica e sparisce dalla sitemap. Il template e i contenuti restano.</p>
+            <label class="field-label"
+              >I suoi indirizzi portano a<input
+                v-model="removing.to"
+                class="input mono"
+                type="text"
+                list="kris-redirect-targets"
+                placeholder="Vuoto: rispondono «pagina non trovata»"
+            /></label>
+            <datalist id="kris-redirect-targets">
+              <option v-for="t in targets" :key="t" :value="t" />
+            </datalist>
+            <p class="hint">Chi arriva da un link o da Google va lì (301), in ogni lingua. Lo trovi poi in Reindirizzamenti.</p>
+            <div class="bar">
+              <button type="button" class="btn btn-white btn-small" @click="removing = null">Annulla</button
+              ><button class="btn btn-danger btn-small" :disabled="busy">Togli la pagina</button>
+            </div>
+          </form>
+          <form
             v-if="editing"
             class="box collection-info-form"
             style="background: var(--surface-2); margin-top: 12px"
@@ -342,7 +376,9 @@ function saveRedirects() {
             </button>
           </div>
           <p class="muted" style="margin: 4px 0 10px">
-            Un vecchio indirizzo porta alla pagina nuova (301): chi arriva da un link o da Google non trova una pagina vuota.
+            Un vecchio indirizzo porta alla pagina nuova (301): chi arriva da un link o da Google non trova una pagina vuota. Con /* in
+            fondo (/progetti-vecchi/*) vale per tutto quello che c'era sotto. Cambiando lo slug di un contenuto, Kris aggiunge da solo
+            il reindirizzamento dal vecchio indirizzo.
           </p>
           <form @submit.prevent="saveRedirects">
             <div v-for="(r, i) in redirects" :key="i" class="inline-form" style="margin-bottom: 8px">

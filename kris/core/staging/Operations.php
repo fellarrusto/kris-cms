@@ -28,7 +28,7 @@ namespace Kris\Staging;
  */
 final class Operations
 {
-    public const TYPES = ['text', 'richtext', 'media', 'select', 'boolean', 'list'];
+    public const TYPES = ['text', 'richtext', 'media', 'select', 'boolean', 'list', 'embed'];
     private const ALIASES = ['plain' => 'text', 'image' => 'media', 'array' => 'list'];
 
     // Gli stessi nomi che l'editor riserva ai propri controlli, piu quelli esposti dal motore dei template
@@ -41,9 +41,13 @@ final class Operations
     private const KEYS = [
         'add_item' => ['op', 'key', 'id', 'path', 'array', 'fields', 'position'],
         'create_entity' => ['op', 'key', 'fields'],
-        'register_page' => ['op', 'page', 'sitemap'],
+        'register_page' => ['op', 'page', 'sitemap', 'template', 'type', 'item', 'priority', 'slug'],
         'set_sitemap' => ['op', 'page', 'sitemap'],
         'set_page' => ['op', 'page', 'template', 'type', 'item', 'sitemap', 'priority', 'slug'],
+        'set_redirect' => ['op', 'from', 'to'],
+        'set_embed_domains' => ['op', 'domains'],
+        'set_plugin_settings' => ['op', 'plugin', 'values'],
+        'unregister_page' => ['op', 'page', 'redirect_to'],
     ];
 
     /** Le sezioni riservate di Kris di cui si scrivono i valori (non lo schema). */
@@ -72,7 +76,8 @@ final class Operations
             'change_type' => 'changeType', 'move_field' => 'moveField', 'set_options' => 'setOptions', 'set_posts' => 'setPosts',
             'set_post_collection' => 'setPostCollection', 'unregister_page' => 'unregisterPage',
             'set_collection_info' => 'setCollectionInfo', 'move_collection' => 'moveCollection',
-            'set_sitemap' => 'setSitemap', 'set_page' => 'setPage',
+            'set_sitemap' => 'setSitemap', 'set_page' => 'setPage', 'set_redirect' => 'setRedirect',
+            'set_embed_domains' => 'setEmbedDomains', 'set_plugin_settings' => 'setPluginSettings',
         ][$type] ?? null;
         if ($method === null) {
             throw new StagingException("Operazione sconosciuta: '{$type}'.");
@@ -93,7 +98,7 @@ final class Operations
         $state += ['schema' => [], 'content' => [], 'settings' => []];
         $state['schema'] += ['types' => [], 'pages' => []];
         $ctx = ['languages' => array_values($languages), 'uploadExists' => $uploadExists, 'replay' => $replay, 'force' => $force,
-            'warnings' => $warnings ?? new \ArrayObject()];
+            'warnings' => $warnings ?? new \ArrayObject(), 'embedDomains' => \Kris\Template\Embed::domains(is_array($state['settings'] ?? null) ? $state['settings'] : [])];
         return self::$method($state, $op, $ctx);
     }
 
@@ -125,7 +130,10 @@ final class Operations
             'move_field' => "Sposta il campo «{$op['name']}» in posizione " . ((int) ($op['to'] ?? 0) + 1) . ' in ' . self::schemaWhere($op),
             'set_posts' => (!empty($op['posts']) ? 'Mostra in Posts' : 'Toglie da Posts') . " l'elenco «{$op['name']}» di «{$op['collection']}»",
             'set_post_collection' => (!empty($op['enabled']) ? 'Mostra in Posts' : 'Toglie da Posts') . " la raccolta «{$op['collection']}»",
-            'unregister_page' => "Toglie la pagina pubblica «{$op['page']}», anche dalla sitemap",
+            'unregister_page' => "Toglie la pagina pubblica «{$op['page']}», anche dalla sitemap" . (($op['redirect_to'] ?? '') !== '' && $op['redirect_to'] !== null ? ", e rimanda i suoi indirizzi a {$op['redirect_to']}" : ''),
+            'set_plugin_settings' => "Impostazioni del plugin «{$op['plugin']}»: " . implode(', ', array_keys((array) ($op['values'] ?? []))),
+            'set_embed_domains' => 'Siti ammessi per i contenuti incorporati: ' . implode(', ', array_map('strval', (array) ($op['domains'] ?? []))),
+            'set_redirect' => ($op['to'] ?? '') === '' || $op['to'] === null ? "Toglie il reindirizzamento da {$op['from']}" : "Reindirizza {$op['from']} a {$op['to']}",
             'set_page' => "Modifica la pagina pubblica «{$op['page']}»",
             'set_collection_info' => "Nome, descrizione o contenuto unico della raccolta «{$op['collection']}»",
             'move_collection' => "Sposta la raccolta «{$op['collection']}» in posizione " . ((int) ($op['to'] ?? 0) + 1),
@@ -257,7 +265,27 @@ final class Operations
         }
         if (!isset($item['values']) || !is_array($item['values']) || array_is_list($item['values'])) $item['values'] = [];
         $item['values'][$def['name']] = $value;
+        unset($item);
+        if (!$path) self::rememberSlug($state, $key, (int) ($op['id'] ?? 0), $def['name'], $current, $value, $ctx['languages']);
         return [$state, $op];
+    }
+
+    /**
+     * Memoria degli slug: se il campo dà l'indirizzo di una pagina (pages.<p>.slug), il vecchio
+     * indirizzo del contenuto rimanda al nuovo (301), lingua per lingua, come fa WordPress.
+     */
+    private static function rememberSlug(array &$state, string $key, int $id, string $field, mixed $old, mixed $new, array $languages): void
+    {
+        foreach ((array) ($state['schema']['pages'] ?? []) as $page => $entry) {
+            if (!is_array($entry) || ($entry['type'] ?? null) !== $key || ($entry['slug'] ?? null) !== $field || array_key_exists('item', $entry)) continue;
+            foreach (array_values($languages) as $n => $lang) {
+                $was = \Kris\Site\Router::slug((string) (is_array($old) ? ($old[$lang] ?? '') : ($old ?? '')));
+                $now = \Kris\Site\Router::slug((string) (is_array($new) ? ($new[$lang] ?? '') : ($new ?? '')));
+                if ($was === $now || $was === '') continue;
+                $prefix = ($n === 0 ? '' : '/' . $lang) . '/' . $page . '/';
+                self::addRedirect($state['schema'], $prefix . $was, $prefix . ($now === '' ? (string) $id : $now));
+            }
+        }
     }
 
     private static function addItem(array $state, array $op, array $ctx): array
@@ -611,7 +639,7 @@ final class Operations
         $new = ['name' => $name, 'type' => $type] + ($type === 'list' ? ['of' => []] : ['localized' => $localized])
             + array_intersect_key($old, array_flip(['description', 'section']));
         if (self::label($new) === $from) return [$state, $op];
-        $choices = ['list', 'boolean', 'select'];
+        $choices = ['list', 'boolean', 'select', 'embed'];
         if ($old['type'] !== $type && (in_array($old['type'], $choices, true) || in_array($type, $choices, true))) {
             if ($type === 'select') {
                 throw new StagingException("Per un campo a scelta servono le opzioni: aggiungilo con add_field invece di convertire «{$name}».");
@@ -621,7 +649,7 @@ final class Operations
                 if (!self::isEmptyValue($item['values'][$name] ?? null)) $filled = true;
             });
             if ($filled) {
-                throw new StagingException("«{$name}» contiene valori: un campo si converte da o verso un elenco, un interruttore o una scelta solo quando è vuoto in tutti i contenuti.");
+                throw new StagingException("«{$name}» contiene valori: un campo si converte da o verso un elenco, un interruttore, una scelta o un contenuto incorporato solo quando è vuoto in tutti i contenuti.");
             }
         }
         if ($old['type'] === $type && $type === 'select') $new += array_intersect_key($old, array_flip(['options', 'multiple']));
@@ -643,7 +671,7 @@ final class Operations
 
     private static function convertValue(mixed $value, array $from, array $to, array $languages): mixed
     {
-        if ($from['type'] !== $to['type'] && (in_array($to['type'], ['list', 'boolean', 'select'], true) || in_array($from['type'], ['list', 'boolean', 'select'], true))) {
+        if ($from['type'] !== $to['type'] && (in_array($to['type'], ['list', 'boolean', 'select', 'embed'], true) || in_array($from['type'], ['list', 'boolean', 'select', 'embed'], true))) {
             return self::emptyValue($to, $languages);
         }
         if ($from['type'] === $to['type'] && in_array($to['type'], ['boolean', 'select'], true)) {
@@ -919,8 +947,115 @@ final class Operations
             if ($ctx['replay'] && $ctx['force']) return [$state, $op];
             throw new StagingException(self::conflict($op, "«{$page}» non è una pagina pubblica"));
         }
+        $entry = $state['schema']['pages'][$page];
         unset($state['schema']['pages'][$page]);
+        // I vecchi indirizzi della pagina portano a redirect_to (301), in ogni lingua
+        if (($op['redirect_to'] ?? '') !== '' && $op['redirect_to'] !== null) {
+            $to = self::redirectTarget($op['redirect_to']);
+            $each = !is_array($entry) || !array_key_exists('item', $entry) || is_string($entry['list'] ?? null);
+            foreach ($ctx['languages'] as $n => $lang) {
+                $prefix = $n === 0 ? '' : '/' . $lang;
+                $target = $n === 0 || !str_starts_with($to, '/') ? $to : $prefix . ($to === '/' ? '/' : $to);
+                self::addRedirect($state['schema'], "{$prefix}/{$page}", $target);
+                if ($each) self::addRedirect($state['schema'], "{$prefix}/{$page}/*", $target);
+            }
+        }
         return [$state, $op];
+    }
+
+    /**
+     * Le impostazioni di un plugin installato, come in Impostazioni › Plugin:
+     * solo i campi dichiarati dal manifest; quelli non mandati restano.
+     */
+    private static function setPluginSettings(array $state, array $op, array $ctx): array
+    {
+        $name = (string) ($op['plugin'] ?? '');
+        $plugin = \Kris\Plugin\Plugins::installed()[$name] ?? null;
+        if ($plugin === null) {
+            if ($ctx['replay'] && $ctx['force']) return [$state, $op];
+            throw new StagingException(self::conflict($op, "il plugin «{$name}» non è installato (se è in attesa, le impostazioni si scrivono dopo la pubblicazione)"));
+        }
+        $fields = $plugin['manifest']['settings'];
+        if (!is_array($op['values'] ?? null) || array_is_list($op['values'])) {
+            throw new StagingException('set_plugin_settings vuole "values": un oggetto con i valori per nome.');
+        }
+        $known = array_column($fields, 'name');
+        $unknown = array_diff(array_map('strval', array_keys($op['values'])), $known);
+        if ($unknown) {
+            throw new StagingException("Il plugin «{$name}» non ha le impostazioni " . implode(', ', $unknown) . '. Impostazioni: ' . ($known ? implode(', ', $known) : 'nessuna') . '.');
+        }
+        $clean = \Kris\Plugin\Settings::clean($fields, $op['values'], $ctx['languages']);
+        $state['content'] = \Kris\Plugin\Settings::merge($state['content'], $name, $clean);
+        return [$state, $op];
+    }
+
+    /** I siti da cui i campi embed accettano contenuti (settings.embed.domains); una lista vuota li spegne. */
+    private static function setEmbedDomains(array $state, array $op, array $ctx): array
+    {
+        if (!is_array($op['domains'] ?? null) || !array_is_list($op['domains'])) {
+            throw new StagingException('set_embed_domains vuole "domains": una lista di domini, per esempio ["youtube.com", "instagram.com"].');
+        }
+        $domains = [];
+        foreach ($op['domains'] as $domain) {
+            $clean = \Kris\Template\Embed::domain((string) $domain);
+            if ($clean === null) throw new StagingException("«{$domain}» non è un dominio, per esempio youtube.com.");
+            $domains[] = $clean;
+        }
+        $domains = array_values(array_unique($domains));
+        $settings = is_array($state['settings'] ?? null) ? $state['settings'] : [];
+        $settings['embed'] = ['domains' => $domains] + (is_array($settings['embed'] ?? null) ? $settings['embed'] : []);
+        $state['settings'] = $settings;
+        return [$state, ['op' => 'set_embed_domains', 'domains' => $domains]];
+    }
+
+    /** Un reindirizzamento da un vecchio indirizzo del sito; "to" vuoto lo toglie. */
+    private static function setRedirect(array $state, array $op, array $ctx): array
+    {
+        $from = self::redirectSource($op['from'] ?? '');
+        if (($op['to'] ?? '') === '' || $op['to'] === null) {
+            unset($state['schema']['redirects'][$from]);
+            if (empty($state['schema']['redirects'])) unset($state['schema']['redirects']);
+            return [$state, ['from' => $from] + $op];
+        }
+        $to = self::redirectTarget($op['to']);
+        self::addRedirect($state['schema'], $from, $to);
+        return [$state, ['from' => $from, 'to' => $to] + $op];
+    }
+
+    /** "/vecchio" o "/vecchio/*" (tutto quello che c'è sotto): un indirizzo del sito, senza spazi né query. */
+    public static function redirectSource(mixed $from): string
+    {
+        $from = '/' . ltrim(trim((string) $from), '/');
+        if ($from === '/' || $from === '/*' || preg_match('#^/[^\s?\#*]*(/\*)?$#', $from) !== 1) {
+            throw new StagingException("«{$from}» non è un vecchio indirizzo del sito: inizia con /, senza spazi né ?; /* in fondo vale per tutto quello che c'è sotto.");
+        }
+        return str_ends_with($from, '/*') ? $from : rtrim($from, '/');
+    }
+
+    /** Una pagina del sito ("/nuovo") o un indirizzo https. */
+    public static function redirectTarget(mixed $to): string
+    {
+        $to = trim((string) $to);
+        if (preg_match('#^(/(?![/\\\\])[^\s]*|https://[^\s]+)$#', $to) !== 1) {
+            throw new StagingException("«{$to}» non va bene come destinazione: un indirizzo del sito (/…) o https://….");
+        }
+        return $to;
+    }
+
+    /**
+     * Aggiunge $from → $to: chi rimandava a $from ora rimanda a $to (niente catene),
+     * e un reindirizzamento da $to si toglie (niente giri, per esempio tornando allo slug di prima).
+     */
+    private static function addRedirect(array &$schema, string $from, string $to): void
+    {
+        if ($from === $to) return;
+        $redirects = is_array($schema['redirects'] ?? null) ? $schema['redirects'] : [];
+        unset($redirects[$to]);
+        foreach ($redirects as $k => $v) {
+            if ($v === $from) $redirects[$k] = $to;
+        }
+        $redirects[$from] = $to;
+        $schema['redirects'] = $redirects;
     }
 
     private static function registerPage(array $state, array $op, array $ctx): array
@@ -932,9 +1067,12 @@ final class Operations
         $current = $state['schema']['pages'][$page] ?? null;
         if (!array_key_exists('sitemap', $op)) {
             $state['schema']['pages'][$page] = is_array($current) ? $current : self::pageEntry($state['schema'], $page, false, null);
-            return [$state, $op];
+        } else {
+            $state['schema']['pages'][$page] = self::pageEntry($state['schema'], $page, $op['sitemap'], is_array($current) ? $current : null);
         }
-        $state['schema']['pages'][$page] = self::pageEntry($state['schema'], $page, $op['sitemap'], is_array($current) ? $current : null);
+        // template, tipo, contenuto fisso, priorità e slug nella stessa operazione: come set_page
+        $details = array_intersect_key($op, array_flip(['template', 'type', 'item', 'priority', 'slug']));
+        if ($details) [$state] = self::setPage($state, ['op' => 'set_page', 'page' => $page] + $details, $ctx);
         return [$state, $op];
     }
 
@@ -1071,6 +1209,14 @@ final class Operations
         // Un testo per lingua è testo semplice; uno condiviso (codici, URL, snippet) esce comunque con l'escape
         if ($def['type'] === 'text' && !empty($def['localized']) && $value !== strip_tags($value)) {
             throw new StagingException("«{$def['name']}» è testo semplice: niente HTML (per l'HTML serve un campo richtext).");
+        }
+        // Un contenuto incorporato: l'indirizzo dell'iframe, solo dai siti ammessi
+        if ($def['type'] === 'embed') {
+            try {
+                return \Kris\Template\Embed::normalize($value, $ctx['embedDomains'] ?? \Kris\Template\Embed::DEFAULT_DOMAINS);
+            } catch (\InvalidArgumentException $e) {
+                throw new StagingException("«{$def['name']}»: " . $e->getMessage());
+            }
         }
         // Il testo formattato si salva già filtrato: solo gli elementi e gli attributi ammessi
         return $def['type'] === 'richtext' ? \Kris\Template\Richtext::clean($value) : $value;

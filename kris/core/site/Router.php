@@ -15,6 +15,23 @@ namespace Kris\Site;
  */
 final class Router
 {
+    /** I parametri di index.php che scelgono la pagina. */
+    public const PARAMS = ['page', 'key', 'id', 'path', 'ln'];
+
+    /**
+     * Parametri di una pagina completati con quelli che la pagina sa da sé:
+     * senza key, il tipo che la pagina rende; senza id, il contenuto fisso
+     * (index.php?page=siti-web vale key=showcase&id=0).
+     */
+    public static function fill(array $routes, array $params): array
+    {
+        $route = $routes[is_string($params['page'] ?? null) ? $params['page'] : 'homepage'] ?? null;
+        if ($route === null) return $params;
+        if (!isset($params['key']) || $params['key'] === '') $params['key'] = $route['key'];
+        if ((!isset($params['id']) || $params['id'] === '') && $route['kind'] !== 'collection' && $params['key'] === $route['key']) $params['id'] = (string) $route['id'];
+        return $params;
+    }
+
     /** @return array<string, array{key: string, kind: string, id: int, children: string}> */
     public static function routes(array $schema): array
     {
@@ -108,8 +125,11 @@ final class Router
                 if (str_starts_with($url, '?')) $url = 'index.php' . $url;
                 if (preg_match('#^index\.php(?:\?([^\#]*))?(\#.*)?$#i', $url, $q) === 1) {
                     parse_str(html_entity_decode($q[1] ?? '', ENT_QUOTES | ENT_HTML5), $params);
-                    // Solo i parametri di una pagina: altri parametri (anteprima, campagne) restano in index.php?…
-                    if (!array_diff(array_keys($params), ['page', 'key', 'id', 'path', 'ln']) && is_array($params) && !array_filter($params, 'is_array')) {
+                    $extra = array_keys(array_diff_key(is_array($params) ? $params : [], array_flip(self::PARAMS)));
+                    // Parametri in più solo su un link a una pagina; quelli di Kris (anteprima, plugin) restano in index.php?…
+                    $pageLink = !$extra || (isset($params['page']) && !preg_grep('/^kris_/', $extra));
+                    if (is_array($params) && $pageLink && !array_filter($params, 'is_array')) {
+                        $params = self::fill($routes, $params);
                         $pretty = self::path(
                             $routes,
                             (string) ($params['page'] ?? 'homepage'),
@@ -120,6 +140,9 @@ final class Router
                             $defaultLang
                         );
                         if ($pretty !== null) {
+                            // Gli altri parametri (un modulo precompilato, una campagna) restano in coda: /preventivo?servizio=social
+                            $rest = array_diff_key($params, array_flip(self::PARAMS));
+                            $pretty .= $rest ? '?' . http_build_query($rest, '', '&', PHP_QUERY_RFC3986) : '';
                             return $m[1] . '=' . $m[2] . htmlspecialchars($basePath . $pretty . ($q[2] ?? ''), ENT_QUOTES, 'UTF-8') . $m[2];
                         }
                     }

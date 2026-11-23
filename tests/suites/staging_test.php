@@ -457,3 +457,13 @@ test('/kris-admin/preview/ apre la pagina in anteprima, solo con l editor aperto
         $s->discard();
     }
 });
+
+test('conta il template che una pagina usa davvero: quello lasciato da set_page si elimina', function () {
+    $root = stagingSite();
+    file_put_contents("{$root}/template/homepage.html", '<p>home</p>');
+    file_put_contents("{$root}/template/dettaglio.html", '<p>d</p>');
+    $s = new Staging($root);
+    $s->operate(['op' => 'set_page', 'page' => 'homepage', 'template' => 'dettaglio'], 'test');
+    $s->delete('template/homepage.html', Staging::hash('<p>home</p>'), 'test');
+    assertThrowsStaging(fn() => $s->delete('template/dettaglio.html', Staging::hash('<p>d</p>'), 'test'), 'set_page');
+});

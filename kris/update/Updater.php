@@ -166,7 +166,14 @@ final class Updater
                 $warnings[] = "editor/{$stub} è stato modificato: l'aggiornamento non lo trasforma nel rimando al nuovo editor in /kris-admin/.";
             }
         }
-        return $warnings;
+        // Rimandi del .htaccess verso ?page=… (giro infinito con gli indirizzi leggibili) e robots.txt fermo a /editor/
+        $root = rtrim($root, '/\\');
+        $schema = is_file("{$root}/data/schema.json") ? json_decode((string) file_get_contents("{$root}/data/schema.json"), true) : null;
+        $allowed = is_file("{$root}/data/allowed_pages.json") ? json_decode((string) file_get_contents("{$root}/data/allowed_pages.json"), true) : null;
+        $pages = array_merge(array_keys((array) ($schema['pages'] ?? [])), (array) ($allowed['allowed_pages'] ?? []));
+        return array_merge($warnings,
+            SiteChecks::redirectLoops(is_file("{$root}/.htaccess") ? (string) file_get_contents("{$root}/.htaccess") : '', array_map('strval', $pages)),
+            SiteChecks::robots(is_file("{$root}/robots.txt") ? (string) file_get_contents("{$root}/robots.txt") : null));
     }
 
     /** Motivo per cui l'hosting non soddisfa i requisiti della release, o null. */

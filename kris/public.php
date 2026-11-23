@@ -24,6 +24,13 @@ if ($maintenance !== null && !$maintenance['stale']) {
     exit;
 }
 
+// Intestazioni di sicurezza di serie (nosniff, Referrer-Policy, X-Frame-Options, HSTS su https)
+try {
+    \Kris\Site\SecurityHeaders::send(\Kris\Store\Site::load()['settings'], (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
+} catch (\Throwable) {
+    // archivio illeggibile: la pagina lo dice più avanti
+}
+
 // Anteprima a indirizzo proprio: /kris-admin/preview/<indirizzo della pagina> è quella pagina
 // in anteprima, anche se nessun link la raggiunge. Vale come ?kris_preview=1 (serve l'editor aperto).
 $previewPrefix = \Kris\Site\Router::basePath($_SERVER) . '/kris-admin/preview';
@@ -136,6 +143,15 @@ $basePath = Router::basePath($_SERVER);
 $requested = '/' . ltrim(substr((string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH), strlen($basePath)), '/');
 $redirects = \Kris\Template\Seo::config(KRIS_ROOT)['redirects'];
 $to = $redirects[$requested] ?? $redirects[rtrim($requested, '/')] ?? null;
+// "/vecchio/*": tutto quello che c'era sotto un indirizzo (vince il prefisso più lungo)
+if ($to === null) {
+    $best = -1;
+    foreach ($redirects as $from => $target) {
+        if (!str_ends_with((string) $from, '/*')) continue;
+        $prefix = substr((string) $from, 0, -1);
+        if (str_starts_with($requested, $prefix) && strlen($prefix) > $best && $requested !== $prefix) [$to, $best] = [$target, strlen($prefix)];
+    }
+}
 // Una destinazione /… è del sito: //… o /\… porterebbero altrove e non valgono
 if (is_string($to) && str_starts_with($to, '/') && preg_match('#^/[/\\\\]#', $to) === 1) $to = null;
 if ($to !== null && $preview === null) {
@@ -160,6 +176,7 @@ if ($routes !== null) {
         // Un percorso che non è di nessuna pagina è una 404
         $query = ($resolved ?? ['page' => '404']) + array_diff_key($query, array_flip($pageParams));
     } elseif ($preview === null && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET' && array_intersect_key($query, array_flip($pageParams))) {
+        $query = Router::fill($routes, $query);
         $pretty = Router::path(
             $routes,
             (string) ($query['page'] ?? 'homepage'), (string) ($query['key'] ?? 'homepage'), (int) ($query['id'] ?? 0),

@@ -117,3 +117,31 @@ test('prima della major nuova si segnalano .htaccess senza la regola di Kris e s
     assertSame([], Updater::upgradeWarnings($root, '1.10.0', ['version' => '2.0.0']));
     assertSame([], Updater::upgradeWarnings($root, '1.10.0', ['version' => '1.10.1']), 'stessa major: niente');
 });
+
+test('controlli del sito: rimandi infiniti del .htaccess, robots.txt fermo a /editor/, testi con embed tolti', function () {
+    $ht = "RewriteEngine On\nRewriteRule ^preventivo/?$ /?page=preventivo [R=301,L]\nRedirect 301 /showcase /index.php?page=showcase\n# RewriteRule ^x$ ?page=privacy [R=301]\nRewriteRule ^interna$ index.php?page=interna [L]\nRewriteRule ^vecchia$ /?page=vecchia [R=301,L]";
+    $w = \Kris\Update\SiteChecks::redirectLoops($ht, ['preventivo', 'showcase', 'privacy', 'interna']);
+    assertSame(1, count($w));
+    assertContains('/preventivo, /showcase', $w[0]);
+    assertNotContains('/privacy', $w[0], 'i commenti non contano');
+    assertNotContains('/interna', $w[0], 'una riscrittura interna non rimanda');
+    assertSame([], \Kris\Update\SiteChecks::redirectLoops($ht, []));
+
+    assertSame(1, count(\Kris\Update\SiteChecks::robots("User-agent: *\nDisallow: /editor/\n")));
+    assertSame([], \Kris\Update\SiteChecks::robots("User-agent: *\nDisallow: /editor/\nDisallow: /kris-admin/\n"));
+    assertSame([], \Kris\Update\SiteChecks::robots(null));
+
+    $site = ['schema' => ['types' => ['progetti' => ['fields' => [
+        ['name' => 'body', 'type' => 'richtext', 'localized' => true],
+        ['name' => 'slides', 'type' => 'list', 'of' => [['name' => 'testo', 'type' => 'richtext', 'localized' => false]]],
+    ]]]], 'content' => [
+        ['type' => 'progetti', 'id' => 3, 'values' => ['body' => ['it' => '<p>ok</p>', 'en' => '<iframe src="https://instagram.com/x"></iframe>'],
+            'slides' => [['id' => 1, 'values' => ['testo' => '<script>x()</script>']]]]],
+        ['type' => 'progetti', 'id' => 4, 'values' => ['body' => ['it' => '<p>pulito</p>']]],
+    ]];
+    $w = \Kris\Update\SiteChecks::strippedRichtext($site);
+    assertSame(1, count($w));
+    assertContains('progetti #3 › body', $w[0]);
+    assertContains('progetti #3 › slides #1 › testo', $w[0]);
+    assertNotContains('#4', $w[0]);
+});

@@ -600,6 +600,15 @@ test('gli avvisi segnalano campi senza sezione, campi non usati e font mancanti'
     assertNotContains('usa titolo', $warnings);
     // seo_title lo usa Kris per il <head>, non un template
     assertNotContains('seo_title', $warnings);
+    // Il campo slug di una pagina lo usano gli indirizzi, non i template
+    $s->operateAll([
+        ['op' => 'add_field', 'collection' => 'servizi', 'field' => ['name' => 'percorso', 'type' => 'text', 'section' => 'Meta']],
+        ['op' => 'register_page', 'page' => 'servizi', 'type' => 'servizi', 'item' => null, 'slug' => 'percorso'],
+    ], 'a');
+    assertContains("«servizi»: nessun template usa sottotitolo.\n", implode("\n", $s->warnings()) . "\n", 'percorso è lo slug della pagina');
+    $schema = json_decode((string) file_get_contents("{$root}/data/staging/data/schema.json"), true);
+    assertSame(['template' => 'servizi', 'type' => 'servizi', 'sitemap' => false, 'slug' => 'percorso'], $schema['pages']['servizi'] ?? null, 'register_page imposta anche tipo e slug');
+
     assertContains('assets/css/tema.css cita il font manca.woff2', $warnings);
 });
 
@@ -648,6 +657,23 @@ test('richtext: restano elementi e attributi editoriali, script e gestori se ne 
     assertSame('testo semplice', \Kris\Template\Richtext::clean('testo semplice'));
 });
 
+test('richtext: le immagini tengono dimensioni e caricamento, e al rendering caricano pigre', function () {
+    $img = '<img src="assets/uploads/a.jpg" alt="x" width="800" height="600" loading="lazy" decoding="async">';
+    assertSame($img, \Kris\Template\Richtext::clean($img));
+    assertSame('<img src="a.jpg">', \Kris\Template\Richtext::clean('<img src="a.jpg" width="80%" loading="subito" decoding="x">'), 'solo valori validi');
+    assertSame('<p><img src="a.jpg" loading="lazy" decoding="async"></p>', \Kris\Template\Richtext::clean('<p><img src="a.jpg"></p>', true));
+    assertSame('<img src="a.jpg" loading="eager" decoding="async">', \Kris\Template\Richtext::clean('<img src="a.jpg" loading="eager">', true), 'una scelta esplicita resta');
+});
+
+test('immagini caricate: width e height anche senza varianti', function () {
+    $root = sys_get_temp_dir() . '/kris-srcset-' . bin2hex(random_bytes(4));
+    mkdir("{$root}/assets/uploads", 0777, true);
+    // PNG 3x2
+    file_put_contents("{$root}/assets/uploads/p.png", base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAMAAAACCAYAAACddGYaAAAAEUlEQVR42mP8z8Dwn4EBCgAP/wH/l4mMBAAAAABJRU5ErkJggg=='));
+    assertSame('<img src="assets/uploads/p.png" alt="" width="3" height="2">', \Kris\Entity\MediaStore::srcset('<img src="assets/uploads/p.png" alt="">', $root));
+    assertSame('<img src="assets/uploads/p.png" width="10">', \Kris\Entity\MediaStore::srcset('<img src="assets/uploads/p.png" width="10">', $root), 'dimensioni scritte restano');
+});
+
 test('richtext: filtrato al rendering e al salvataggio dello staging', function () {
     $e = makeEntity([['name' => 'body', 'type' => 'richtext', 'value' => ['it' => '<p onclick="x()">Ciao</p><script>y()</script>']]]);
     assertSame('<div><p>Ciao</p></div>', trim(renderTemplate('<div>{{body}}</div>', $e)));
@@ -676,4 +702,70 @@ test('set_page cambia una pagina già pubblica: template, tipo, contenuto fisso 
     expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'progetto', 'priority' => 2], 'a'), 'da 0 a 1');
     expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'homepage', 'item' => null], 'a'), 'contenuto fisso');
     expectStaging(fn() => $s->operate(['op' => 'set_page', 'page' => 'nessuna', 'sitemap' => true], 'a'), 'non è una pagina pubblica');
+});
+
+test('reindirizzamenti: set_redirect, unregister_page con redirect_to e memoria degli slug', function () {
+    $root = contentSite();
+    $s = new Staging($root);
+    $schema = fn() => schemaOf("{$root}/data/staging/data/schema.json");
+
+    $s->operate(['op' => 'set_redirect', 'from' => 'showcase.html', 'to' => '/siti'], 'a');
+    $s->operate(['op' => 'set_redirect', 'from' => '/project-detail/*', 'to' => '/progetti'], 'a');
+    assertSame(['/showcase.html' => '/siti', '/project-detail/*' => '/progetti'], $schema()['redirects']);
+    expectStaging(fn() => $s->operate(['op' => 'set_redirect', 'from' => '/a?b=1', 'to' => '/x'], 'a'), 'vecchio indirizzo');
+    expectStaging(fn() => $s->operate(['op' => 'set_redirect', 'from' => '/a', 'to' => 'javascript:x'], 'a'), 'destinazione');
+    $s->operate(['op' => 'set_redirect', 'from' => '/showcase.html', 'to' => ''], 'a');
+    assertSame(['/project-detail/*' => '/progetti'], $schema()['redirects']);
+
+    // Lo slug cambiato: il vecchio indirizzo porta al nuovo, in ogni lingua; tornando indietro niente giri
+    $s->write('template/progetto.html', '<!doctype html><html><body>{{title}}</body></html>', null, 'a');
+    $s->operate(['op' => 'register_page', 'page' => 'progetto', 'type' => 'posts', 'item' => null, 'slug' => 'title'], 'a');
+    $id = null;
+    foreach (json_decode((string) file_get_contents("{$root}/data/staging/data/content.json"), true) as $item) if ($item['type'] === 'posts') { $id = (int) $item['id']; break; }
+    $s->operate(['op' => 'set_field', 'key' => 'posts', 'id' => $id, 'field' => 'title', 'value' => ['it' => 'Casa Rossi', 'en' => 'Red House']], 'a');
+    $s->operate(['op' => 'set_field', 'key' => 'posts', 'id' => $id, 'field' => 'title', 'lang' => 'it', 'value' => 'Casa Bianca'], 'a');
+    $r = $schema()['redirects'];
+    assertSame('/progetto/casa-bianca', $r['/progetto/casa-rossi'] ?? null);
+    assertTrue(!isset($r['/en/progetto/red-house']), 'l inglese non è cambiato');
+    $s->operate(['op' => 'set_field', 'key' => 'posts', 'id' => $id, 'field' => 'title', 'lang' => 'it', 'value' => 'Casa Rossi'], 'a');
+    $r = $schema()['redirects'];
+    assertSame('/progetto/casa-rossi', $r['/progetto/casa-bianca'] ?? null);
+    assertTrue(!isset($r['/progetto/casa-rossi']), 'niente giro infinito');
+
+    // Pagina tolta: i suoi indirizzi portano altrove, anche nelle altre lingue
+    $s->operate(['op' => 'unregister_page', 'page' => 'progetto', 'redirect_to' => '/'], 'a');
+    $r = $schema()['redirects'];
+    assertSame(['/', '/', '/en/', '/en/'], [$r['/progetto'], $r['/progetto/*'], $r['/en/progetto'], $r['/en/progetto/*']]);
+});
+
+test('embed: indirizzi e codici incollati diventano l iframe, solo dai siti ammessi e configurabili', function () {
+    $d = \Kris\Template\Embed::DEFAULT_DOMAINS;
+    assertSame('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ', \Kris\Template\Embed::normalize('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=3', $d));
+    assertSame('https://www.instagram.com/reel/XYZ/embed', \Kris\Template\Embed::normalize('<blockquote class="instagram-media" data-instgrm-permalink="https://www.instagram.com/reel/XYZ/?utm_source=ig_embed"></blockquote><script async src="//www.instagram.com/embed.js"></script>', $d));
+    assertSame('https://www.tiktok.com/embed/v2/7234567890123', \Kris\Template\Embed::normalize('https://www.tiktok.com/@sofab/video/7234567890123', $d));
+    assertSame('https://www.google.com/maps/embed?pb=!1m18', \Kris\Template\Embed::normalize('<iframe src="https://www.google.com/maps/embed?pb=!1m18" width="600"></iframe>', $d));
+    assertThrows(fn() => \Kris\Template\Embed::normalize('https://altro.it/x', $d), \InvalidArgumentException::class);
+    assertThrows(fn() => \Kris\Template\Embed::normalize('http://www.youtube.com/embed/x', $d), \InvalidArgumentException::class);
+    assertSame('', \Kris\Template\Embed::html('https://altro.it/x', $d), 'un dominio non ammesso non esce');
+    assertContains('<iframe class="kris-embed kris-embed-wide"', \Kris\Template\Embed::html('https://player.vimeo.com/video/1', $d));
+
+    $root = contentSite();
+    $s = new Staging($root);
+    $s->operateAll([
+        ['op' => 'add_field', 'collection' => 'homepage', 'field' => ['name' => 'video', 'type' => 'embed', 'localized' => false]],
+        ['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'video', 'value' => 'https://youtu.be/dQw4w9WgXcQ'],
+    ], 'a');
+    assertSame('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ', siteValue("{$root}/data/staging/data/content.json", 'homepage', 0, 'video'));
+    expectStaging(fn() => $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'video', 'value' => 'https://www.mixcloud.com/x/'], 'a'), 'Contenuti incorporati');
+    $s->operate(['op' => 'set_embed_domains', 'domains' => ['https://www.Mixcloud.com/', 'youtube.com']], 'a');
+    assertSame(['mixcloud.com', 'youtube.com'], json_decode((string) file_get_contents("{$root}/data/staging/data/settings.json"), true)['embed']['domains']);
+    $s->operate(['op' => 'set_field', 'key' => 'homepage', 'id' => 0, 'field' => 'video', 'value' => 'https://www.mixcloud.com/widget/iframe/?feed=x'], 'a');
+    expectStaging(fn() => $s->operate(['op' => 'set_embed_domains', 'domains' => ['non un dominio']], 'a'), 'non è un dominio');
+});
+
+test('embed: nel template {{campo}} è l iframe', function () {
+    $e = makeEntity([['name' => 'video', 'type' => 'embed', 'value' => 'https://www.youtube-nocookie.com/embed/abc']]);
+    assertContains('<iframe class="kris-embed kris-embed-wide" style="display:block;width:100%;border:0;aspect-ratio:16/9" src="https://www.youtube-nocookie.com/embed/abc"', renderTemplate('<div>{{video}}</div>', $e));
+    $bad = makeEntity([['name' => 'video', 'type' => 'embed', 'value' => 'https://altro.it/" onload="x']]);
+    assertSame('<div></div>', trim(renderTemplate('<div>{{video}}</div>', $bad)));
 });
