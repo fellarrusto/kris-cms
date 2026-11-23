@@ -114,13 +114,25 @@ final class Router
      * index.php partono dalla cartella del sito (una pagina /en/menu li
      * cercherebbe altrimenti in /en/). Ancore, indirizzi assoluti e quelli
      * da / non si toccano.
+     *
+     * Un link solo di query senza la pagina ("?ln=en", il selettore della lingua)
+     * vale la pagina corrente, $current (page, key, id, path): diventa la stessa
+     * pagina nell'altra lingua; senza $current resta com'è, e la richiesta porta lì.
      */
-    public static function rewriteLinks(string $html, array $routes, string $basePath, string $defaultLang): string
+    public static function rewriteLinks(string $html, array $routes, string $basePath, string $defaultLang, ?array $current = null): string
     {
         $html = (string) preg_replace_callback(
             '#\b(href|src|poster|action)=(["\'])(\./)?((?:assets|kris)/[^"\']*|(?:index\.php)?\?[^"\'\#]*(?:\#[^"\']*)?|index\.php(?:\#[^"\']*)?|sitemap\.php)\2#i',
-            function (array $m) use ($routes, $basePath, $defaultLang): string {
+            function (array $m) use ($routes, $basePath, $defaultLang, $current): string {
                 $url = $m[4];
+                // "?ln=en" senza pagina: questa pagina in un'altra lingua, non la homepage
+                if (str_starts_with($url, '?') && preg_match('#^\?([^\#]*)(\#.*)?$#', $url, $own) === 1) {
+                    parse_str(html_entity_decode($own[1], ENT_QUOTES | ENT_HTML5), $own_params);
+                    if (is_array($own_params) && !array_intersect_key($own_params, array_flip(['page', 'key', 'id', 'path']))) {
+                        if ($current === null) return $m[0];
+                        $url = 'index.php?' . http_build_query(array_intersect_key($current, array_flip(['page', 'key', 'id', 'path'])) + $own_params, '', '&', PHP_QUERY_RFC3986) . ($own[2] ?? '');
+                    }
+                }
                 // "?page=…" vale index.php?page=…: sotto /en/menu andrebbe al percorso sbagliato
                 if (str_starts_with($url, '?')) $url = 'index.php' . $url;
                 if (preg_match('#^index\.php(?:\?([^\#]*))?(\#.*)?$#i', $url, $q) === 1) {
