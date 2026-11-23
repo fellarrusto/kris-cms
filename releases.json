@@ -2,6 +2,26 @@
     "format": 1,
     "releases": [
         {
+            "version": "2.1.1",
+            "min_from": "1.10.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.3",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Il selettore della lingua resta sulla pagina che stai guardando, invece di riportare alla homepage.",
+            "date": "2026-11-23",
+            "editor_upgrade": true,
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v2.1.1/kris-2.1.1.zip",
+            "sha256": "b01a517a44da5337bbac52a9b8fce402e1caaccfe7b5c1ccab46ef0ad6d152ad",
+            "size": 394198
+        },
+        {
             "version": "2.1.0",
             "min_from": "1.10.0",
             "breaking": false,
