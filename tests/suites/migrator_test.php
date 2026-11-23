@@ -275,3 +275,20 @@ test('un sito nuovo già nel formato 2 registra le migrazioni della 1.x senza es
     assertSame($m->latestDataVersion(), $state['data_version']);
     assertSame($site['content'], \Kris\Store\Site::current($root)['content']);
 });
+
+test('0010: un tipo promosso con una frase come nome prende un nome breve, la frase diventa descrizione', function () {
+    $m = require KRIS_ROOT . '/kris/migrations/0010_etichette_tipi_promossi.php';
+    $files = ['schema' => ['types' => [
+        'websites' => ['label' => 'Elenco dei siti web realizzati, con link e anteprima.', 'fields' => []],
+        'posts' => ['label' => 'Articoli', 'fields' => []],
+        'altro' => ['label' => 'Una frase lunga che non viene da un elenco della 1.x.', 'fields' => []],
+    ], 'promoted' => [
+        ['from' => 'homepage', 'id' => 0, 'list' => 'websites', 'to' => 'websites'],
+        ['from' => 'homepage', 'id' => 0, 'list' => 'posts', 'to' => 'posts'],
+    ]], 'content' => [], 'settings' => []];
+    $out = $m['up']($files);
+    assertSame(['label' => 'Websites', 'description' => 'Elenco dei siti web realizzati, con link e anteprima.', 'fields' => []], $out['schema']['types']['websites']);
+    assertSame('Articoli', $out['schema']['types']['posts']['label'], 'un nome breve resta');
+    assertSame($files['schema']['types']['altro'], $out['schema']['types']['altro'], 'solo i tipi promossi');
+    assertSame($out, $m['up']($out), 'idempotente');
+});

@@ -67,12 +67,20 @@ test('i link index.php diventano percorsi leggibili; risorse e link della sottoc
         . '<link href="assets/css/style.css?v=1"><img src="./assets/uploads/a.webp"><a href="#c">c</a><a href="https://x.it">e</a><a href="/assoluto">a</a>';
     $out = Router::rewriteLinks($html, $demoRoutes(), '/sito', 'it');
     assertContains('href="/sito/en/progetto/3#top"', $out);
-    assertContains('href="/sito/index.php?page=progetto&amp;key=progetti&amp;id=3&amp;utm_source=qr"', $out, 'altri parametri: resta index.php');
+    assertContains('href="/sito/progetto/3?utm_source=qr"', $out, 'gli altri parametri restano in coda');
     assertContains('href="/sito/assets/css/style.css?v=1"', $out);
     assertContains('src="/sito/assets/uploads/a.webp"', $out);
     assertContains('href="#c"', $out);
     assertContains('href="https://x.it"', $out);
     assertContains('href="/assoluto"', $out);
+});
+
+test('un link senza key e id usa il tipo e il contenuto fisso della pagina', function () use ($demoRoutes) {
+    $out = Router::rewriteLinks('<a href="index.php?page=privacy&amp;ln=en">p</a><a href="index.php?page=privacy&amp;servizio=social&amp;x=a%20b">q</a>', $demoRoutes(), '', 'it');
+    assertContains('href="/en/privacy"', $out);
+    assertContains('href="/privacy?servizio=social&amp;x=a%20b"', $out);
+    assertSame(['page' => 'privacy', 'key' => 'kris_legal', 'id' => '0'], Router::fill($demoRoutes(), ['page' => 'privacy']));
+    assertSame(['page' => 'progetto', 'key' => 'progetti'], Router::fill($demoRoutes(), ['page' => 'progetto']), 'una pagina per contenuto non sceglie l id');
 });
 
 test('con pretty_urls il sito risponde ai percorsi, i vecchi indirizzi fanno 301 e i link sono leggibili', function () {
@@ -146,12 +154,17 @@ test('i reindirizzamenti di seo.json rispondono con un 301', function () {
     rcopy(projectSandbox(), $root);
     register_shutdown_function(fn() => rrmdir($root));
     $seo = json_decode((string) file_get_contents("{$root}/config/seo.json"), true);
-    file_put_contents("{$root}/config/seo.json", json_encode($seo + ['redirects' => ['/menu' => '/?ln=en', '/x' => 'javascript:alert(1)']]));
+    file_put_contents("{$root}/config/seo.json", json_encode($seo + ['redirects' => ['/menu' => '/?ln=en', '/x' => 'javascript:alert(1)', '/project-detail/*' => '/progetti']]));
     try {
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/menu/';
         assertSame(301, renderOnce([], $root)['status']);
         $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/x';
         assertTrue(renderOnce([], $root)['status'] !== 301, 'solo percorsi del sito o https');
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/project-detail/8';
+        $r = renderOnce([], $root);
+        assertSame([301, '/progetti'], [$r['status'], $r['location']], '/* vale per tutto quello sotto');
+        $GLOBALS['KRIS_TEST_REQUEST_URI'] = '/project-detail';
+        assertTrue(renderOnce([], $root)['status'] !== 301, '/* non vale per il prefisso stesso');
     } finally {
         unset($GLOBALS['KRIS_TEST_REQUEST_URI']);
     }

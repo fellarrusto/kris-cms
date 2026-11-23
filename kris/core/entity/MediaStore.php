@@ -358,15 +358,20 @@ final class MediaStore
         return (string) preg_replace_callback('#<img\b[^>]*>#i', function (array $m) use ($dir): string {
             $tag = $m[0];
             if (preg_match('#\bsrc=(["\'])(?:\./)?assets/uploads/([A-Za-z0-9][A-Za-z0-9._-]*)\1#i', $tag, $src) !== 1 || stripos($tag, 'srcset=') !== false) return $tag;
-            $variants = self::variants($dir, $src[2]);
             $info = @getimagesize($dir . $src[2]);
-            if (!$variants || !is_array($info)) return $tag;
-            $set = [];
-            foreach ($variants as $width => $variant) $set[] = "assets/uploads/{$variant} {$width}w";
-            $set[] = "assets/uploads/{$src[2]} {$info[0]}w";
-            $add = ' srcset="' . htmlspecialchars(implode(', ', $set), ENT_QUOTES, 'UTF-8') . '"';
-            if (stripos($tag, 'sizes=') === false) $add .= ' sizes="100vw"';
+            if (!is_array($info) || empty($info[0])) return $tag;
+            // width e height anche senza varianti (GD assente, foto piccola): la pagina non salta
+            $variants = self::variants($dir, $src[2]);
+            $add = '';
+            if ($variants) {
+                $set = [];
+                foreach ($variants as $width => $variant) $set[] = "assets/uploads/{$variant} {$width}w";
+                $set[] = "assets/uploads/{$src[2]} {$info[0]}w";
+                $add = ' srcset="' . htmlspecialchars(implode(', ', $set), ENT_QUOTES, 'UTF-8') . '"';
+                if (stripos($tag, 'sizes=') === false) $add .= ' sizes="100vw"';
+            }
             if (!preg_match('#\swidth=#i', $tag) && !preg_match('#\sheight=#i', $tag)) $add .= ' width="' . (int) $info[0] . '" height="' . (int) $info[1] . '"';
+            if ($add === '') return $tag;
             return (string) preg_replace('#\s*/?>$#', $add . '$0', $tag, 1);
         }, $html);
     }

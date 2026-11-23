@@ -480,3 +480,28 @@ test('tabella dei cookie del core: tecnici sempre, poi quelli dei plugin accesi,
         pluginDone();
     }
 });
+
+test('agente: impostazioni dei plugin con set_plugin_settings nello staging, installazioni in attesa', function () {
+    $site = pluginSite();
+    try {
+        pluginInstaller()->installZip(pluginPackage(), 'prova', 'anna');
+        Plugins::reset();
+        $s = new \Kris\Staging\Staging($site);
+        $s->operate(['op' => 'set_plugin_settings', 'plugin' => 'prova', 'values' => ['codice' => '  G-123  ']], 'agente');
+        $content = json_decode((string) file_get_contents("{$site}/data/staging/data/content.json"), true);
+        assertSame(['codice' => 'G-123'], \Kris\Plugin\Settings::values($content, 'prova'));
+        assertSame([], \Kris\Plugin\Settings::values(json_decode((string) file_get_contents("{$site}/data/content.json"), true), 'prova'), 'il sito non cambia prima della pubblicazione');
+        assertThrows(fn() => $s->operate(['op' => 'set_plugin_settings', 'plugin' => 'prova', 'values' => ['altro' => 1]], 'agente'), \Kris\Staging\StagingException::class);
+        assertThrows(fn() => $s->operate(['op' => 'set_plugin_settings', 'plugin' => 'nessuno', 'values' => ['codice' => 'x']], 'agente'), \Kris\Staging\StagingException::class);
+
+        $s->requestPlugin('misurazione', null, 'agente');
+        assertSame(['misurazione'], array_keys($s->manifest()['plugins']));
+        $s->dropPlugin('misurazione');
+        assertSame([], $s->manifest()['plugins']);
+
+        $s->promote('anna');
+        assertSame(['codice' => 'G-123'], \Kris\Plugin\Settings::values(json_decode((string) file_get_contents("{$site}/data/content.json"), true), 'prova'));
+    } finally {
+        pluginDone();
+    }
+});

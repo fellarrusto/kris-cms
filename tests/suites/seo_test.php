@@ -226,3 +226,13 @@ test('sitemap con priorita e robots.txt generato con la sitemap assoluta e le ri
     assertContains("Disallow: /bozze/\n", $robots);
     assertContains('Sitemap: http://localhost/sitemap.php', $robots);
 });
+
+test('intestazioni di sicurezza di serie, HSTS solo su https, spente da settings', function () {
+    $h = \Kris\Site\SecurityHeaders::for([], false);
+    assertSame('nosniff', $h['X-Content-Type-Options']);
+    assertSame('SAMEORIGIN', $h['X-Frame-Options']);
+    assertSame('strict-origin-when-cross-origin', $h['Referrer-Policy']);
+    assertTrue(!isset($h['Strict-Transport-Security']));
+    assertSame('max-age=31536000', \Kris\Site\SecurityHeaders::for([], true)['Strict-Transport-Security']);
+    assertSame([], \Kris\Site\SecurityHeaders::for(['security' => ['headers' => false]], true));
+});

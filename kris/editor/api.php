@@ -29,7 +29,7 @@ if (!defined('KRIS_EDITOR')) { http_response_code(404); exit; } // file interno
 /** Operazioni che cambiano la struttura: solo sul sito pubblico. */
 const KRIS_API_SCHEMA_OPS = ['add_field', 'remove_field', 'rename_field', 'describe_field', 'change_type', 'move_field', 'set_options',
     'create_collection', 'rename_collection', 'remove_collection', 'set_post_collection', 'set_collection_info', 'move_collection',
-    'register_page', 'unregister_page', 'set_sitemap', 'set_page'];
+    'register_page', 'unregister_page', 'set_sitemap', 'set_page', 'set_redirect', 'set_embed_domains'];
 
 function kris_api_respond(array $data, int $status = 200): never
 {
@@ -80,7 +80,7 @@ $me = (string) $_SESSION['kris_user'];
 $stagingSummary = function (bool $full) use (&$stagingMode): array {
     $s = new Staging();
     $manifest = $s->manifest();
-    $count = count($s->changes()) + count($s->operations()) + count($manifest['uploads']) + count($manifest['fonts']);
+    $count = count($s->changes()) + count($s->operations()) + count($manifest['uploads']) + count($manifest['fonts']) + count($manifest['plugins']);
     $out = ['count' => $count, 'visible' => $count > 0 || $s->lastPromotion() !== null];
     if (!$full) return $out;
     $changes = $s->changes();
@@ -102,6 +102,8 @@ $stagingSummary = function (bool $full) use (&$stagingMode): array {
         'uploads' => array_map(fn($name, $info) => ['name' => (string) $name, 'original' => (string) ($info['original'] ?? $name),
             'src' => $siteRoot . '/' . \Kris\Staging\Preview::assetUrl('uploads/' . rawurlencode((string) $name))], array_keys($manifest['uploads']), $manifest['uploads']),
         'fonts' => array_map(fn($name, $info) => ['name' => (string) $name, 'by' => (string) ($info['by'] ?? '')], array_keys($manifest['fonts']), $manifest['fonts']),
+        // Plugin chiesti dall'agente: si installano spenti alla pubblicazione
+        'plugins' => array_map(fn($name, $info) => ['name' => (string) $name, 'version' => $info['version'] ?? null, 'by' => (string) ($info['by'] ?? '')], array_keys($manifest['plugins']), $manifest['plugins']),
         'problems' => $s->templateProblems(),
         'warnings' => $s->warnings(),
         'code' => ['files' => $s->codeFiles(), 'approved' => $s->codeApproved(), 'fingerprint' => (string) $s->codeFingerprint()],
@@ -136,27 +138,7 @@ function editorPluginsSummary(): array
 /** I valori delle impostazioni di un plugin, ripuliti secondo i campi del manifest. */
 function editorPluginValues(array $fields, array $values): array
 {
-    $langs = editorLanguages();
-    $clean = [];
-    $one = function (array $f, mixed $v): mixed {
-        return match ($f['type']) {
-            'boolean' => $v === true,
-            'richtext' => \Kris\Template\Richtext::clean(is_string($v) ? $v : ''),
-            'select' => \Kris\Entity\Entity::normalizeChoice($f, $v),
-            default => is_scalar($v) ? mb_substr(trim((string) $v), 0, 5000) : '',
-        };
-    };
-    foreach ($fields as $f) {
-        if (!array_key_exists($f['name'], $values)) continue;
-        $v = $values[$f['name']];
-        if ($f['localized']) {
-            $clean[$f['name']] = [];
-            foreach ($langs as $lang) $clean[$f['name']][$lang] = $one($f, is_array($v) ? ($v[$lang] ?? null) : null);
-        } else {
-            $clean[$f['name']] = $one($f, $v);
-        }
-    }
-    return $clean;
+    return \Kris\Plugin\Settings::clean($fields, $values, editorLanguages());
 }
 
 /** Cosa riceve content_saved: per contenuto, i campi e le lingue cambiati. */
@@ -384,7 +366,11 @@ try {
             } elseif ($action === 'undo') {
                 $result['restored'] = count($staging->undoLastPromotion());
             } elseif ($action === 'promote' || $action === 'discard') {
-                if ($action === 'promote') $result['files'] = count($staging->promote($me, !empty($body['force']))['files']);
+                if ($action === 'promote') {
+                    $promoted = $staging->promote($me, !empty($body['force']));
+                    $result['files'] = count($promoted['files']);
+                    if (isset($promoted['plugins'])) $result += ['plugins' => $promoted['plugins'], 'plugin_errors' => $promoted['plugin_errors']];
+                }
                 else $staging->discard();
                 // Non c'è più niente in attesa: si torna al sito pubblico
                 $_SESSION['kris_editing'] = 'live';

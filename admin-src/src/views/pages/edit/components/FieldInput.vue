@@ -83,6 +83,11 @@ function choose(url) {
 
   <RichText v-else-if="def.type === 'richtext'" :id="id" :label="label" :model-value="text" @update:model-value="$emit('update:modelValue', $event)" @pick-media="(callback) => (picker = { kind: 'richtext', callback })" />
 
+  <div v-else-if="def.type === 'embed'" class="embed-field">
+    <input :id="id" class="input mono" :class="{ 'is-changed': changed }" type="text" :value="text" placeholder="https://www.youtube.com/watch?v=… o il codice di incorporamento" @input="$emit('update:modelValue', $event.target.value)" />
+    <p class="hint">Incolla l'indirizzo del video, del post o della mappa (YouTube, Vimeo, Instagram, TikTok, Google Maps…) o il suo codice di incorporamento. I siti ammessi sono in Impostazioni › Contenuti incorporati.</p>
+  </div>
+
   <textarea v-else :id="id" v-grow class="input autogrow" :class="{ 'is-changed': changed }" rows="1" :value="text" @input="grow($event), $emit('update:modelValue', $event.target.value)"></textarea>
 
   <MediaPicker v-if="picker" :value="picker.kind === 'field' ? text : ''" :accept="accept" @choose="choose" @close="picker = null" />

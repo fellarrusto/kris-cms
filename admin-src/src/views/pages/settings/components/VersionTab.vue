@@ -53,11 +53,14 @@ async function check() {
   const r = await call('check')
   busy.value = false
   if (!r.ok) return (result.value = { kind: 'error', title: 'Verifica non riuscita', text: r.error, manual: true })
+  const checks = r.checks || []
   result.value = r.target
     ? { kind: 'available', title: `È disponibile Kris ${r.target}`, text: `Installata ora: Kris ${r.current}.`, notes: r.notes || [], target: r.target, major: r.major, warnings: r.warnings || [], blocked: r.blocked }
     : r.unmet
       ? { kind: 'error', title: 'Aggiornamento non installabile su questo hosting', text: r.unmet, blocked: r.blocked }
       : { kind: 'info', title: 'Kris è aggiornato', text: `La versione installata (${r.current}) è la più recente installabile da qui.`, blocked: r.blocked }
+  // Controlli sul sito (rimandi del .htaccess, robots.txt, embed tolti): valgono con o senza aggiornamenti
+  result.value.warnings = [...new Set([...(result.value.warnings || []), ...checks])]
 }
 
 async function install(prepareOp, fields) {

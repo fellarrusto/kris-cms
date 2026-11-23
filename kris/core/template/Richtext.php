@@ -30,12 +30,24 @@ final class Richtext
     private const ATTRIBUTES = [
         '*' => ['class', 'title'],
         'a' => ['href', 'target', 'rel'],
-        'img' => ['src', 'alt'],
+        'img' => ['src', 'alt', 'width', 'height', 'loading', 'decoding'],
         'td' => ['colspan', 'rowspan'],
         'th' => ['colspan', 'rowspan'],
     ];
 
-    public static function clean(string $html): string
+    /** Gli elementi di $html che il filtro toglie con il loro contenuto (iframe, script…). @return list<string> */
+    public static function removes(string $html): array
+    {
+        if (preg_match_all('/<(' . implode('|', self::DROPPED) . ')\b/i', $html, $m) === 0) return [];
+        return array_values(array_unique(array_map('strtolower', $m[1])));
+    }
+
+    /**
+     * $render: al rendering le immagini senza loading ricevono loading="lazy"
+     * e decoding="async": le foto di un testo lungo non rubano banda a quelle
+     * che si vedono subito (LCP). width e height li aggiunge MediaStore::srcset.
+     */
+    public static function clean(string $html, bool $render = false): string
     {
         if ($html === '' || !preg_match('/[<&]/', $html)) return $html;
         $dom = new DOMDocument('1.0', 'UTF-8');
@@ -46,6 +58,12 @@ final class Richtext
         $root = $dom->getElementById('kris-richtext');
         if ($root === null) return htmlspecialchars(strip_tags($html), ENT_QUOTES, 'UTF-8');
         self::walk($root);
+        if ($render) {
+            foreach (iterator_to_array($root->getElementsByTagName('img')) as $img) {
+                if (!$img->hasAttribute('loading')) $img->setAttribute('loading', 'lazy');
+                if (!$img->hasAttribute('decoding')) $img->setAttribute('decoding', 'async');
+            }
+        }
         $out = '';
         foreach ($root->childNodes as $child) $out .= $dom->saveHTML($child);
         return $out;
@@ -78,7 +96,9 @@ final class Richtext
                     'href' => self::safeHref($attr->value),
                     'src' => self::safeSrc($attr->value),
                     'target' => in_array($attr->value, ['_blank', '_self'], true),
-                    'colspan', 'rowspan' => ctype_digit($attr->value),
+                    'colspan', 'rowspan', 'width', 'height' => ctype_digit($attr->value),
+                    'loading' => in_array($attr->value, ['lazy', 'eager'], true),
+                    'decoding' => in_array($attr->value, ['async', 'sync', 'auto'], true),
                     default => true,
                 };
                 if (!$keep) $child->removeAttribute($attr->name);

@@ -177,9 +177,18 @@ class ElementProcessor
             return '';
         }
 
+        // Un contenuto incorporato diventa il suo iframe, se il sito è ancora fra quelli ammessi
+        if ($entity->getType($name) === 'embed') {
+            try {
+                $domains = Embed::domains(\Kris\Store\Site::load(null, true)['settings']);
+            } catch (\Throwable) {
+                $domains = Embed::DEFAULT_DOMAINS;
+            }
+            return Embed::html((string) $value, $domains);
+        }
         // Il testo formattato passa dal filtro anche qui: un valore scritto a mano nei dati non porta script nella pagina
         return $entity->getType($name) === 'richtext'
-            ? Richtext::clean((string) $value)
+            ? Richtext::clean((string) $value, true)
             : htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
     }
 

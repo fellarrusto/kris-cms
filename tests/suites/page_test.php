@@ -274,3 +274,30 @@ test('proprieta del sito e campi seo_* della pagina: titolo, description, Open G
     file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
     assertContains('<title>Colazioni a Sorrento | Bar Centrale</title>', renderPage([], $root)['output']);
 });
+
+test('og: Kris aggiunge solo i tag che il template non ha, og:locale come it_IT, i commenti non contano', function () {
+    assertSame('it_IT', \Kris\Site\PageRenderer::ogLocale('it'));
+    assertSame('en_US', \Kris\Site\PageRenderer::ogLocale('en'));
+    assertSame('pt_BR', \Kris\Site\PageRenderer::ogLocale('pt-br'));
+    assertSame('de_DE', \Kris\Site\PageRenderer::ogLocale('de'));
+
+    $root = pageSandboxCopy();
+    $migration = require KRIS_ROOT . '/kris/migrations/0008_proprieta_del_sito.php';
+    $files = $migration['up'](['k_data' => json_decode((string) file_get_contents("{$root}/data/k_data.json"), true), 'k_model' => json_decode((string) file_get_contents("{$root}/data/k_model.json"), true), 'cms_settings' => []]);
+    foreach ($files['k_data'] as &$e) {
+        if ($e['name'] === 'kris_site') $e['data'][] = ['name' => 'site_name', 'type' => 'text', 'value' => ['it' => 'Bar Centrale', 'en' => 'Bar Centrale']];
+    }
+    unset($e);
+    file_put_contents("{$root}/data/k_data.json", json_encode($files['k_data']));
+    file_put_contents("{$root}/data/k_model.json", json_encode($files['k_model']));
+    $tpl = "{$root}/template/homepage.html";
+    $html = (string) file_get_contents($tpl);
+    file_put_contents($tpl, str_replace('</head>', "<!-- <title>vecchio</title> -->\n<meta property=\"og:image\" content=\"https://x.it/copertina.jpg\">\n</head>", preg_replace('#<title>.*?</title>#is', '', $html)));
+
+    $out = renderPage([], $root)['output'];
+    assertContains('<title>Bar Centrale</title>', $out, 'il titolo commentato non conta');
+    assertContains('<meta property="og:locale" content="it_IT">', $out);
+    assertContains('<meta property="og:site_name" content="Bar Centrale">', $out);
+    assertSame(1, substr_count($out, 'property="og:image"'), 'l og:image del template resta l unico');
+    assertContains('name="twitter:card"', $out);
+});

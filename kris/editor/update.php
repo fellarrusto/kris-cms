@@ -157,5 +157,18 @@ function kris_present_check(array $result): array
         // Passaggio a una versione principale nuova: cosa cambia e cosa controllare prima
         'major' => $until !== null && (int) explode('.', $until)[0] !== (int) explode('.', $result['current'])[0],
         'warnings' => $result['target'] ? \Kris\Update\Updater::upgradeWarnings(KRIS_ROOT, $result['current'], $result['target']) : [],
+        // Controlli sul sito che valgono sempre: rimandi del .htaccess, robots.txt, testi con embed tolti
+        'checks' => kris_site_checks(),
     ];
+}
+
+/** @return list<string> */
+function kris_site_checks(): array
+{
+    try {
+        return \Kris\Update\SiteChecks::run(KRIS_ROOT, \Kris\Store\Site::load());
+    } catch (Throwable $e) {
+        error_log('Kris site checks: ' . $e->getMessage());
+        return [];
+    }
 }

@@ -60,7 +60,12 @@ const promote = () =>
       confirmLabel: 'Pubblica',
       danger: false,
     },
-    'Modifiche pubblicate.'
+    (r) =>
+      r.plugin_errors?.length
+        ? `Modifiche pubblicate. ${r.plugin_errors.join(' ')}`
+        : r.plugins?.length
+          ? `Modifiche pubblicate. Plugin installati (spenti): ${r.plugins.join(', ')}. Accendili da Impostazioni › Plugin.`
+          : 'Modifiche pubblicate.'
   )
 const discard = () => act(() => StagingService.discard(), { title: 'Scartare le modifiche?', text: 'Le modifiche in attesa verranno eliminate. Il sito non cambia.', confirmLabel: 'Scarta' }, 'Modifiche scartate.')
 const undo = () =>
@@ -152,6 +157,13 @@ function toggleFile(name) {
               <div class="card-body staging-uploads" style="margin-top: 12px">
                 <figure v-for="u in data.uploads" :key="u.name"><img v-if="/\.(jpe?g|png|gif|webp|avif|svg)$/i.test(u.name)" :src="u.src" alt="" /><span v-else class="file-placeholder">{{ u.name.split('.').pop().toUpperCase() }}</span><figcaption>{{ u.original }}</figcaption></figure>
               </div>
+            </div>
+            <div v-if="data.plugins?.length" class="box">
+              <h2>Plugin da installare</h2>
+              <p class="sub" style="font-size: 14px">Si installano con la pubblicazione, spenti: li accendi tu da Impostazioni › Plugin.</p>
+              <ul class="staging-problems">
+                <li v-for="p in data.plugins" :key="p.name"><strong>{{ p.name }}</strong>{{ p.version ? ` ${p.version}` : ', ultima versione' }} · {{ p.by }}</li>
+              </ul>
             </div>
             <div v-if="data.fonts.length" class="box">
               <h2>Font del tema</h2>

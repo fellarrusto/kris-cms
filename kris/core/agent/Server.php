@@ -185,6 +185,28 @@ final class Server
                     @unlink($tmp);
                 }
 
+            case 'plugins':
+                // Installati (con impostazioni e cosa aggiungono alle pagine), in attesa e, con catalog: true, il catalogo
+                return ['installed' => $this->plugins(), 'pending' => $s->manifest()['plugins'] ?: (object) []]
+                    + (($r['catalog'] ?? false) === true ? ['catalog' => $this->pluginCatalog()] : []);
+
+            case 'plugin_install':
+                // Si installa alla pubblicazione, spento: lo accende l'admin da Impostazioni › Plugin
+                if (!\Kris\Plugin\Plugins::enabled()) throw new AgentException('I plugin sono spenti su questo sito (config/plugins.php).', 403);
+                $name = $this->string($r, 'name');
+                $version = is_string($r['version'] ?? null) && $r['version'] !== '' ? $r['version'] : null;
+                $installer = new \Kris\Plugin\Installer();
+                $releases = $installer->releases($name);
+                $release = $version === null ? $installer->latestCompatible($releases) : (array_values(array_filter($releases, fn($x) => $x['version'] === $version))[0] ?? null);
+                if ($release === null) throw new AgentException($version === null ? "Nessuna versione del plugin «{$name}» va su questo sito." : "La versione {$version} del plugin «{$name}» non esiste.", 422);
+                $s->requestPlugin($name, $version, $by);
+                return ['pending' => $name, 'version' => $version ?? $release['version'],
+                    'note' => 'Si installa quando l\'admin pubblica, spento: lo accende l\'admin da Impostazioni › Plugin. Le impostazioni si scrivono con set_plugin_settings dopo l\'installazione.'];
+
+            case 'plugin_cancel':
+                $s->dropPlugin($this->string($r, 'name'));
+                return ['cancelled' => true];
+
             case 'status':
                 return $this->status();
 
@@ -303,10 +325,14 @@ final class Server
             'seo' => is_array($state['settings']['seo'] ?? null) && $state['settings']['seo'] ? $state['settings']['seo'] : (object) [],
             'redirects' => is_array($state['schema']['redirects'] ?? null) && $state['schema']['redirects'] ? $state['schema']['redirects'] : (object) [],
             'robots_txt' => is_file($robots) ? (string) file_get_contents($robots) : null,
+            // I siti da cui i campi embed accettano contenuti (set_embed_domains)
+            'embed_domains' => \Kris\Template\Embed::domains(is_array($state['settings'] ?? null) ? $state['settings'] : []),
             'sitemap_xml' => \Kris\Template\Seo::sitemapXml(
                 \Kris\Template\Seo::sitemapEntries($state['schema'], $state['content']),
                 \Kris\Template\Seo::baseUrl($seo, $_SERVER),
-                $langs
+                $langs,
+                // Gli indirizzi leggibili, come in /sitemap.php
+                $seo['pretty_urls'] ? \Kris\Site\PageRenderer::routesFor($state['schema'], $state['content'], $langs) : null
             ),
         ];
     }
@@ -342,6 +368,8 @@ final class Server
             'scripts' => $files('assets/js/*.js'),
             'svg_images' => $files('assets/images/*.svg'),
             'fonts' => $files('assets/fonts/*.woff2'),
+            // I plugin installati: cosa aggiungono alle pagine e le impostazioni (set_plugin_settings)
+            'plugins' => $this->plugins($state),
             'staging' => $this->status($report, $state),
         ];
     }
@@ -358,6 +386,7 @@ final class Server
             'operations' => array_map(fn($o) => ['description' => $o['description'], 'conflict' => $o['conflict']], $report),
             'uploads' => array_map(fn($n) => "assets/uploads/{$n}", array_keys($s->manifest()['uploads'])),
             'fonts' => array_map(fn($n) => "assets/fonts/{$n}", array_keys($s->manifest()['fonts'])),
+            'plugins_to_install' => array_keys($s->manifest()['plugins']),
             'template_problems' => $s->templateProblems(),
             // Da controllare, non bloccano la pubblicazione
             'warnings' => $s->warnings($state),
@@ -368,6 +397,40 @@ final class Server
             // Una per pagina toccata, anche quelle che nessun link del sito raggiunge
             'preview_pages' => $s->previewPages($state),
         ];
+    }
+
+    /**
+     * I plugin installati: acceso o no, cosa aggiungono alle pagine (head,
+     * body_end, blocchi <div k-plugin="nome:blocco">), cookie e domini che
+     * usano, impostazioni con i valori (con le modifiche in attesa).
+     */
+    private function plugins(?array $state = null): array
+    {
+        if (!\Kris\Plugin\Plugins::enabled()) return [];
+        $state ??= $this->staging->state();
+        $out = [];
+        foreach (\Kris\Plugin\Plugins::installed() as $name => $p) {
+            $m = $p['manifest'];
+            $out[] = [
+                'name' => $name, 'title' => $m['title'], 'description' => $m['description'], 'version' => $m['version'],
+                'active' => ($p['state']['active'] ?? false) === true,
+                'adds' => array_values(array_filter($m['hooks'], fn($h) => in_array($h, ['head', 'body_end'], true) || str_starts_with($h, 'block:'))),
+                'cookies' => $m['cookies'], 'domains' => $m['domains'],
+                'settings' => $m['settings'],
+                'values' => (object) \Kris\Plugin\Settings::values($state['content'], $name),
+            ];
+        }
+        return $out;
+    }
+
+    /** Il catalogo firmato dei plugin; un errore di rete diventa un messaggio. */
+    private function pluginCatalog(): array
+    {
+        try {
+            return (new \Kris\Plugin\Installer())->catalog();
+        } catch (\Kris\Plugin\PluginException $e) {
+            return ['error' => $e->getMessage()];
+        }
     }
 
     /** Gli avvisi dell'ultima registrazione, solo se ce ne sono. */
@@ -390,10 +453,25 @@ final class Server
                     if ($next === null) throw new AgentException("L'elemento {$path[$i]}/{$path[$i + 1]} non esiste.", 404);
                     $cur = $next;
                 }
-                return $cur;
+                return self::withPositions($cur);
             }
         }
         throw new AgentException("Il contenuto «{$key}» con id {$id} non esiste.", 404);
+    }
+
+    /**
+     * Ogni elemento degli elenchi riceve "position" (0 = il primo mostrato): l'ordine è quello
+     * della lista, non degli id, e le operazioni vogliono l'id. Solo in lettura.
+     */
+    private static function withPositions(array $item): array
+    {
+        foreach (is_array($item['values'] ?? null) ? $item['values'] : [] as $name => $value) {
+            if (!is_array($value) || !array_is_list($value) || !$value || !is_array($value[0]) || !array_key_exists('values', $value[0])) continue;
+            foreach ($value as $n => $child) {
+                if (is_array($child)) $item['values'][$name][$n] = ['id' => $child['id'] ?? null, 'position' => $n] + self::withPositions($child);
+            }
+        }
+        return $item;
     }
 
     /** Il primo testo non vuoto del contenuto, nella lingua principale: per riconoscerlo nell'elenco. */

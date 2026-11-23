@@ -76,13 +76,37 @@ final class Staging
             'files' => is_array($manifest['files'] ?? null) ? $manifest['files'] : [],
             'uploads' => is_array($manifest['uploads'] ?? null) ? $manifest['uploads'] : [],
             'fonts' => is_array($manifest['fonts'] ?? null) ? $manifest['fonts'] : [],
+            // Plugin da installare alla pubblicazione (dall'agente): nome => {version, by, at}
+            'plugins' => is_array($manifest['plugins'] ?? null) ? $manifest['plugins'] : [],
         ];
+    }
+
+    /**
+     * Chiede di installare un plugin del catalogo alla pubblicazione. Installato
+     * resta spento: lo accende l'admin da Impostazioni › Plugin. $version null:
+     * l'ultima compatibile in quel momento.
+     */
+    public function requestPlugin(string $name, ?string $version, string $by): void
+    {
+        if (preg_match(\Kris\Plugin\Manifest::NAME, $name) !== 1) throw new StagingException("Nome di plugin non valido: '{$name}'.");
+        $manifest = $this->startManifest($by);
+        $manifest['plugins'][$name] = ['version' => $version, 'by' => $by, 'at' => gmdate('c')];
+        $this->saveManifest($manifest);
+    }
+
+    /** Toglie un plugin dalle installazioni in attesa. */
+    public function dropPlugin(string $name): void
+    {
+        $manifest = $this->manifest();
+        if (!isset($manifest['plugins'][$name])) throw new StagingException("Il plugin «{$name}» non è fra quelli in attesa di installazione.");
+        unset($manifest['plugins'][$name]);
+        $this->saveManifest($manifest);
     }
 
     /** Vero se c'e qualcosa da pubblicare. */
     public function hasChanges(): bool
     {
-        return $this->changes() || $this->operations() || $this->manifest()['uploads'] || $this->manifest()['fonts'];
+        return $this->changes() || $this->operations() || $this->manifest()['uploads'] || $this->manifest()['fonts'] || $this->manifest()['plugins'];
     }
 
     // --- file del tema -------------------------------------------------------
@@ -185,8 +209,13 @@ final class Staging
         if ($current['hash'] !== $expectedHash) {
             throw new StagingException("Il file '{$relative}' è cambiato da quando l'hai letto: rileggilo prima di eliminarlo.", ['current_hash' => $current['hash']]);
         }
-        if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1 && isset($this->state()['schema']['pages'][$m[1]])) {
-            throw new StagingException("template/{$m[1]}.html è il template della pagina pubblica «{$m[1]}»: toglila prima con unregister_page.");
+        if (preg_match('#^template/(.+)\.html$#', $relative, $m) === 1) {
+            // Conta il template che la pagina usa davvero (set_page può averlo cambiato), non il nome della pagina
+            foreach ((array) ($this->state()['schema']['pages'] ?? []) as $page => $entry) {
+                if ((is_array($entry) && is_string($entry['template'] ?? null) ? $entry['template'] : (string) $page) === $m[1]) {
+                    throw new StagingException("template/{$m[1]}.html è il template della pagina pubblica «{$page}»: cambiale template con set_page o toglila con unregister_page.");
+                }
+            }
         }
         $manifest = $this->startManifest($by);
         $siteHash = self::hashOf("{$this->root}/{$relative}");
@@ -274,8 +303,8 @@ final class Staging
                 throw new StagingException("L'operazione {$n} non è un oggetto con \"op\". Nessuna operazione del gruppo è stata registrata.");
             }
             try {
-                if (($op['op'] ?? null) === 'register_page' && !$this->templateExists((string) ($op['page'] ?? ''))) {
-                    throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/{$op['page']}.html.");
+                if (($op['op'] ?? null) === 'register_page' && !$this->templateExists((string) ($op['template'] ?? $op['page'] ?? ''))) {
+                    throw new StagingException("Per la pagina «{$op['page']}» serve prima il template template/" . ($op['template'] ?? $op['page']) . ".html.");
                 }
                 [$state, $completed] = Operations::apply($state, $op, $languages, [$this, 'uploadExists'], false, false, $warnings);
             } catch (StagingException $e) {
@@ -573,6 +602,11 @@ final class Staging
         };
         $templates = implode("\n", $read('template/*.html'));
         $out = [];
+        // Il campo "slug" di una pagina lo usano gli indirizzi leggibili, non i template
+        $slugs = [];
+        foreach ((array) ($state['schema']['pages'] ?? []) as $page) {
+            if (is_array($page) && is_string($page['slug'] ?? null) && is_string($page['type'] ?? null)) $slugs[$page['type']][] = $page['slug'];
+        }
 
         foreach ((array) ($state['schema']['types'] ?? []) as $collection => $type) {
             // kris_ e plg_ sono del framework e dei plugin: i loro campi non passano dai template
@@ -587,6 +621,7 @@ final class Staging
                 foreach ($defs as $def) {
                     // seo_title, seo_description e seo_image li usa Kris per il <head> (PageRenderer)
                     if (in_array($def['name'] ?? '', ['seo_title', 'seo_description', 'seo_image'], true)) continue;
+                    if ($where === (string) $collection && in_array($def['name'] ?? '', $slugs[$collection] ?? [], true)) continue;
                     $q = preg_quote((string) ($def['name'] ?? ''), '/');
                     if (preg_match('/\{\{[^}]*\b' . $q . '\b[^}]*\}\}|k-[a-z-]+=["\']' . $q . '["\']/', $templates) !== 1) $unused[] = $def['name'];
                 }
@@ -972,12 +1007,22 @@ final class Staging
         }
 
         $touched = $this->previewPages();
+        $plugins = $this->manifest()['plugins'];
         $this->discard();
+        // Plugin chiesti dall'agente: si installano spenti, a sito già pubblicato; un errore non annulla il resto
+        $pluginErrors = [];
+        foreach ($plugins as $name => $request) {
+            try {
+                (new \Kris\Plugin\Installer())->install((string) $name, is_string($request['version'] ?? null) ? $request['version'] : null, $by);
+            } catch (\Throwable $e) {
+                $pluginErrors[] = "Plugin «{$name}»: " . $e->getMessage();
+            }
+        }
         $this->pruneBackups();
         $published = array_merge(array_keys($files), array_map([\Kris\Store\FileStore::class, 'relativePath'], $docs));
         // I plugin (IndexNow) sanno cosa è stato pubblicato, dopo la risposta all'admin
         \Kris\Plugin\Plugins::event('published', \Kris\Plugin\Plugins::publishedPayload($published, $ops, $touched));
-        return ['backup' => $id, 'files' => $published];
+        return ['backup' => $id, 'files' => $published] + ($plugins ? ['plugins' => array_keys($plugins), 'plugin_errors' => $pluginErrors] : []);
     }
 
     /** L'ultima pubblicazione che si puo ancora annullare, o null. */

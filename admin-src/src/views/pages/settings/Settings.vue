@@ -6,6 +6,7 @@ import { useSessionStore } from '@/stores/session'
 import { useSiteStore } from '@/stores/site'
 import LanguagesTab from '@/views/pages/settings/components/LanguagesTab.vue'
 import UploadsTab from '@/views/pages/settings/components/UploadsTab.vue'
+import EmbedTab from '@/views/pages/settings/components/EmbedTab.vue'
 import AccountTab from '@/views/pages/settings/components/AccountTab.vue'
 import UsersTab from '@/views/pages/settings/components/UsersTab.vue'
 import AgentTab from '@/views/pages/settings/components/AgentTab.vue'
@@ -37,6 +38,7 @@ const TABS = [
   },
   { key: 'lingue', label: 'Lingue', hint: 'Lingue del sito', icon: 'language', component: LanguagesTab },
   { key: 'caricamenti', label: 'Caricamenti', hint: 'Nomi e foto', icon: 'media', component: UploadsTab },
+  { key: 'incorporati', label: 'Contenuti incorporati', hint: 'Video, post e mappe', icon: 'globe', component: EmbedTab },
   { key: 'account', label: 'Account', hint: 'Email e password', icon: 'user', component: AccountTab },
   { key: 'utenti', label: 'Utenti', hint: 'Chi accede all’editor', icon: 'users', component: UsersTab, admin: true },
   { key: 'assistente', label: 'Assistente AI', hint: 'Kris Agent', icon: 'agent', component: AgentTab },
