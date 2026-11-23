@@ -186,3 +186,12 @@ test('su Apache senza la regola del .htaccess di Kris restano gli indirizzi di p
         if ($server === null) unset($_SERVER['SERVER_SOFTWARE']); else $_SERVER['SERVER_SOFTWARE'] = $server;
     }
 });
+
+test('il selettore della lingua (?ln=en) porta alla stessa pagina nell altra lingua, non alla homepage', function () use ($demoRoutes) {
+    $html = '<a href="?ln=en" hreflang="en">EN</a><a href="?ln=it#top">IT</a><a href="index.php?ln=en">home</a>';
+    $out = Router::rewriteLinks($html, $demoRoutes(), '/sito', 'it', ['page' => 'progetto', 'key' => 'progetti', 'id' => '3', 'ln' => 'it', 'utm' => 'x']);
+    assertContains('href="/sito/en/progetto/3"', $out);
+    assertContains('href="/sito/progetto/3#top"', $out);
+    assertContains('href="/sito/en/"', $out, 'index.php?ln=en resta la homepage');
+    assertContains('href="?ln=en"', Router::rewriteLinks($html, $demoRoutes(), '/sito', 'it'), 'senza la pagina corrente resta com era');
+});

@@ -224,4 +224,5 @@ if ($wip !== null && $preview === null && Preview::isAdmin()) {
     $html = Preview::notice($html, 'Lavori in corso', 'I visitatori vedono la pagina di lavorazione; tu il sito, perché hai l\'editor aperto.',
         [['Vedi la pagina', $basePath . '/index.php?kris_wip_preview=1&ln=' . rawurlencode($lang)]]);
 }
-echo $routes !== null ? Router::rewriteLinks($html, $routes, $basePath, PageRenderer::language([])[1][0]) : $html;
+// Il selettore della lingua ("?ln=en") porta alla stessa pagina: la pagina corrente, tranne la 404
+echo $routes !== null ? Router::rewriteLinks($html, $routes, $basePath, PageRenderer::language([])[1][0], $page['status'] === 200 ? Router::fill($routes, $query) : null) : $html;
