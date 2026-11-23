@@ -2,6 +2,26 @@
     "format": 1,
     "releases": [
         {
+            "version": "2.1.0",
+            "min_from": "1.10.0",
+            "breaking": false,
+            "requires": {
+                "php": "8.3",
+                "ext": [
+                    "dom",
+                    "json",
+                    "mbstring",
+                    "session"
+                ]
+            },
+            "changelog_it": "Immagini dei testi più veloci (dimensioni e caricamento pigro), indirizzi leggibili anche per i link senza key e con parametri, reindirizzamenti gestiti da Kris (anche automatici quando cambi uno slug), campo per video e post incorporati da siti ammessi, intestazioni di sicurezza di serie, controlli del sito in Versione di Kris, plugin gestibili da Kris Agent.",
+            "date": "2026-11-23",
+            "editor_upgrade": true,
+            "url": "https://github.com/fellarrusto/kris-cms/releases/download/v2.1.0/kris-2.1.0.zip",
+            "sha256": "459aec28e899fd3af0f5d91dce6e91d09795c2548bfbc0a951c5e9b73747c5cf",
+            "size": 394026
+        },
+        {
             "version": "2.0.1",
             "min_from": "1.10.0",
             "breaking": false,
